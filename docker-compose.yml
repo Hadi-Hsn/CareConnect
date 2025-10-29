@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: careconnect-db
+    environment:
+      POSTGRES_USER: careconnect
+      POSTGRES_PASSWORD: careconnect_dev
+      POSTGRES_DB: careconnect
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careconnect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: careconnect-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://careconnect:careconnect_dev@db:5432/careconnect
+      VECTOR_STORE_PATH: /data/faiss_index
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: gpt-4o
+      OPENAI_EMBEDDING_MODEL: text-embedding-3-large
+      OPENAI_EMBEDDING_DIMENSIONS: "3072"
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_in_production}
+      JWT_ISSUER: careconnect
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_MINUTES: "1440"
+      FRONTEND_ORIGIN: http://localhost:5173
+      LOG_LEVEL: INFO
+      ENVIRONMENT: development
+      RATE_LIMIT_PER_MINUTE: "60"
+      ENABLE_PROMETHEUS: "true"
+      ENABLE_PRIVACY_MODE: "false"
+      MOCK_SCHEDULING: "true"
+    volumes:
+      - ./backend:/app
+      - vector_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "alembic upgrade head && python scripts/seed_demo_data.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: careconnect-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+      VITE_APP_NAME: CareConnect
+      VITE_ENABLE_ANALYTICS: "false"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
+  vector_data:
