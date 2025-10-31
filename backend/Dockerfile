@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
     curl \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -20,7 +21,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Create data directory for vector store
-RUN mkdir -p /data/faiss_index
+RUN mkdir -p /data/faiss_index /data/doctor_pdfs
 
 # Expose port
 EXPOSE 8000

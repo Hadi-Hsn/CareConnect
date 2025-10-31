@@ -17,13 +17,19 @@ cp frontend/.env.example frontend/.env
 # Add your OpenAI API key to backend/.env
 # OPENAI_API_KEY=sk-your-key-here
 
-# Start with Docker
+# Start with Docker (includes automatic data population)
 docker-compose up --build
-
-# Or manually:
-# Backend: cd backend && pip install -e ".[dev]" && uvicorn app.main:app --reload
-# Frontend: cd frontend && npm install && npm run dev
 ```
+
+**What happens on first start:**
+1. 🗄️ PostgreSQL database starts
+2. 🔧 Setup container runs (one-time):
+   - Applies database migrations
+   - Seeds demo users, providers, and lab tests
+   - Generates 5 doctor profile PDFs
+   - Indexes all documents into RAG system
+3. 🚀 Backend API starts (after setup completes)
+4. 🎨 Frontend starts
 
 Visit:
 - Frontend: http://localhost:5173
@@ -34,6 +40,25 @@ Visit:
 Demo credentials:
 - Patient: `patient@careconnect.health` / `password123`
 - Admin: `admin@careconnect.health` / `admin123`
+
+**Admin Features:**
+- Full CRUD operations for doctors/providers
+- Comprehensive appointment management
+- Schedule management and time blocking
+- PDF upload and RAG integration for doctor profiles
+- System statistics and reporting
+
+### Resetting Data
+
+To reset and re-populate all data:
+
+```bash
+# Stop and remove everything
+docker-compose down -v
+
+# Restart fresh (will re-run setup)
+docker-compose up --build
+```
 
 ## 🏗️ Architecture
 
@@ -68,7 +93,7 @@ careconnect/
 │   │   ├── schemas/      # Pydantic schemas
 │   │   └── services/     # Business logic (scheduling, RAG, email)
 │   ├── alembic/          # Database migrations
-│   ├── scripts/          # Seed data
+│   ├── scripts/          # Development scripts
 │   └── tests/            # Pytest tests
 ├── frontend/             # React application
 │   ├── src/
@@ -77,6 +102,11 @@ careconnect/
 │   │   ├── lib/          # API client, theme
 │   │   └── types/        # TypeScript types
 │   └── public/
+├── setup/                # Database initialization 🆕
+│   ├── scripts/          # Seed data, PDF generation, RAG indexing
+│   ├── Dockerfile        # Setup container
+│   ├── run_setup.sh      # Setup orchestration
+│   └── README.md         # Setup documentation
 ├── docs/                 # Architecture docs
 └── docker-compose.yml    # Multi-container setup
 ```
@@ -111,6 +141,10 @@ The agent uses OpenAI's function calling to orchestrate workflows:
 - **Chunking**: 1000 chars with 200 char overlap
 - **Storage**: FAISS index (swappable via `VectorStore` interface)
 - **Retrieval**: Pre-fetch context + on-demand `rag_lookup` tool
+- **Content**: Doctor profiles, facility docs, FAQs
+- **Auto-indexing**: PDFs indexed automatically on container startup
+
+See [RAG System Documentation](docs/RAG_SYSTEM.md) for details.
 
 ## 📊 Success Metrics
 
@@ -136,13 +170,13 @@ Tracked via `/api/v1/eval/kpis`:
 ## 📦 Development Commands
 
 ```bash
-# Start all services
+# Start all services (includes setup on first run)
 docker-compose up --build
 
-# Seed demo data
-docker-compose exec backend python -m scripts.seed_data
+# Re-run setup only (reset data)
+docker-compose up setup
 
-# Apply database migrations
+# Apply database migrations manually
 docker-compose exec backend alembic upgrade head
 
 # Run backend tests
@@ -190,6 +224,17 @@ npm run test:e2e
 - `POST /api/v1/rag/retrieve` - Retrieve relevant chunks
 - `GET /api/v1/rag/stats` - Vector store stats
 
+**Admin** 🆕
+- `POST /api/v1/admin/doctors` - Create doctor
+- `PUT /api/v1/admin/doctors/{id}` - Update doctor
+- `DELETE /api/v1/admin/doctors/{id}` - Delete doctor
+- `POST /api/v1/admin/doctors/{id}/upload-profile` - Upload doctor PDF
+- `GET /api/v1/admin/appointments` - List all appointments
+- `PUT /api/v1/admin/appointments/{id}` - Update appointment
+- `GET /api/v1/admin/doctors/{id}/schedule` - View schedule
+- `POST /api/v1/admin/doctors/{id}/block-time` - Block time slot
+- `GET /api/v1/admin/stats/overview` - System statistics
+
 **Providers**
 - `GET /api/v1/providers` - List providers
 - `GET /api/v1/providers/{id}/timeslots` - Get availability
@@ -218,6 +263,11 @@ The architecture uses interfaces to enable swapping:
 - [API Contract & Tool Schemas](docs/API_CONTRACT.md)
 - [Evaluation Framework](docs/EVALUATION.md)
 - [Threat Model & Security](docs/THREAT_MODEL.md)
+- [RAG System Documentation](docs/RAG_SYSTEM.md)
+- [RAG Quick Start Guide](docs/RAG_QUICKSTART.md)
+- [Admin API Documentation](docs/ADMIN_API.md)
+- [Admin User Guide](docs/ADMIN_GUIDE.md)
+- [Setup Documentation](setup/README.md) 🆕
 
 ---
 
