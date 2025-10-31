@@ -185,7 +185,51 @@ class ApiClient {
   }
 
   async getHealth(): Promise<HealthMetrics> {
-    const { data } = await this.client.get<HealthMetrics>('/health');
+    const { data} = await this.client.get<HealthMetrics>('/health');
+    return data;
+  }
+
+  // Handover
+  async requestHandover(
+    messages: ChatMessage[],
+    subject: string,
+    phone: string | null,
+    priority: string
+  ): Promise<{
+    incident_id: number;
+    status: string;
+    message: string;
+    confirmation_code: string;
+    estimated_response_time: string;
+  }> {
+    const { data } = await this.client.post('/handover/request', {
+      messages,
+      subject,
+      patient_phone: phone,
+      priority,
+    });
+    return data;
+  }
+
+  async getIncidents(status?: string): Promise<any[]> {
+    const { data } = await this.client.get('/handover/incidents', {
+      params: { status },
+    });
+    return data;
+  }
+
+  async getIncident(id: number): Promise<any> {
+    const { data } = await this.client.get(`/handover/incidents/${id}`);
+    return data;
+  }
+
+  async updateIncident(id: number, updates: any): Promise<any> {
+    const { data } = await this.client.patch(`/handover/incidents/${id}`, updates);
+    return data;
+  }
+
+  async getIncidentStats(): Promise<any> {
+    const { data } = await this.client.get('/handover/incidents/stats/overview');
     return data;
   }
 }

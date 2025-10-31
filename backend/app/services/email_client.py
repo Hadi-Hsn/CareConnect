@@ -164,3 +164,167 @@ class EmailService:
         """
 
         return await self.client.send_email(user_email, subject, html_content, text_content)
+
+    async def send_handover_notification(
+        self, 
+        admin_emails: list[str], 
+        incident_details: dict[str, Any]
+    ) -> bool:
+        """Send handover notification to admin team."""
+        subject = f"🚨 Patient Handover Request - {incident_details.get('subject', 'N/A')}"
+
+        priority_emoji = {
+            "low": "🟢",
+            "medium": "🟡",
+            "high": "🟠",
+            "urgent": "🔴"
+        }
+        priority = incident_details.get('priority', 'medium')
+        priority_display = f"{priority_emoji.get(priority, '🟡')} {priority.upper()}"
+
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 20px; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #856404;">🚨 Patient Handover Request</h2>
+                <p style="margin: 10px 0 0 0; color: #856404;">Priority: {priority_display}</p>
+            </div>
+            
+            <h3>Patient Information</h3>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <p><strong>Name:</strong> {incident_details.get('patient_name', 'N/A')}</p>
+                <p><strong>Email:</strong> {incident_details.get('patient_email', 'N/A')}</p>
+                <p><strong>Phone:</strong> {incident_details.get('patient_phone', 'Not provided')}</p>
+                <p><strong>Incident ID:</strong> #{incident_details.get('incident_id', 'N/A')}</p>
+            </div>
+            
+            <h3>Subject</h3>
+            <p style="background-color: #e9ecef; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                {incident_details.get('subject', 'N/A')}
+            </p>
+            
+            <h3>Conversation Summary</h3>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; white-space: pre-wrap;">
+                {incident_details.get('chat_summary', 'No summary available')}
+            </div>
+            
+            <h3>Action Required</h3>
+            <p>Please review this handover request and contact the patient as soon as possible.</p>
+            
+            <div style="margin: 30px 0;">
+                <a href="{incident_details.get('admin_portal_url', 'http://localhost:5173')}/admin/incidents/{incident_details.get('incident_id', '')}" 
+                   style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    View in Admin Portal
+                </a>
+            </div>
+            
+            <p style="color: #666; font-size: 12px; margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
+                This is an automated notification from CareConnect. Patient requested human assistance.
+                <br>Confirmation Code: {incident_details.get('confirmation_code', 'N/A')}
+            </p>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+        🚨 PATIENT HANDOVER REQUEST
+        Priority: {priority.upper()}
+        
+        PATIENT INFORMATION
+        Name: {incident_details.get('patient_name', 'N/A')}
+        Email: {incident_details.get('patient_email', 'N/A')}
+        Phone: {incident_details.get('patient_phone', 'Not provided')}
+        Incident ID: #{incident_details.get('incident_id', 'N/A')}
+        
+        SUBJECT
+        {incident_details.get('subject', 'N/A')}
+        
+        CONVERSATION SUMMARY
+        {incident_details.get('chat_summary', 'No summary available')}
+        
+        ACTION REQUIRED
+        Please review this handover request and contact the patient as soon as possible.
+        
+        Confirmation Code: {incident_details.get('confirmation_code', 'N/A')}
+        """
+
+        # Send to all admin emails
+        success_count = 0
+        for admin_email in admin_emails:
+            if await self.client.send_email(admin_email, subject, html_content, text_content):
+                success_count += 1
+
+        return success_count > 0
+
+    async def send_handover_confirmation_to_patient(
+        self,
+        patient_email: str,
+        incident_details: dict[str, Any]
+    ) -> bool:
+        """Send confirmation to patient that handover was received."""
+        subject = "Your Request for Human Assistance - CareConnect"
+
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #007bff;">Request Received</h2>
+            <p>Thank you for reaching out. We've received your request for human assistance.</p>
+            
+            <div style="background-color: #e3f2fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Confirmation Code:</strong> {incident_details.get('confirmation_code', 'N/A')}</p>
+                <p style="margin: 10px 0 0 0;"><strong>Incident ID:</strong> #{incident_details.get('incident_id', 'N/A')}</p>
+            </div>
+            
+            <h3>What happens next?</h3>
+            <ol style="line-height: 2;">
+                <li>Our care team has been notified</li>
+                <li>A staff member will review your conversation</li>
+                <li>We'll contact you within {incident_details.get('estimated_response_time', '24 hours')}</li>
+            </ol>
+            
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>⚠️ For medical emergencies:</strong></p>
+                <p style="margin: 10px 0 0 0;">Please call 911 or go to your nearest emergency room immediately. Do not wait for a response from our team.</p>
+            </div>
+            
+            <h3>Your Information</h3>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
+                <p><strong>Subject:</strong> {incident_details.get('subject', 'N/A')}</p>
+                <p><strong>Contact Email:</strong> {patient_email}</p>
+                <p><strong>Contact Phone:</strong> {incident_details.get('patient_phone', 'Not provided')}</p>
+            </div>
+            
+            <p style="margin-top: 30px;">We appreciate your patience and look forward to assisting you.</p>
+            
+            <p style="color: #666; font-size: 12px; margin-top: 40px;">
+                This is an automated confirmation from CareConnect.
+            </p>
+        </body>
+        </html>
+        """
+
+        text_content = f"""
+        Request Received
+        
+        Thank you for reaching out. We've received your request for human assistance.
+        
+        Confirmation Code: {incident_details.get('confirmation_code', 'N/A')}
+        Incident ID: #{incident_details.get('incident_id', 'N/A')}
+        
+        WHAT HAPPENS NEXT?
+        1. Our care team has been notified
+        2. A staff member will review your conversation
+        3. We'll contact you within {incident_details.get('estimated_response_time', '24 hours')}
+        
+        ⚠️ FOR MEDICAL EMERGENCIES:
+        Please call 911 or go to your nearest emergency room immediately. Do not wait for a response from our team.
+        
+        YOUR INFORMATION
+        Subject: {incident_details.get('subject', 'N/A')}
+        Contact Email: {patient_email}
+        Contact Phone: {incident_details.get('patient_phone', 'Not provided')}
+        
+        We appreciate your patience and look forward to assisting you.
+        """
+
+        return await self.client.send_email(patient_email, subject, html_content, text_content)

@@ -2,17 +2,29 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   Box,
+  Button,
   Card,
   CardContent,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Grid,
   IconButton,
+  MenuItem,
   Paper,
   TextField,
   Typography,
   Chip,
   CircularProgress,
+  Alert,
 } from '@mui/material';
-import { Send as SendIcon, ThumbUp, ThumbDown } from '@mui/icons-material';
+import { 
+  Send as SendIcon, 
+  SupportAgent as SupportAgentIcon,
+  Phone as PhoneIcon,
+} from '@mui/icons-material';
 import { api } from '@/lib/api';
 import type { ChatMessage, ToolResult } from '@/types/api';
 
@@ -20,6 +32,12 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [toolResults, setToolResults] = useState<ToolResult[]>([]);
+  const [handoverDialogOpen, setHandoverDialogOpen] = useState(false);
+  const [handoverSubject, setHandoverSubject] = useState('');
+  const [handoverPhone, setHandoverPhone] = useState('');
+  const [handoverPriority, setHandoverPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [handoverSuccess, setHandoverSuccess] = useState(false);
+  const [confirmationCode, setConfirmationCode] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const chatMutation = useMutation({
@@ -27,6 +45,15 @@ export default function ChatPage() {
     onSuccess: (data) => {
       setMessages((prev) => [...prev, data.message]);
       setToolResults(data.tool_results);
+    },
+  });
+
+  const handoverMutation = useMutation({
+    mutationFn: (data: { subject: string; phone: string | null; priority: string }) =>
+      api.requestHandover(messages, data.subject, data.phone, data.priority),
+    onSuccess: (data) => {
+      setHandoverSuccess(true);
+      setConfirmationCode(data.confirmation_code);
     },
   });
 
@@ -38,6 +65,37 @@ export default function ChatPage() {
     setInput('');
 
     chatMutation.mutate([...messages, userMessage]);
+  };
+
+  const handleHandoverClick = () => {
+    if (messages.length === 0) {
+      alert('Please start a conversation first before requesting human assistance.');
+      return;
+    }
+    setHandoverDialogOpen(true);
+    setHandoverSuccess(false);
+  };
+
+  const handleHandoverSubmit = () => {
+    if (!handoverSubject.trim()) {
+      alert('Please provide a subject for your request.');
+      return;
+    }
+
+    handoverMutation.mutate({
+      subject: handoverSubject,
+      phone: handoverPhone || null,
+      priority: handoverPriority,
+    });
+  };
+
+  const handleHandoverClose = () => {
+    setHandoverDialogOpen(false);
+    setHandoverSubject('');
+    setHandoverPhone('');
+    setHandoverPriority('medium');
+    setHandoverSuccess(false);
+    setConfirmationCode('');
   };
 
   useEffect(() => {
@@ -139,9 +197,118 @@ export default function ChatPage() {
                 • Get directions
               </Typography>
             </Box>
+            <Box sx={{ mt: 3 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="warning"
+                startIcon={<SupportAgentIcon />}
+                onClick={handleHandoverClick}
+                disabled={messages.length === 0}
+              >
+                Talk to a Human
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                Request assistance from our care team
+              </Typography>
+            </Box>
           </CardContent>
         </Card>
       </Grid>
+
+      {/* Handover Dialog */}
+      <Dialog open={handoverDialogOpen} onClose={handleHandoverClose} maxWidth="sm" fullWidth>
+        {!handoverSuccess ? (
+          <>
+            <DialogTitle>Request Human Assistance</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                Our care team will review your conversation and contact you as soon as possible.
+              </DialogContentText>
+              <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
+                <strong>For medical emergencies:</strong> Please call 911 immediately.
+              </Alert>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Subject / Reason"
+                type="text"
+                fullWidth
+                required
+                value={handoverSubject}
+                onChange={(e) => setHandoverSubject(e.target.value)}
+                placeholder="e.g., Need help booking appointment, billing question"
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                margin="dense"
+                label="Phone Number (Optional)"
+                type="tel"
+                fullWidth
+                value={handoverPhone}
+                onChange={(e) => setHandoverPhone(e.target.value)}
+                placeholder="+1-555-123-4567"
+                InputProps={{
+                  startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active' }} />,
+                }}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                select
+                margin="dense"
+                label="Priority"
+                fullWidth
+                value={handoverPriority}
+                onChange={(e) => setHandoverPriority(e.target.value as any)}
+              >
+                <MenuItem value="low">Low - General inquiry</MenuItem>
+                <MenuItem value="medium">Medium - Need assistance</MenuItem>
+                <MenuItem value="high">High - Urgent matter</MenuItem>
+                <MenuItem value="urgent">Urgent - Critical issue</MenuItem>
+              </TextField>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleHandoverClose}>Cancel</Button>
+              <Button
+                onClick={handleHandoverSubmit}
+                variant="contained"
+                color="primary"
+                disabled={handoverMutation.isPending || !handoverSubject.trim()}
+              >
+                {handoverMutation.isPending ? 'Submitting...' : 'Submit Request'}
+              </Button>
+            </DialogActions>
+          </>
+        ) : (
+          <>
+            <DialogTitle>Request Submitted</DialogTitle>
+            <DialogContent>
+              <Alert severity="success" sx={{ mb: 2 }}>
+                Your request has been received!
+              </Alert>
+              <Typography variant="body1" gutterBottom>
+                Thank you for reaching out. Our care team has been notified and will contact you within 24 hours.
+              </Typography>
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Confirmation Code
+                </Typography>
+                <Typography variant="h6" color="primary">
+                  {confirmationCode}
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                Please save this confirmation code for your records.
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleHandoverClose} variant="contained">
+                Close
+              </Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Grid>
   );
 }

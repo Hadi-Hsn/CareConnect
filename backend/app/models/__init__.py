@@ -1,6 +1,7 @@
 """Models package."""
 from app.models.appointment import Appointment, AppointmentChannel, AppointmentStatus
 from app.models.booking_event import BookingEvent, BookingEventType
+from app.models.handover import HandoverIncident, IncidentPriority, IncidentStatus
 from app.models.lab import LabTest
 from app.models.provider import Provider, ProviderType
 from app.models.user import User, UserRole
@@ -16,4 +17,7 @@ __all__ = [
     "LabTest",
     "BookingEvent",
     "BookingEventType",
+    "HandoverIncident",
+    "IncidentStatus",
+    "IncidentPriority",
 ]

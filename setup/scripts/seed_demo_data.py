@@ -26,12 +26,14 @@ async def seed_users():
             User(
                 email="patient@careconnect.health",
                 name="John Doe",
+                phone="+1-555-123-4567",
                 role=UserRole.PATIENT,
                 hashed_password=get_password_hash("password123"),
             ),
             User(
                 email="admin@careconnect.health",
                 name="Admin User",
+                phone="+1-555-999-8888",
                 role=UserRole.ADMIN,
                 hashed_password=get_password_hash("admin123"),
             ),
