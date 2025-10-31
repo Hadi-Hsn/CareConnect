@@ -1,9 +1,7 @@
-"""Email client for sending notifications via SMTP."""
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+"""Email client for sending notifications via SendGrid."""
 from typing import Any
 
-import aiosmtplib
+import httpx
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -12,50 +10,82 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 
-class SMTPEmailClient:
-    """SMTP email client."""
+class SendGridEmailClient:
+    """SendGrid email client."""
+
+    def __init__(self) -> None:
+        """Initialize SendGrid client."""
+        self.api_key = settings.sendgrid_api_key
+        self.api_url = "https://api.sendgrid.com/v3/mail/send"
 
     async def send_email(
         self, to_email: str, subject: str, html_content: str, text_content: str | None = None
     ) -> bool:
-        """Send email via SMTP."""
+        """Send email via SendGrid API."""
         try:
-            message = MIMEMultipart("alternative")
-            message["Subject"] = subject
-            message["From"] = settings.email_from
-            message["To"] = to_email
+            payload = {
+                "personalizations": [
+                    {
+                        "to": [{"email": to_email}],
+                        "subject": subject
+                    }
+                ],
+                "from": {
+                    "email": settings.email_from,
+                    "name": settings.email_from_name
+                },
+                "content": []
+            }
 
             if text_content:
-                part1 = MIMEText(text_content, "plain")
-                message.attach(part1)
+                payload["content"].append({
+                    "type": "text/plain",
+                    "value": text_content
+                })
 
-            part2 = MIMEText(html_content, "html")
-            message.attach(part2)
+            payload["content"].append({
+                "type": "text/html",
+                "value": html_content
+            })
 
-            await aiosmtplib.send(
-                message,
-                hostname=settings.smtp_host,
-                port=settings.smtp_port,
-                username=settings.smtp_user,
-                password=settings.smtp_password,
-                use_tls=True,
-            )
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
 
-            logger.info("email_sent", to=to_email, subject=subject, provider="smtp")
-            return True
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    self.api_url,
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0
+                )
+
+                if response.status_code in (200, 202):
+                    logger.info("email_sent", to=to_email, subject=subject, provider="sendgrid")
+                    return True
+                else:
+                    logger.error(
+                        "email_send_failed",
+                        to=to_email,
+                        status_code=response.status_code,
+                        response=response.text,
+                        provider="sendgrid"
+                    )
+                    return False
 
         except Exception as e:
-            logger.error("email_send_failed", to=to_email, error=str(e), provider="smtp")
+            logger.error("email_send_failed", to=to_email, error=str(e), provider="sendgrid")
             return False
 
 
 class EmailService:
-    """Email service using SMTP."""
+    """Email service using SendGrid."""
 
     def __init__(self) -> None:
         """Initialize email service."""
-        self.client = SMTPEmailClient()
-        logger.info("email_service_initialized", provider="smtp")
+        self.client = SendGridEmailClient()
+        logger.info("email_service_initialized", provider="sendgrid")
 
     async def send_confirmation(self, user_email: str, details: dict[str, Any]) -> bool:
         """Send appointment confirmation email."""

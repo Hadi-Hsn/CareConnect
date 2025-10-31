@@ -33,12 +33,10 @@ class Settings(BaseSettings):
     vector_store_path: str = "./data/faiss_index"
     vector_store_type: Literal["faiss", "pgvector", "weaviate"] = "faiss"
 
-    # Email (SMTP only)
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    email_from: str = "noreply@careconnect.health"
+    # Email (SendGrid)
+    sendgrid_api_key: str = ""
+    email_from: str = "hadihacan@gmail.com"
+    email_from_name: str = "CareConnect"
 
     # Auth
     jwt_secret: str = secrets.token_urlsafe(32)
