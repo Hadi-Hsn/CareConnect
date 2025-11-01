@@ -232,6 +232,29 @@ class ApiClient {
     const { data } = await this.client.get('/handover/incidents/stats/overview');
     return data;
   }
+
+  // Voice
+  async textToSpeech(text: string, voice?: string): Promise<Blob> {
+    const { data } = await this.client.post(
+      '/voice/text-to-speech',
+      { text, voice },
+      { responseType: 'blob' }
+    );
+    return data;
+  }
+
+  async speechToText(audioBlob: Blob, language: string = 'en'): Promise<string> {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.webm');
+    formData.append('language', language);
+
+    const { data } = await this.client.post<{ text: string }>('/voice/speech-to-text', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data.text;
+  }
 }
 
 export const api = new ApiClient();

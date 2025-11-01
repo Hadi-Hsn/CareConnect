@@ -12,7 +12,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.api.v1 import admin, appointments, auth, email, files, handover, health, labs, metrics, providers, rag
+from app.api.v1 import admin, appointments, auth, email, files, handover, health, labs, metrics, providers, rag, voice
 from app.api.v1.agent import chat as agent_chat
 from app.core.config import get_settings
 from app.core.db import close_db, init_db
@@ -101,6 +101,7 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(agent_chat.router, prefix="/api/v1/agent", tags=["Agent"])
 app.include_router(handover.router, prefix="/api/v1/handover", tags=["Handover"])
+app.include_router(voice.router, prefix="/api/v1/voice", tags=["Voice"])
 app.include_router(rag.router, prefix="/api/v1/rag", tags=["RAG"])
 app.include_router(files.router, prefix="/api/v1/files", tags=["Files"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])

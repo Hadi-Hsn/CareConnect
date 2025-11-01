@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     openai_embedding_dimensions: int = 3072
     openai_max_tokens: int = 4096
     openai_temperature: float = 0.7
+    
+    # OpenAI Voice
+    openai_tts_model: str = "tts-1"  # tts-1 or tts-1-hd
+    openai_tts_voice: str = "alloy"  # alloy, echo, fable, onyx, nova, shimmer
+    openai_stt_model: str = "whisper-1"
 
     # Vector Store
     vector_store_path: str = "./data/faiss_index"

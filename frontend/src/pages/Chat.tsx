@@ -19,25 +19,37 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  useTheme,
+  useMediaQuery,
+  Divider,
+  Tooltip,
 } from '@mui/material';
 import { 
   Send as SendIcon, 
   SupportAgent as SupportAgentIcon,
   Phone as PhoneIcon,
+  Mic as MicIcon,
+  Chat as ChatIcon,
+  CalendarToday as CalendarIcon,
+  Science as ScienceIcon,
+  LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 import type { ChatMessage, ToolResult } from '@/types/api';
+import VoiceChat from '@/components/VoiceChat';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [toolResults, setToolResults] = useState<ToolResult[]>([]);
+  const [voiceMode, setVoiceMode] = useState(false);
   const [handoverDialogOpen, setHandoverDialogOpen] = useState(false);
   const [handoverSubject, setHandoverSubject] = useState('');
   const [handoverPhone, setHandoverPhone] = useState('');
   const [handoverPriority, setHandoverPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [handoverSuccess, setHandoverSuccess] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState('');
+  const [lastResponseText, setLastResponseText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const chatMutation = useMutation({
@@ -45,6 +57,7 @@ export default function ChatPage() {
     onSuccess: (data) => {
       setMessages((prev) => [...prev, data.message]);
       setToolResults(data.tool_results);
+      setLastResponseText(data.message.content);
     },
   });
 
@@ -98,6 +111,21 @@ export default function ChatPage() {
     setConfirmationCode('');
   };
 
+  // Voice mode handlers
+  const handleVoiceTranscription = (text: string) => {
+    const userMessage: ChatMessage = { role: 'user', content: text };
+    setMessages((prev) => [...prev, userMessage]);
+    chatMutation.mutate([...messages, userMessage]);
+  };
+
+  const handleSpeechToText = async (audioBlob: Blob): Promise<string> => {
+    return await api.speechToText(audioBlob);
+  };
+
+  const handleTextToSpeech = async (text: string): Promise<Blob> => {
+    return await api.textToSpeech(text);
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -106,59 +134,96 @@ export default function ChatPage() {
     <Grid container spacing={3} sx={{ height: 'calc(100vh - 100px)' }}>
       <Grid item xs={12} md={8}>
         <Paper elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h5">Chat with CareConnect</Typography>
-            <Typography variant="body2" color="text.secondary">
-              I can help you book appointments, find providers, and answer facility questions
-            </Typography>
-          </Box>
-          <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-            {messages.map((msg, idx) => (
-              <Box
-                key={idx}
-                sx={{
-                  mb: 2,
-                  display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h5">Chat with CareConnect</Typography>
+              <Typography variant="body2" color="text.secondary">
+                I can help you book appointments, find providers, and answer facility questions
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton
+                onClick={() => setVoiceMode(false)}
+                color={!voiceMode ? 'primary' : 'default'}
+                sx={{ 
+                  border: !voiceMode ? 2 : 1, 
+                  borderColor: !voiceMode ? 'primary.main' : 'divider' 
                 }}
               >
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    maxWidth: '70%',
-                    bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
-                    color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                  }}
-                >
-                  <Typography variant="body1">{msg.content}</Typography>
-                </Paper>
-              </Box>
-            ))}
-            {chatMutation.isPending && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                <CircularProgress size={24} />
-              </Box>
-            )}
-            <div ref={messagesEndRef} />
+                <ChatIcon />
+              </IconButton>
+              <IconButton
+                onClick={() => setVoiceMode(true)}
+                color={voiceMode ? 'primary' : 'default'}
+                sx={{ 
+                  border: voiceMode ? 2 : 1, 
+                  borderColor: voiceMode ? 'primary.main' : 'divider' 
+                }}
+              >
+                <MicIcon />
+              </IconButton>
+            </Box>
           </Box>
-          <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
-            <TextField
-              fullWidth
-              placeholder="Type your message..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              disabled={chatMutation.isPending}
+
+          {voiceMode ? (
+            <VoiceChat
+              onTranscription={handleVoiceTranscription}
+              onSpeechToText={handleSpeechToText}
+              onTextToSpeech={handleTextToSpeech}
+              responseText={lastResponseText}
+              isProcessing={chatMutation.isPending}
             />
-            <IconButton
-              color="primary"
-              onClick={handleSend}
-              disabled={chatMutation.isPending || !input.trim()}
-            >
-              <SendIcon />
-            </IconButton>
-          </Box>
+          ) : (
+            <>
+              <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+                {messages.map((msg, idx) => (
+                  <Box
+                    key={idx}
+                    sx={{
+                      mb: 2,
+                      display: 'flex',
+                      justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                    }}
+                  >
+                    <Paper
+                      elevation={1}
+                      sx={{
+                        p: 2,
+                        maxWidth: '70%',
+                        bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
+                        color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                      }}
+                    >
+                      <Typography variant="body1">{msg.content}</Typography>
+                    </Paper>
+                  </Box>
+                ))}
+                {chatMutation.isPending && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                )}
+                <div ref={messagesEndRef} />
+              </Box>
+              <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Type your message..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                  disabled={chatMutation.isPending}
+                />
+                <IconButton
+                  color="primary"
+                  onClick={handleSend}
+                  disabled={chatMutation.isPending || !input.trim()}
+                >
+                  <SendIcon />
+                </IconButton>
+              </Box>
+            </>
+          )}
         </Paper>
       </Grid>
       <Grid item xs={12} md={4}>
