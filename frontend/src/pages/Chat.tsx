@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Box,
   Button,
@@ -204,9 +206,63 @@ export default function ChatPage() {
                         maxWidth: '70%',
                         bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
                         color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                        '& p': { margin: '0.5em 0' },
+                        '& p:first-of-type': { marginTop: 0 },
+                        '& p:last-of-type': { marginBottom: 0 },
+                        '& ul, & ol': { 
+                          marginTop: '0.5em', 
+                          marginBottom: '0.5em',
+                          paddingLeft: '1.5em'
+                        },
+                        '& li': { marginBottom: '0.25em' },
+                        '& strong': { fontWeight: 700 },
+                        '& em': { fontStyle: 'italic' },
+                        '& code': {
+                          backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          fontFamily: 'monospace',
+                          fontSize: '0.9em'
+                        },
+                        '& pre': {
+                          backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                          padding: '1em',
+                          borderRadius: '4px',
+                          overflow: 'auto',
+                          '& code': {
+                            backgroundColor: 'transparent',
+                            padding: 0
+                          }
+                        },
+                        '& h1, & h2, & h3, & h4, & h5, & h6': {
+                          marginTop: '0.5em',
+                          marginBottom: '0.5em',
+                          fontWeight: 600
+                        },
+                        '& blockquote': {
+                          borderLeft: '3px solid',
+                          borderColor: msg.role === 'user' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)',
+                          paddingLeft: '1em',
+                          marginLeft: 0,
+                          fontStyle: 'italic'
+                        }
                       }}
                     >
-                      <Typography variant="body1">{msg.content}</Typography>
+                      {msg.role === 'user' ? (
+                        <Typography variant="body1">{msg.content}</Typography>
+                      ) : (
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            p: ({ children }) => <Typography variant="body1" component="p">{children}</Typography>,
+                            strong: ({ children }) => <strong>{children}</strong>,
+                            em: ({ children }) => <em>{children}</em>,
+                            li: ({ children }) => <li><Typography variant="body2" component="span">{children}</Typography></li>,
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      )}
                     </Paper>
                   </Box>
                 ))}
