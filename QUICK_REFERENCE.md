@@ -8,8 +8,8 @@
 ## 🔐 Demo Accounts
 | Role | Email | Password |
 |------|-------|----------|
-| Patient | patient@careconnect.health | password123 |
-| Admin | admin@careconnect.health | admin123 |
+| Patient | hadihacan@gmail.com | password123 |
+| Admin | hadi.wmail@gmail.com | admin123 |
 
 ## 🎨 AUB Theme Colors
 | Color | HEX | Usage |

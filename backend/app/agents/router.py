@@ -59,8 +59,15 @@ class AgentRouter:
         """
         start_time = time.perf_counter()
 
+        # Get current date for the system prompt
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        system_prompt = SYSTEM_PROMPT.format(
+            current_date=current_date,
+            user_id=user_id if user_id else "Not authenticated"
+        )
+
         # Build messages for OpenAI
-        openai_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        openai_messages = [{"role": "system", "content": system_prompt}]
         openai_messages.extend([{"role": m.role, "content": m.content} for m in messages])
 
         # Optional: Pre-retrieve context for information queries
@@ -194,7 +201,9 @@ class AgentRouter:
             if tool_name == "search_timeslots":
                 result = await self._search_timeslots(**arguments)
             elif tool_name == "book_appointment":
-                result = await self._book_appointment(**arguments, user_id=user_id)
+                # Remove user_id from arguments if present (we'll use the authenticated user_id)
+                book_args = {k: v for k, v in arguments.items() if k != 'user_id'}
+                result = await self._book_appointment(**book_args, user_id=user_id)
             elif tool_name == "modify_appointment":
                 result = await self._modify_appointment(**arguments)
             elif tool_name == "cancel_appointment":

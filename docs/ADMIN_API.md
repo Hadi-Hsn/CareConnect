@@ -15,7 +15,7 @@ All admin endpoints require:
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@careconnect.health",
+    "email": "hadi.wmail@gmail.com",
     "password": "admin123"
   }'
 
@@ -500,7 +500,7 @@ All admin actions are logged with:
 TOKEN=$(curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@careconnect.health",
+    "email": "hadi.wmail@gmail.com",
     "password": "admin123"
   }' | jq -r '.access_token')
 
@@ -516,7 +516,7 @@ curl http://localhost:8000/api/v1/admin/stats/overview \
 TOKEN=$(curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "patient@careconnect.health",
+    "email": "hadihacan@gmail.com",
     "password": "password123"
   }' | jq -r '.access_token')
 

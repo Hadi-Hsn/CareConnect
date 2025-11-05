@@ -249,7 +249,7 @@ Per 100 conversations (5 min avg, 500 words response):
 
 4. **Test frontend**
    - Visit http://localhost:5173
-   - Login as patient@careconnect.health
+   - Login as hadihacan@gmail.com
    - Navigate to Chat page
    - Click microphone icon
    - Grant microphone permission

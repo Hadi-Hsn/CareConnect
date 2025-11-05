@@ -24,14 +24,14 @@ async def seed_users():
     async with async_session_maker() as session:
         users = [
             User(
-                email="patient@careconnect.health",
+                email="hadihacan@gmail.com",
                 name="John Doe",
                 phone="+1-555-123-4567",
                 role=UserRole.PATIENT,
                 hashed_password=get_password_hash("password123"),
             ),
             User(
-                email="admin@careconnect.health",
+                email="hadi.wmail@gmail.com",
                 name="Admin User",
                 phone="+1-555-999-8888",
                 role=UserRole.ADMIN,
@@ -316,8 +316,8 @@ async def main():
     print("✅ Database seeding completed successfully!")
     print()
     print("Demo credentials:")
-    print("  Patient: patient@careconnect.health / password123")
-    print("  Admin:   admin@careconnect.health / admin123")
+    print("  Patient: hadihacan@gmail.com / password123")
+    print("  Admin:   hadi.wmail@gmail.com / admin123")
 
 
 if __name__ == "__main__":

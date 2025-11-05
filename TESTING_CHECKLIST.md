@@ -19,8 +19,8 @@ All containers are running successfully:
 - [ ] Hospital icon with "AUB Medical Center" branding visible
 - [ ] Tabbed interface (Login/Register tabs)
 - [ ] Demo account buttons present:
-  - Patient: `patient@careconnect.health` / `password123`
-  - Admin: `admin@careconnect.health` / `admin123`
+  - Patient: `hadihacan@gmail.com` / `password123`
+  - Admin: `hadi.wmail@gmail.com` / `admin123`
 - [ ] Form fields styled with AUB colors
 - [ ] Mobile responsive (test at 375px, 768px, 1024px widths)
 
@@ -46,7 +46,7 @@ All containers are running successfully:
 
 ### Voice Chat Component
 1. **Login as Patient:**
-   - Email: `patient@careconnect.health`
+   - Email: `hadihacan@gmail.com`
    - Password: `password123`
 
 2. **Navigate to Chat Page:**

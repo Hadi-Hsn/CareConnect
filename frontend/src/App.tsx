@@ -5,6 +5,8 @@ import ChatPage from './pages/Chat';
 import AppointmentsPage from './pages/Appointments';
 import LabsPage from './pages/Labs';
 import AdminPage from './pages/Admin';
+import IncidentsPage from './pages/Incidents';
+import ProvidersPage from './pages/Providers';
 import LoginPage from './pages/Login';
 
 function App() {
@@ -64,11 +66,35 @@ function App() {
             }
           />
           <Route
+            path="/providers"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <ProvidersPage />
+                </Layout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
             path="/admin"
             element={
               isAuthenticated ? (
                 <Layout>
                   <AdminPage />
+                </Layout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/incidents"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <IncidentsPage />
                 </Layout>
               ) : (
                 <Navigate to="/login" />

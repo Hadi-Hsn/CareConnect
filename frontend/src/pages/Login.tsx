@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -47,7 +46,6 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +53,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await api.login(email, password);
-      navigate('/chat');
+      // Force a page reload to update authentication state
+      window.location.href = '/chat';
     } catch (err) {
       setError('Invalid email or password');
     } finally {
@@ -69,7 +68,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await api.register(email, name, password);
-      navigate('/chat');
+      // Force a page reload to update authentication state
+      window.location.href = '/chat';
     } catch (err) {
       setError('Registration failed. Please try again.');
     } finally {
@@ -82,7 +82,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await api.login(userEmail, userPassword);
-      navigate('/chat');
+      // Force a page reload to update authentication state
+      window.location.href = '/chat';
     } catch (err) {
       setError('Demo login failed');
     } finally {
@@ -257,7 +258,7 @@ export default function LoginPage() {
                     variant="outlined"
                     size={isMobile ? 'small' : 'medium'}
                     fullWidth
-                    onClick={() => handleDemoLogin('patient@careconnect.health', 'patient123')}
+                    onClick={() => handleDemoLogin('hadihacan@gmail.com', 'password123')}
                     disabled={loading}
                     sx={{ justifyContent: 'flex-start', px: 2 }}
                   >
@@ -266,7 +267,7 @@ export default function LoginPage() {
                         Patient Demo
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        patient@careconnect.health
+                        hadihacan@gmail.com
                       </Typography>
                     </Box>
                   </Button>
@@ -274,7 +275,7 @@ export default function LoginPage() {
                     variant="outlined"
                     size={isMobile ? 'small' : 'medium'}
                     fullWidth
-                    onClick={() => handleDemoLogin('admin@careconnect.health', 'admin123')}
+                    onClick={() => handleDemoLogin('hadi.wmail@gmail.com', 'admin123')}
                     disabled={loading}
                     sx={{ justifyContent: 'flex-start', px: 2 }}
                   >
@@ -283,7 +284,7 @@ export default function LoginPage() {
                         Admin Demo
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        admin@careconnect.health
+                        hadi.wmail@gmail.com
                       </Typography>
                     </Box>
                   </Button>

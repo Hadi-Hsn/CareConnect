@@ -52,8 +52,20 @@ export default function ChatPage() {
   const [lastResponseText, setLastResponseText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Get current user ID from localStorage
+  const getCurrentUserId = (): number | undefined => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return undefined;
+    try {
+      const user = JSON.parse(userStr);
+      return user.id;
+    } catch {
+      return undefined;
+    }
+  };
+
   const chatMutation = useMutation({
-    mutationFn: (messages: ChatMessage[]) => api.chat(messages, 1),
+    mutationFn: (messages: ChatMessage[]) => api.chat(messages, getCurrentUserId()),
     onSuccess: (data) => {
       setMessages((prev) => [...prev, data.message]);
       setToolResults(data.tool_results);

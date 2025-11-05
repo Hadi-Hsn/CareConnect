@@ -5,7 +5,7 @@
 ### Access the System
 
 1. **Login Credentials**
-   - Email: `admin@careconnect.health`
+   - Email: `hadi.wmail@gmail.com`
    - Password: `admin123` (change in production!)
 
 2. **API Documentation**
@@ -367,7 +367,7 @@ While the API is powerful, you can also use the interactive documentation:
    ```bash
    curl -X POST http://localhost:8000/api/v1/auth/login \
      -H "Content-Type: application/json" \
-     -d '{"email": "admin@careconnect.health", "password": "admin123"}'
+     -d '{"email": "hadi.wmail@gmail.com", "password": "admin123"}'
    ```
 
 2. Check token is valid:

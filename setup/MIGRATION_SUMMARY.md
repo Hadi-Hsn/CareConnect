@@ -156,7 +156,7 @@ docker-compose up backend frontend
 ## Data Created
 
 ### Database Records
-- **Users**: patient@careconnect.health, admin@careconnect.health
+- **Users**: hadihacan@gmail.com, hadi.wmail@gmail.com
 - **Providers**: 5 doctors (Sara Haddad, Omar Nassar, Maria Rodriguez, James Chen, Sarah Johnson)
 - **Lab Tests**: 5 tests (CBC, Lipid Panel, Thyroid, A1C, CMP)
 

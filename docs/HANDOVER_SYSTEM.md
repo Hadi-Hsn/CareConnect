@@ -190,7 +190,7 @@ Priority: 🟠 HIGH
 
 Patient Information:
 - Name: John Doe
-- Email: patient@careconnect.health
+- Email: hadihacan@gmail.com
 - Phone: +1-555-123-4567
 - Incident ID: #12
 
@@ -307,12 +307,12 @@ SELECT id, name, email, phone FROM users;
 ```
 
 ### 3. Test Handover Flow
-1. Login as patient: `patient@careconnect.health` / `password123`
+1. Login as patient: `hadihacan@gmail.com` / `password123`
 2. Start a conversation
 3. Click "Talk to a Human"
 4. Fill out form and submit
 5. Check email (admin inbox)
-6. Login as admin: `admin@careconnect.health` / `admin123`
+6. Login as admin: `hadi.wmail@gmail.com` / `admin123`
 7. Navigate to "Incidents" in admin panel
 8. View and update incident
 
@@ -360,7 +360,7 @@ Add to your routing configuration:
   {
     "id": 1,
     "patient_name": "John Doe",
-    "patient_email": "patient@careconnect.health",
+    "patient_email": "hadihacan@gmail.com",
     "subject": "Need help booking appointment",
     "priority": "medium",
     "status": "pending",

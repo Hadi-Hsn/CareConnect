@@ -18,7 +18,7 @@ Wait for initialization (~30 seconds)
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@careconnect.health",
+    "email": "hadi.wmail@gmail.com",
     "password": "admin123"
   }' | jq -r '.access_token'
 ```
@@ -195,14 +195,14 @@ curl -X POST http://localhost:8000/api/v1/admin/doctors/5/block-time \
 # Re-login to get fresh token
 export TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "admin@careconnect.health", "password": "admin123"}' \
+  -d '{"email": "hadi.wmail@gmail.com", "password": "admin123"}' \
   | jq -r '.access_token')
 ```
 
 ### "Admin access required"
 
 Make sure you're using admin credentials:
-- Email: `admin@careconnect.health`
+- Email: `hadi.wmail@gmail.com`
 - Password: `admin123`
 
 ### Docker not running

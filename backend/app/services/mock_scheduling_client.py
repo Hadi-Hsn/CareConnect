@@ -175,7 +175,7 @@ class MockSchedulingClient(SchedulingClient):
                     "confirmation_code": confirmation_code,
                     "time_start": appointment.time_start.isoformat(),
                     "time_end": appointment.time_end.isoformat(),
-                    "status": appointment.status.value,
+                    "status": str(appointment.status) if hasattr(appointment.status, 'value') else appointment.status,
                 }
 
         except Exception as e:
@@ -221,7 +221,7 @@ class MockSchedulingClient(SchedulingClient):
                     "appointment_id": appointment.id,
                     "time_start": appointment.time_start.isoformat(),
                     "time_end": appointment.time_end.isoformat(),
-                    "status": appointment.status.value,
+                    "status": str(appointment.status) if hasattr(appointment.status, 'value') else appointment.status,
                 }
 
         except Exception as e:
@@ -249,7 +249,7 @@ class MockSchedulingClient(SchedulingClient):
 
                 return {
                     "appointment_id": appointment.id,
-                    "status": appointment.status.value,
+                    "status": str(appointment.status) if hasattr(appointment.status, 'value') else appointment.status,
                     "message": "Appointment successfully cancelled",
                 }
 

@@ -76,12 +76,12 @@ careconnect-frontend   Up 11 minutes             0.0.0.0:5173->5173/tcp
 - ✅ Demo data seeded successfully (5 doctor PDFs, 14 vectors in vector store)
 
 ### Demo Credentials
-- **Patient Account:**
-  - Email: `patient@careconnect.health`
+- **Patient Account**
+  - Email: `hadihacan@gmail.com`
   - Password: `password123`
 
-- **Admin Account:**
-  - Email: `admin@careconnect.health`
+- **Admin Account**
+  - Email: `hadi.wmail@gmail.com`
   - Password: `admin123`
 
 ---

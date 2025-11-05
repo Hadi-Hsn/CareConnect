@@ -304,7 +304,7 @@ curl http://localhost:8000/api/v1/rag/stats
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "patient@careconnect.health",
+    "email": "hadihacan@gmail.com",
     "password": "password123"
   }'
 ```

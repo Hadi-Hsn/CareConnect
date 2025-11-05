@@ -379,7 +379,7 @@ JWT_EXPIRATION_MINUTES: 1440
 ### Admin User
 ```yaml
 # Default credentials (change in production!)
-Email: admin@careconnect.health
+Email: hadi.wmail@gmail.com
 Password: admin123
 Role: admin
 ```

@@ -29,17 +29,19 @@ import {
   LocalHospital as HospitalIcon,
   Person as PersonIcon,
   ReportProblem as IncidentIcon,
+  MedicalServices as ProvidersIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 
 const DRAWER_WIDTH = 260;
 
-const menuItems = [
-  { text: 'Chat', icon: <ChatIcon />, path: '/chat', color: '#840132' },
-  { text: 'Appointments', icon: <EventIcon />, path: '/appointments', color: '#000000' },
-  { text: 'Lab Tests', icon: <ScienceIcon />, path: '/labs', color: '#808080' },
-  { text: 'Admin', icon: <AdminIcon />, path: '/admin', color: '#840132' },
-  { text: 'Incidents', icon: <IncidentIcon />, path: '/incidents', color: '#000000' },
+const allMenuItems = [
+  { text: 'Chat', icon: <ChatIcon />, path: '/chat', color: '#840132', roles: ['patient'] },
+  { text: 'Appointments', icon: <EventIcon />, path: '/appointments', color: '#000000', roles: ['patient', 'admin', 'staff'] },
+  { text: 'Lab Tests', icon: <ScienceIcon />, path: '/labs', color: '#808080', roles: ['patient', 'admin', 'staff'] },
+  { text: 'Providers', icon: <ProvidersIcon />, path: '/providers', color: '#840132', roles: ['admin', 'staff'] },
+  { text: 'Incidents', icon: <IncidentIcon />, path: '/incidents', color: '#000000', roles: ['admin', 'staff'] },
+  { text: 'Admin', icon: <AdminIcon />, path: '/admin', color: '#840132', roles: ['admin'] },
 ];
 
 interface LayoutProps {
@@ -53,6 +55,16 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  // Get current user and filter menu items based on role
+  const currentUser = api.getCurrentUser();
+  const userRole = currentUser?.role || 'patient';
+  
+  // Debug logging
+  console.log('Current user:', currentUser);
+  console.log('User role:', userRole);
+  
+  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -239,6 +251,14 @@ export default function Layout({ children }: LayoutProps) {
               },
             }}
           >
+            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                {currentUser?.name || 'User'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {currentUser?.email}
+              </Typography>
+            </Box>
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />

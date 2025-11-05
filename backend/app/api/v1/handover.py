@@ -256,7 +256,7 @@ async def update_incident(
         "incident_updated",
         incident_id=incident_id,
         updated_by=current_user.id,
-        status=incident.status.value,
+        status=incident.status.value if hasattr(incident.status, 'value') else incident.status,
     )
     
     return IncidentDetail(

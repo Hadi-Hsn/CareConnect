@@ -27,8 +27,8 @@ setup/
 
 ### 1. Database Records
 - **Users** (2):
-  - Patient: `patient@careconnect.health` / `password123`
-  - Admin: `admin@careconnect.health` / `admin123`
+  - Patient: `hadihacan@gmail.com` / `password123`
+  - Admin: `hadi.wmail@gmail.com` / `admin123`
 
 - **Providers** (5):
   - Dr. Sara Haddad (Cardiology)

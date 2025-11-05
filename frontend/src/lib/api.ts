@@ -49,6 +49,7 @@ class ApiClient {
       role: 'patient',
     });
     localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
     return data;
   }
 
@@ -58,11 +59,23 @@ class ApiClient {
       password,
     });
     localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
     return data;
   }
 
   logout(): void {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+  }
+
+  getCurrentUser(): User | null {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr) as User;
+    } catch {
+      return null;
+    }
   }
 
   // Chat
@@ -101,6 +114,34 @@ class ApiClient {
   async getProvider(id: number): Promise<Provider> {
     const { data } = await this.client.get<Provider>(`/providers/${id}`);
     return data;
+  }
+
+  async createProvider(provider: {
+    name: string;
+    type: string;
+    department: string;
+    specialty?: string | null;
+    bio?: string | null;
+    availability_calendar_id?: string | null;
+  }): Promise<Provider> {
+    const { data } = await this.client.post<Provider>('/providers', provider);
+    return data;
+  }
+
+  async updateProvider(id: number, updates: {
+    name?: string;
+    type?: string;
+    department?: string;
+    specialty?: string | null;
+    bio?: string | null;
+    availability_calendar_id?: string | null;
+  }): Promise<Provider> {
+    const { data } = await this.client.patch<Provider>(`/providers/${id}`, updates);
+    return data;
+  }
+
+  async deleteProvider(id: number): Promise<void> {
+    await this.client.delete(`/providers/${id}`);
   }
 
   async getTimeslots(providerId: number, date: string): Promise<{ slots: TimeSlot[] }> {

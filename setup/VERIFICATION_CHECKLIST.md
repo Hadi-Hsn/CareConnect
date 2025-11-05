@@ -65,7 +65,7 @@ SELECT name FROM lab_tests;
 \q
 ```
 
-- [ ] 2 users: patient@careconnect.health, admin@careconnect.health
+- [ ] 2 users: hadihacan@gmail.com, hadi.wmail@gmail.com
 - [ ] 5 providers listed
 - [ ] 5 lab tests listed
 
@@ -165,7 +165,8 @@ http://localhost:5173
 ### 7. Authentication
 
 **Test patient login:**
-- Email: `patient@careconnect.health`
+#### Test Login (Patient)
+- Email: `hadihacan@gmail.com`
 - Password: `password123`
 
 - [ ] Login successful
@@ -173,7 +174,7 @@ http://localhost:5173
 - [ ] Chat interface loads
 
 **Test admin login:**
-- Email: `admin@careconnect.health`
+- Email: `hadi.wmail@gmail.com`
 - Password: `admin123`
 
 - [ ] Login successful

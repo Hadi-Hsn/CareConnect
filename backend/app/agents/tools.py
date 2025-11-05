@@ -21,7 +21,7 @@ TOOLS: list[dict[str, Any]] = [
                     },
                     "date": {
                         "type": "string",
-                        "description": "The date to check availability for, in YYYY-MM-DD format",
+                        "description": "The date to check availability for, in YYYY-MM-DD format. You must calculate this from relative dates like 'Thursday', 'tomorrow', 'next week', etc. based on the current date.",
                     },
                 },
                 "required": ["date"],
@@ -32,14 +32,10 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "book_appointment",
-            "description": "Book an appointment for a user with a specific provider at a specific timeslot. Only call this after the user has confirmed they want to book.",
+            "description": "Book an appointment for the authenticated user with a specific provider at a specific timeslot. Only call this after the user has confirmed they want to book. DO NOT include user_id - it is automatically provided from authentication.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {
-                        "type": "integer",
-                        "description": "The ID of the user booking the appointment",
-                    },
                     "provider_id": {
                         "type": "integer",
                         "description": "The ID of the provider for the appointment",
@@ -53,7 +49,7 @@ TOOLS: list[dict[str, Any]] = [
                         "description": "Optional reason for the appointment",
                     },
                 },
-                "required": ["user_id", "provider_id", "slot_id"],
+                "required": ["provider_id", "slot_id"],
             },
         },
     },

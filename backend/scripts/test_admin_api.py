@@ -21,7 +21,7 @@ async def test_admin_api():
         login_response = await client.post(
             f"{BASE_URL}/auth/login",
             json={
-                "email": "admin@careconnect.health",
+                "email": "hadi.wmail@gmail.com",
                 "password": "admin123"
             }
         )
@@ -183,7 +183,7 @@ async def test_admin_api():
         patient_login = await client.post(
             f"{BASE_URL}/auth/login",
             json={
-                "email": "patient@careconnect.health",
+                "email": "hadihacan@gmail.com",
                 "password": "password123"
             }
         )

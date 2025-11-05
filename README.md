@@ -38,8 +38,8 @@ Visit:
 - Metrics: http://localhost:8000/metrics
 
 Demo credentials:
-- Patient: `patient@careconnect.health` / `password123`
-- Admin: `admin@careconnect.health` / `admin123`
+- Patient: `hadihacan@gmail.com` / `password123`
+- Admin: `hadi.wmail@gmail.com` / `admin123`
 
 **Admin Features:**
 - Full CRUD operations for doctors/providers

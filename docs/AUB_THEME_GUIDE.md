@@ -75,8 +75,8 @@ Light Gray:   #808080  /* Tertiary/accent color */
 - Responsive icon sizing
 
 **Demo Accounts:**
-- Patient: `patient@careconnect.health` / `patient123`
-- Admin: `admin@careconnect.health` / `admin123`
+- Patient: `hadihacan@gmail.com` / `password123`
+- Admin: `hadi.wmail@gmail.com` / `admin123`
 
 ### 3. Layout Component (`src/components/Layout.tsx`)
 

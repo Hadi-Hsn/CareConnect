@@ -22,8 +22,8 @@ That's it! The setup will automatically:
 ## What You Get
 
 ### Demo Accounts
-- **Patient**: `patient@careconnect.health` / `password123`
-- **Admin**: `admin@careconnect.health` / `admin123`
+- **Patient**: `hadihacan@gmail.com` / `password123`
+- **Admin**: `hadi.wmail@gmail.com` / `admin123`
 
 ### Sample Data
 - 5 doctors/providers

@@ -24,13 +24,13 @@ async def seed_users():
     async with async_session_maker() as session:
         users = [
             User(
-                email="patient@careconnect.health",
+                email="hadihacan@gmail.com",
                 name="John Doe",
                 role=UserRole.PATIENT,
                 hashed_password=get_password_hash("password123"),
             ),
             User(
-                email="admin@careconnect.health",
+                email="hadi.wmail@gmail.com",
                 name="Admin User",
                 role=UserRole.ADMIN,
                 hashed_password=get_password_hash("admin123"),
@@ -62,7 +62,7 @@ async def seed_providers():
             ),
             Provider(
                 name="Dr. Maria Rodriguez",
-                department="Primary Care",
+                department="Internal Medicine",
                 type=ProviderType.PHYSICIAN,
                 specialty="Family Medicine",
                 bio="Comprehensive family healthcare provider",
@@ -76,10 +76,31 @@ async def seed_providers():
             ),
             Provider(
                 name="Sarah Johnson",
-                department="Primary Care",
+                department="Internal Medicine",
                 type=ProviderType.NURSE_PRACTITIONER,
                 specialty="Adult Primary Care",
                 bio="Nurse practitioner focused on preventive care",
+            ),
+            Provider(
+                name="Dr. Ahmed Hassan",
+                department="Neurology",
+                type=ProviderType.PHYSICIAN,
+                specialty="Stroke Care",
+                bio="Neurologist specializing in stroke prevention and treatment",
+            ),
+            Provider(
+                name="Dr. Emily Taylor",
+                department="Pediatrics",
+                type=ProviderType.PHYSICIAN,
+                specialty="General Pediatrics",
+                bio="Pediatrician with expertise in child development",
+            ),
+            Provider(
+                name="Dr. David Kim",
+                department="Oncology",
+                type=ProviderType.SPECIALIST,
+                specialty="Medical Oncology",
+                bio="Oncologist specializing in cancer treatment and care",
             ),
         ]
 
@@ -95,7 +116,7 @@ async def seed_lab_tests():
             LabTest(
                 name="Complete Blood Count (CBC)",
                 code="LAB-CBC",
-                department="Laboratory",
+                department="Hematology",
                 description="Measures different components of blood including red and white blood cells",
                 prep_instructions="No special preparation required",
                 estimated_duration_minutes=15,
@@ -103,7 +124,7 @@ async def seed_lab_tests():
             LabTest(
                 name="Lipid Panel",
                 code="LAB-LIPID",
-                department="Laboratory",
+                department="Cardiology",
                 description="Measures cholesterol and triglyceride levels",
                 prep_instructions="Fasting required before test",
                 fasting_hours=12,
@@ -112,7 +133,7 @@ async def seed_lab_tests():
             LabTest(
                 name="Thyroid Function Test",
                 code="LAB-THYROID",
-                department="Laboratory",
+                department="Endocrinology",
                 description="Measures thyroid hormone levels (TSH, T3, T4)",
                 prep_instructions="No special preparation required",
                 estimated_duration_minutes=15,
@@ -120,7 +141,7 @@ async def seed_lab_tests():
             LabTest(
                 name="Hemoglobin A1C",
                 code="LAB-A1C",
-                department="Laboratory",
+                department="Endocrinology",
                 description="Measures average blood sugar levels over 3 months",
                 prep_instructions="No fasting required",
                 estimated_duration_minutes=15,
@@ -128,11 +149,35 @@ async def seed_lab_tests():
             LabTest(
                 name="Comprehensive Metabolic Panel",
                 code="LAB-CMP",
-                department="Laboratory",
+                department="Nephrology",
                 description="Measures kidney function, blood sugar, and electrolytes",
                 prep_instructions="Fasting recommended",
                 fasting_hours=8,
                 estimated_duration_minutes=15,
+            ),
+            LabTest(
+                name="Liver Function Test",
+                code="LAB-LFT",
+                department="Gastroenterology",
+                description="Evaluates liver health and function",
+                prep_instructions="No special preparation required",
+                estimated_duration_minutes=15,
+            ),
+            LabTest(
+                name="Urinalysis",
+                code="LAB-UA",
+                department="Nephrology",
+                description="Analyzes urine for various health indicators",
+                prep_instructions="First morning urine sample preferred",
+                estimated_duration_minutes=10,
+            ),
+            LabTest(
+                name="Chest X-Ray",
+                code="RAD-CXR",
+                department="Radiology",
+                description="Imaging of chest, heart, and lungs",
+                prep_instructions="Remove jewelry and metal objects",
+                estimated_duration_minutes=30,
             ),
         ]
 
@@ -309,8 +354,8 @@ async def main():
     print("✅ Database seeding completed successfully!")
     print()
     print("Demo credentials:")
-    print("  Patient: patient@careconnect.health / password123")
-    print("  Admin:   admin@careconnect.health / admin123")
+    print("  Patient: hadihacan@gmail.com / password123")
+    print("  Admin:   hadi.wmail@gmail.com / admin123")
 
 
 if __name__ == "__main__":
