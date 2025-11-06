@@ -1,0 +1,101 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: careconnect-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-careconnect}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-careconnect_prod}
+      POSTGRES_DB: ${POSTGRES_DB:-careconnect}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careconnect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  setup:
+    image: ghcr.io/hadi-hsn/careconnect-backend:latest
+    container_name: careconnect-setup
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-careconnect}:${POSTGRES_PASSWORD:-careconnect_prod}@db:5432/${POSTGRES_DB:-careconnect}
+      VECTOR_STORE_PATH: /app/data/vectorstore
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
+      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-3072}
+      PYTHONPATH: /app
+    volumes:
+      - vector_data:/app/data/vectorstore
+      - pdf_data:/app/data/doctor_pdfs
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        python -m alembic upgrade head &&
+        python scripts/seed_providers.py &&
+        python scripts/seed_demo_data.py &&
+        python scripts/generate_doctor_pdfs.py &&
+        python scripts/index_pdfs.py
+      "
+    restart: on-failure
+
+  backend:
+    image: ghcr.io/hadi-hsn/careconnect-backend:latest
+    container_name: careconnect-backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-careconnect}:${POSTGRES_PASSWORD:-careconnect_prod}@db:5432/${POSTGRES_DB:-careconnect}
+      VECTOR_STORE_PATH: /data/faiss_index
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
+      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-3072}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: careconnect
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRATION_MINUTES: "1440"
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://46.62.253.61:5173}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: production
+      RATE_LIMIT_PER_MINUTE: "60"
+      ENABLE_PROMETHEUS: "true"
+      ENABLE_PRIVACY_MODE: "false"
+      MOCK_SCHEDULING: "true"
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-CareConnect}
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+    volumes:
+      - vector_data:/data/faiss_index
+      - pdf_data:/data/doctor_pdfs
+    depends_on:
+      db:
+        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/hadi-hsn/careconnect-frontend:latest
+    container_name: careconnect-frontend
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://46.62.253.61:8000/api/v1}
+      VITE_APP_NAME: CareConnect
+      VITE_ENABLE_ANALYTICS: "false"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  vector_data:
+  pdf_data:
