@@ -20,7 +20,7 @@ jobs:
           mkdir -p deploy
           cp -r backend deploy/
           cp -r frontend deploy/
-          cp docker-compose.prod.yml deploy/docker-compose.yml
+          cp docker-compose.yml deploy/docker-compose.yml
           cat > deploy/deploy.sh << 'DEPLOYEOF'
           #!/bin/bash
           set -e
