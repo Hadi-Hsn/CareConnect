@@ -286,6 +286,7 @@ class AgentRouter:
                     providers_with_slots.append({
                         "provider_id": provider["id"],
                         "provider_name": provider["name"],
+                        "department": provider.get("department", ""),
                         "specialty": provider.get("specialty", ""),
                         "slots": [
                             {
