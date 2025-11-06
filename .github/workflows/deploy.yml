@@ -1,4 +1,4 @@
-name: Deploy to Hetzner
+﻿name: Deploy to Hetzner
 
 on:
   push:
@@ -7,135 +7,76 @@ on:
       - main
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: hadi-hsn/careconnect-backend
-  IMAGE_NAME_FRONTEND: hadi-hsn/careconnect-frontend
-
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy
+          cp -r backend deploy/
+          cp -r frontend deploy/
+          cp docker-compose.prod.yml deploy/docker-compose.yml
+          cat > deploy/deploy.sh << 'DEPLOYEOF'
+          #!/bin/bash
+          set -e
+          echo "=== Starting Deployment ==="
+          df -h
+          docker system prune -af --volumes 2>/dev/null || true
+          docker compose down 2>/dev/null || true
+          docker compose up -d --build
+          sleep 20
+          docker image prune -f
+          docker compose ps
+          docker compose logs --tail=30
+          curl -f http://localhost:8000/health || echo "Health check failed"
+          df -h
+          echo "=== Deployment Complete ==="
+          DEPLOYEOF
+          chmod +x deploy/deploy.sh
+          tar -czf deployment.tar.gz -C deploy .
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Backend
-        id: meta-backend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix={{branch}}-
-
-      - name: Build and push Backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: ${{ steps.meta-backend.outputs.tags }}
-          labels: ${{ steps.meta-backend.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:buildcache,mode=max
-
-      - name: Extract metadata for Frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix={{branch}}-
-
-      - name: Build and push Frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:buildcache,mode=max
-
-      - name: Deploy to Hetzner Server
-        uses: appleboy/ssh-action@v1.0.0
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+      - name: Copy deployment files
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASS }}
-          envs: OPENAI_API_KEY,SENDGRID_API_KEY,EMAIL_FROM
+          source: "deployment.tar.gz"
+          target: "/app/careconnect/"
+
+      - name: Extract and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASS }}
           script: |
             cd /app/careconnect
-            
-            # Login to GitHub Container Registry
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Create/Update .env file with secrets from GitHub
-            cat > .env << EOF
-            # Database Configuration
+            tar -xzf deployment.tar.gz
+            rm deployment.tar.gz
+            cat > .env << ENVEOF
             POSTGRES_USER=careconnect
             POSTGRES_PASSWORD=careconnect_prod_2025
             POSTGRES_DB=careconnect
-            
-            # OpenAI Configuration
-            OPENAI_API_KEY=${OPENAI_API_KEY}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             OPENAI_MODEL=gpt-4o
             OPENAI_EMBEDDING_MODEL=text-embedding-3-large
             OPENAI_EMBEDDING_DIMENSIONS=3072
-            
-            # JWT Configuration
             JWT_SECRET=8f7d6c5b4a3e2d1c0b9a8f7e6d5c4b3a2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5
             JWT_EXPIRATION_MINUTES=1440
-            
-            # Frontend Configuration
             FRONTEND_ORIGIN=http://46.62.253.61:5173
             VITE_API_BASE_URL=http://46.62.253.61:8000/api/v1
-            
-            # Email Configuration (SendGrid)
-            SENDGRID_API_KEY=${SENDGRID_API_KEY}
-            EMAIL_FROM=${EMAIL_FROM}
+            SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
+            EMAIL_FROM=${{ secrets.EMAIL_FROM }}
             EMAIL_FROM_NAME=CareConnect
             ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}
-            
-            # Application Configuration
             LOG_LEVEL=INFO
             ENVIRONMENT=production
-            EOF
-            
-            # Pull the latest images
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:latest
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:latest
-            
-            # Stop and remove old containers
-            docker compose -f docker-compose.prod.yml down
-            
-            # Start new containers
-            docker compose -f docker-compose.prod.yml up -d
-            
-            # Show running containers
-            docker compose -f docker-compose.prod.yml ps
-            
-            # Clean up old images
-            docker image prune -f
-            
-            echo "Deployment completed successfully!"
+            ENVEOF
+            chmod +x deploy.sh
+            ./deploy.sh
