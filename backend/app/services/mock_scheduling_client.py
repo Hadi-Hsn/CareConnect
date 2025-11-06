@@ -1,6 +1,7 @@
 """Mock scheduling client for development."""
 import secrets
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 from typing import Any
 
 from sqlalchemy import select
@@ -13,6 +14,9 @@ from app.schemas.provider import TimeSlot
 from app.services.scheduling_client import SchedulingClient
 
 logger = get_logger(__name__)
+
+# Lebanon timezone
+LEBANON_TZ = ZoneInfo("Asia/Beirut")
 
 
 class MockSchedulingClient(SchedulingClient):
@@ -29,15 +33,31 @@ class MockSchedulingClient(SchedulingClient):
         """Get database session."""
         return async_session_maker()
 
-    def _generate_slots_for_date(self, target_date: date) -> list[TimeSlot]:
-        """Generate timeslots for a given date."""
+    def _generate_slots_for_date(self, target_date: date, filter_past: bool = True) -> list[TimeSlot]:
+        """Generate timeslots for a given date.
+        
+        Args:
+            target_date: The date to generate slots for
+            filter_past: If True, filter out past time slots for today
+        """
         slots: list[TimeSlot] = []
-        current_time = datetime.combine(target_date, time(hour=self.start_hour), tzinfo=timezone.utc)
-        end_time = datetime.combine(target_date, time(hour=self.end_hour), tzinfo=timezone.utc)
+        current_time = datetime.combine(target_date, time(hour=self.start_hour), tzinfo=LEBANON_TZ)
+        end_time = datetime.combine(target_date, time(hour=self.end_hour), tzinfo=LEBANON_TZ)
+        
+        # Get current time in Lebanon timezone for filtering
+        now_lebanon = datetime.now(LEBANON_TZ)
+        is_today = target_date == now_lebanon.date()
 
         slot_id = 1
         while current_time < end_time:
             slot_end = current_time + timedelta(minutes=self.slot_duration_minutes)
+            
+            # Skip past slots if this is today and filter_past is True
+            if filter_past and is_today and slot_end <= now_lebanon:
+                current_time = slot_end
+                slot_id += 1
+                continue
+            
             slots.append(
                 TimeSlot(
                     slot_id=f"slot_{target_date.isoformat()}_{slot_id}",
@@ -88,12 +108,12 @@ class MockSchedulingClient(SchedulingClient):
                 logger.warning("provider_not_found", provider_id=provider_id)
                 return []
 
-            # Generate all possible slots
-            all_slots = self._generate_slots_for_date(target_date)
+            # Generate all possible slots (with past filtering for today)
+            all_slots = self._generate_slots_for_date(target_date, filter_past=True)
 
             # Get existing appointments for this provider on this date
-            start_of_day = datetime.combine(target_date, time.min, tzinfo=timezone.utc)
-            end_of_day = datetime.combine(target_date, time.max, tzinfo=timezone.utc)
+            start_of_day = datetime.combine(target_date, time.min, tzinfo=LEBANON_TZ)
+            end_of_day = datetime.combine(target_date, time.max, tzinfo=LEBANON_TZ)
 
             result = await session.execute(
                 select(Appointment).where(
@@ -136,7 +156,7 @@ class MockSchedulingClient(SchedulingClient):
             slot_number = int(parts[2])
 
             target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            slots = self._generate_slots_for_date(target_date)
+            slots = self._generate_slots_for_date(target_date, filter_past=False)  # Don't filter when booking
 
             if slot_number - 1 >= len(slots):
                 raise ValueError("Invalid slot number")
@@ -191,7 +211,7 @@ class MockSchedulingClient(SchedulingClient):
             slot_number = int(parts[2])
 
             target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            slots = self._generate_slots_for_date(target_date)
+            slots = self._generate_slots_for_date(target_date, filter_past=False)  # Don't filter when modifying
 
             if slot_number - 1 >= len(slots):
                 raise ValueError("Invalid slot number")
@@ -210,7 +230,7 @@ class MockSchedulingClient(SchedulingClient):
 
                 appointment.time_start = selected_slot.start
                 appointment.time_end = selected_slot.end
-                appointment.updated_at = datetime.now(timezone.utc)
+                appointment.updated_at = datetime.now(LEBANON_TZ)
 
                 await session.commit()
                 await session.refresh(appointment)
@@ -241,7 +261,7 @@ class MockSchedulingClient(SchedulingClient):
                     raise ValueError("Appointment not found")
 
                 appointment.status = AppointmentStatus.CANCELLED
-                appointment.updated_at = datetime.now(timezone.utc)
+                appointment.updated_at = datetime.now(LEBANON_TZ)
 
                 await session.commit()
 

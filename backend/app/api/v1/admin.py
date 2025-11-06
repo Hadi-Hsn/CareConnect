@@ -1,5 +1,6 @@
 """Admin endpoints for managing doctors, appointments, and schedules."""
 from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import delete, select
@@ -24,6 +25,9 @@ from app.services.rag_service import RAGService
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+# Lebanon timezone
+LEBANON_TZ = ZoneInfo("Asia/Beirut")
 
 
 # ============================================================================
@@ -177,7 +181,7 @@ async def delete_doctor(
     await db.execute(
         delete(Appointment).where(
             Appointment.provider_id == doctor_id,
-            Appointment.time_start > datetime.now(),
+            Appointment.time_start > datetime.now(LEBANON_TZ),
         )
     )
 
@@ -647,7 +651,7 @@ async def get_admin_stats(
     total_users = len(user_result.scalars().all())
 
     # Count upcoming appointments
-    upcoming = sum(1 for a in appointments if a.time_start > datetime.now())
+    upcoming = sum(1 for a in appointments if a.time_start > datetime.now(LEBANON_TZ))
 
     return {
         "total_doctors": total_doctors,

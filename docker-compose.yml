@@ -63,6 +63,9 @@ services:
       ENABLE_PROMETHEUS: "true"
       ENABLE_PRIVACY_MODE: "false"
       MOCK_SCHEDULING: "true"
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
     volumes:
       - ./backend:/app
       - vector_data:/data/faiss_index

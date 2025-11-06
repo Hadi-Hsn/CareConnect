@@ -1,7 +1,8 @@
 """Handover API endpoints."""
 import json
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func, and_
@@ -24,6 +25,9 @@ from app.services.email_client import EmailService
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+# Lebanon timezone
+LEBANON_TZ = ZoneInfo("Asia/Beirut")
 
 
 def _summarize_conversation(messages: list[dict]) -> str:
@@ -235,7 +239,7 @@ async def update_incident(
     if update.status is not None:
         incident.status = update.status
         if update.status == IncidentStatus.RESOLVED:
-            incident.resolved_at = datetime.now(timezone.utc)
+            incident.resolved_at = datetime.now(LEBANON_TZ)
     
     if update.priority is not None:
         incident.priority = update.priority

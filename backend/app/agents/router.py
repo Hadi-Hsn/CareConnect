@@ -2,6 +2,7 @@
 import json
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Any
 
 from openai import AsyncOpenAI
@@ -22,6 +23,9 @@ from app.services.scheduling_client import SchedulingClient
 
 logger = get_logger(__name__)
 settings = get_settings()
+
+# Lebanon timezone
+LEBANON_TZ = ZoneInfo("Asia/Beirut")
 
 
 class AgentRouter:
@@ -59,10 +63,14 @@ class AgentRouter:
         """
         start_time = time.perf_counter()
 
-        # Get current date for the system prompt
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        # Get current date and time for Lebanon timezone
+        lebanon_now = datetime.now(LEBANON_TZ)
+        current_date = lebanon_now.strftime("%Y-%m-%d")
+        current_time = lebanon_now.strftime("%I:%M %p")  # e.g., "08:10 PM"
+        
         system_prompt = SYSTEM_PROMPT.format(
             current_date=current_date,
+            current_time=current_time,
             user_id=user_id if user_id else "Not authenticated"
         )
 
@@ -268,25 +276,39 @@ class AgentRouter:
             if not providers:
                 return {"error": f"No providers found in department: {department}"}
 
-            # Return first provider's slots (could be extended to show multiple)
-            first_provider = providers[0]
-            slots = await self.scheduling_client.get_timeslots(first_provider["id"], target_date)
+            # Return all providers with their slots
+            providers_with_slots = []
+            for provider in providers[:3]:  # Limit to first 3 providers for performance
+                slots = await self.scheduling_client.get_timeslots(provider["id"], target_date)
+                # Only include providers with available slots
+                available_slots = [s for s in slots if s.available]
+                if available_slots:
+                    providers_with_slots.append({
+                        "provider_id": provider["id"],
+                        "provider_name": provider["name"],
+                        "specialty": provider.get("specialty", ""),
+                        "slots": [
+                            {
+                                "slot_id": s.slot_id,
+                                "start": s.start.isoformat(),
+                                "end": s.end.isoformat(),
+                            }
+                            for s in available_slots[:10]  # Limit to first 10 slots
+                        ],
+                    })
+            
+            if not providers_with_slots:
+                return {
+                    "department": department,
+                    "date": date,
+                    "message": f"No available appointments found in {department} for {date}",
+                }
 
             return {
-                "provider_id": first_provider["id"],
-                "provider_name": first_provider["name"],
-                "department": first_provider["department"],
+                "department": department,
                 "date": date,
-                "available_providers": [p["name"] for p in providers],
-                "slots": [
-                    {
-                        "slot_id": s.slot_id,
-                        "start": s.start.isoformat(),
-                        "end": s.end.isoformat(),
-                        "available": s.available,
-                    }
-                    for s in slots
-                ],
+                "providers": providers_with_slots,
+                "message": f"Found {len(providers_with_slots)} provider(s) with availability",
             }
 
         return {"error": "Either provider_id or department must be specified"}
@@ -308,6 +330,23 @@ class AgentRouter:
             slot_id=slot_id,
             reason=reason,
         )
+
+        # Automatically send email confirmation after successful booking
+        if "appointment_id" in result and "error" not in result:
+            try:
+                appointment_id = result["appointment_id"]
+                email_result = await self._send_email_confirmation(appointment_id)
+                result["email_sent"] = email_result.get("email_sent", False)
+                logger.info(
+                    "auto_email_sent",
+                    appointment_id=appointment_id,
+                    email_sent=email_result.get("email_sent", False),
+                )
+            except Exception as e:
+                logger.error("auto_email_failed", error=str(e), appointment_id=result.get("appointment_id"))
+                # Don't fail the booking if email fails
+                result["email_sent"] = False
+                result["email_error"] = str(e)
 
         return result
 
@@ -339,11 +378,14 @@ class AgentRouter:
 
         appointment, user, provider = row
 
+        # Convert to Lebanon timezone for display
+        lebanon_time = appointment.time_start.astimezone(LEBANON_TZ)
+
         details = {
             "confirmation_code": appointment.confirmation_code,
             "provider_name": provider.name,
             "department": provider.department,
-            "datetime": appointment.time_start.strftime("%B %d, %Y at %I:%M %p"),
+            "datetime": lebanon_time.strftime("%B %d, %Y at %I:%M %p"),
             "reason": appointment.reason,
         }
 

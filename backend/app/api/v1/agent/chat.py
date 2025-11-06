@@ -52,7 +52,8 @@ async def chat(
         )
 
     except Exception as e:
-        logger.error("chat_error", error=str(e))
+        import traceback
+        logger.error("chat_error", error=str(e), traceback=traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
 
 
