@@ -9,8 +9,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_BACKEND: ${{ github.repository }}-backend
-  IMAGE_NAME_FRONTEND: ${{ github.repository }}-frontend
+  IMAGE_NAME_BACKEND: hadi-hsn/careconnect-backend
+  IMAGE_NAME_FRONTEND: hadi-hsn/careconnect-frontend
 
 jobs:
   build-and-deploy:
