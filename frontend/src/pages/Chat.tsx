@@ -21,10 +21,6 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  useTheme,
-  useMediaQuery,
-  Divider,
-  Tooltip,
 } from '@mui/material';
 import { 
   Send as SendIcon, 
@@ -32,9 +28,6 @@ import {
   Phone as PhoneIcon,
   Mic as MicIcon,
   Chat as ChatIcon,
-  CalendarToday as CalendarIcon,
-  Science as ScienceIcon,
-  LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 import type { ChatMessage, ToolResult } from '@/types/api';
