@@ -44,6 +44,9 @@ class Provider(Base):
     appointments: Mapped[list["Appointment"]] = relationship(
         "Appointment", back_populates="provider"
     )
+    availability_schedule: Mapped[list["ProviderAvailability"]] = relationship(
+        "ProviderAvailability", back_populates="provider", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<Provider(id={self.id}, name={self.name}, dept={self.department})>"

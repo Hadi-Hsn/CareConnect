@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   Box,
-  Button,
   Card,
   CardContent,
   Grid,
-  TextField,
   Typography,
   Tab,
   Tabs,
@@ -25,33 +23,11 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 export default function AdminPage() {
   const [tabValue, setTabValue] = useState(0);
-  const [docTitle, setDocTitle] = useState('');
-  const [docContent, setDocContent] = useState('');
-  const queryClient = useQueryClient();
-
-  const { data: stats } = useQuery({
-    queryKey: ['rag-stats'],
-    queryFn: () => api.getRAGStats(),
-  });
 
   const { data: kpis } = useQuery({
     queryKey: ['kpis'],
     queryFn: () => api.getKPIs(),
   });
-
-  const indexMutation = useMutation({
-    mutationFn: (docs: any) => api.indexDocuments(docs),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rag-stats'] });
-      setDocTitle('');
-      setDocContent('');
-    },
-  });
-
-  const handleIndexDocument = () => {
-    if (!docTitle || !docContent) return;
-    indexMutation.mutate([{ title: docTitle, content: docContent }]);
-  };
 
   return (
     <Box>
@@ -59,54 +35,10 @@ export default function AdminPage() {
         Admin Dashboard
       </Typography>
       <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ mb: 3 }}>
-        <Tab label="Index Documents" />
         <Tab label="Metrics" />
         <Tab label="System Status" />
       </Tabs>
       <TabPanel value={tabValue} index={0}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Index New Document
-            </Typography>
-            <TextField
-              fullWidth
-              label="Document Title"
-              value={docTitle}
-              onChange={(e) => setDocTitle(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              multiline
-              rows={10}
-              label="Document Content"
-              value={docContent}
-              onChange={(e) => setDocContent(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleIndexDocument}
-              disabled={indexMutation.isPending}
-            >
-              Index Document
-            </Button>
-          </CardContent>
-        </Card>
-        {stats && (
-          <Card sx={{ mt: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Vector Store Stats
-              </Typography>
-              <Typography>Total Vectors: {stats.total_vectors}</Typography>
-              <Typography>Unique Documents: {stats.unique_documents}</Typography>
-            </CardContent>
-          </Card>
-        )}
-      </TabPanel>
-      <TabPanel value={tabValue} index={1}>
         {kpis && (
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
@@ -163,7 +95,7 @@ export default function AdminPage() {
           </Grid>
         )}
       </TabPanel>
-      <TabPanel value={tabValue} index={2}>
+      <TabPanel value={tabValue} index={1}>
         <Typography variant="body1">System health metrics coming soon...</Typography>
       </TabPanel>
     </Box>

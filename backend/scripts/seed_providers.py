@@ -6,9 +6,12 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
+from sqlalchemy import delete, select
+
 from app.core.db import async_session_maker, init_db
 from app.models import Provider, ProviderType
-from sqlalchemy import delete
+from app.schemas.rag import Document
+from app.services.rag_service import RAGService
 
 
 async def clear_providers():
@@ -604,6 +607,57 @@ async def seed_providers():
         print(f"✓ Seeded {len(providers)} providers across all 25 departments (3 per department)")
 
 
+async def seed_doctor_documents():
+    """Seed doctor profile documents for RAG."""
+    # Get all providers from database
+    async with async_session_maker() as session:
+        result = await session.execute(select(Provider))
+        providers = result.scalars().all()
+        
+        if not providers:
+            print("⚠ No providers found - skipping doctor document indexing")
+            return
+        
+        # Create RAG documents for each doctor
+        documents = []
+        for provider in providers:
+            # Build a comprehensive profile document
+            content = f"""
+            {provider.name} - {provider.specialty}
+            Department: {provider.department}
+            
+            ABOUT:
+            {provider.bio}
+            
+            SPECIALTIES:
+            {provider.specialty}
+            
+            TYPE:
+            {provider.type.value}
+            
+            To book an appointment with {provider.name}, you can search for available slots in the {provider.department} department or directly by provider ID {provider.id}.
+            """
+            
+            documents.append(
+                Document(
+                    title=f"{provider.name} - {provider.specialty}",
+                    content=content.strip(),
+                    metadata={
+                        "type": "doctor_profile",
+                        "department": provider.department,
+                        "specialty": provider.specialty,
+                        "provider_id": str(provider.id),
+                        "provider_name": provider.name,
+                    },
+                )
+            )
+        
+        # Index all doctor documents (replace=True to clear old doctor profiles)
+        rag_service = RAGService()
+        result = await rag_service.index_documents(documents, replace=False)
+        print(f"✓ Indexed {result.indexed_count} doctor profiles ({result.total_chunks} chunks)")
+
+
 async def main():
     """Run provider seeding."""
     print("🌱 Seeding providers...")
@@ -615,6 +669,9 @@ async def main():
 
     # Seed providers (will add new ones, existing ones will remain)
     await seed_providers()
+    
+    # Index doctor documents in RAG
+    await seed_doctor_documents()
 
     print()
     print("✅ Provider seeding completed successfully!")

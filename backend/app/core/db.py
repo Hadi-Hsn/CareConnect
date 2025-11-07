@@ -30,12 +30,21 @@ class Base(DeclarativeBase):
     metadata = metadata
 
 
-# Create async engine
+# Create async engine with SQLite-specific settings
+engine_args = {
+    "echo": settings.log_level == "DEBUG",
+    "future": True,
+}
+
+# Add SQLite-specific connection arguments if using SQLite
+if settings.database_url.startswith("sqlite"):
+    engine_args["connect_args"] = {"check_same_thread": False}
+else:
+    engine_args["pool_pre_ping"] = True
+
 engine = create_async_engine(
     settings.database_url,
-    echo=settings.log_level == "DEBUG",
-    future=True,
-    pool_pre_ping=True,
+    **engine_args,
 )
 
 # Create sessionmaker
@@ -61,9 +70,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Initialize database tables."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("database_initialized")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("database_initialized")
+    except Exception as e:
+        # Log but don't fail if tables already exist
+        if "already exists" in str(e):
+            logger.info("database_tables_already_exist")
+        else:
+            raise
 
 
 async def close_db() -> None:

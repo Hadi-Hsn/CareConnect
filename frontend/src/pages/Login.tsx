@@ -43,7 +43,9 @@ export default function LoginPage() {
   const [tabValue, setTabValue] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -65,13 +67,27 @@ export default function LoginPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
+    // Validate password length
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    
     setLoading(true);
     try {
-      await api.register(email, name, password);
+      await api.register(email, name, password, confirmPassword, phone);
       // Force a page reload to update authentication state
       window.location.href = '/chat';
-    } catch (err) {
-      setError('Registration failed. Please try again.');
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Registration failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -318,6 +334,19 @@ export default function LoginPage() {
                   />
                   <TextField
                     margin="normal"
+                    fullWidth
+                    label="Phone Number"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={loading}
+                    autoComplete="tel"
+                    placeholder="+961 1 234 5678"
+                    helperText="Optional - for appointment reminders"
+                    size={isMobile ? 'small' : 'medium'}
+                  />
+                  <TextField
+                    margin="normal"
                     required
                     fullWidth
                     label="Password"
@@ -327,6 +356,24 @@ export default function LoginPage() {
                     disabled={loading}
                     autoComplete="new-password"
                     helperText="Minimum 8 characters"
+                    size={isMobile ? 'small' : 'medium'}
+                  />
+                  <TextField
+                    margin="normal"
+                    required
+                    fullWidth
+                    label="Confirm Password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={loading}
+                    autoComplete="new-password"
+                    error={confirmPassword !== '' && password !== confirmPassword}
+                    helperText={
+                      confirmPassword !== '' && password !== confirmPassword
+                        ? 'Passwords do not match'
+                        : ''
+                    }
                     size={isMobile ? 'small' : 'medium'}
                   />
                   <Button

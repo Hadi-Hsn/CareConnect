@@ -1,7 +1,7 @@
 """User schemas."""
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.models.user import UserRole
 
@@ -16,8 +16,29 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """User creation schema."""
 
-    password: str | None = Field(None, min_length=8)
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    confirm_password: str = Field(..., description="Password confirmation must match password")
+    phone: str | None = Field(None, min_length=10, max_length=20, description="Phone number")
     role: UserRole = UserRole.PATIENT
+
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        """Validate phone number format."""
+        if v is None:
+            return v
+        # Remove common separators
+        cleaned = ''.join(filter(str.isdigit, v))
+        if len(cleaned) < 10:
+            raise ValueError('Phone number must contain at least 10 digits')
+        return v
+
+    @model_validator(mode='after')
+    def validate_passwords_match(self) -> 'UserCreate':
+        """Validate that password and confirm_password match."""
+        if self.password != self.confirm_password:
+            raise ValueError('Passwords do not match')
+        return self
 
 
 class UserUpdate(BaseModel):
@@ -32,6 +53,7 @@ class UserResponse(UserBase):
 
     id: int
     role: UserRole
+    phone: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

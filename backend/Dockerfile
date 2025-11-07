@@ -5,7 +5,6 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
-    postgresql-client \
     curl \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
@@ -20,8 +19,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create data directory for vector store
-RUN mkdir -p /data/faiss_index /data/doctor_pdfs
+# Create data directory for SQLite database and PDFs
+RUN mkdir -p /app/data /data/doctor_pdfs
 
 # Expose port
 EXPOSE 8000

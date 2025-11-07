@@ -25,6 +25,8 @@ import {
   Typography,
   CircularProgress,
   Avatar,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -37,6 +39,7 @@ import { api } from '@/lib/api';
 import { DEPARTMENTS } from '@/lib/constants';
 
 export default function ProvidersPage() {
+  const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -45,6 +48,7 @@ export default function ProvidersPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [generalDocFile, setGeneralDocFile] = useState<File | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -53,7 +57,18 @@ export default function ProvidersPage() {
     department: '',
     specialty: '',
     bio: '',
-    availability_calendar_id: '',
+  });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [availability, setAvailability] = useState<{
+    [key: string]: { enabled: boolean; start: string; end: string };
+  }>({
+    monday: { enabled: false, start: '09:00', end: '17:00' },
+    tuesday: { enabled: false, start: '09:00', end: '17:00' },
+    wednesday: { enabled: false, start: '09:00', end: '17:00' },
+    thursday: { enabled: false, start: '09:00', end: '17:00' },
+    friday: { enabled: false, start: '09:00', end: '17:00' },
+    saturday: { enabled: false, start: '09:00', end: '17:00' },
+    sunday: { enabled: false, start: '09:00', end: '17:00' },
   });
 
   const queryClient = useQueryClient();
@@ -71,10 +86,20 @@ export default function ProvidersPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: any) => api.createProvider(data),
-    onSuccess: () => {
+    onSuccess: async (createdProvider: any) => {
       queryClient.invalidateQueries({ queryKey: ['providers'] });
+      // If a file was selected, upload and index it and link to provider
+      if (selectedFile) {
+        try {
+          await api.uploadPDF(selectedFile, 'provider', createdProvider.id);
+        } catch (err) {
+          // Log but don't block provider creation
+          console.error('provider document upload failed', err);
+        }
+      }
       setCreateDialogOpen(false);
       resetForm();
+      setSelectedFile(null);
     },
   });
 
@@ -106,7 +131,15 @@ export default function ProvidersPage() {
       department: '',
       specialty: '',
       bio: '',
-      availability_calendar_id: '',
+    });
+    setAvailability({
+      monday: { enabled: false, start: '09:00', end: '17:00' },
+      tuesday: { enabled: false, start: '09:00', end: '17:00' },
+      wednesday: { enabled: false, start: '09:00', end: '17:00' },
+      thursday: { enabled: false, start: '09:00', end: '17:00' },
+      friday: { enabled: false, start: '09:00', end: '17:00' },
+      saturday: { enabled: false, start: '09:00', end: '17:00' },
+      sunday: { enabled: false, start: '09:00', end: '17:00' },
     });
   };
 
@@ -123,7 +156,6 @@ export default function ProvidersPage() {
       department: provider.department,
       specialty: provider.specialty || '',
       bio: provider.bio || '',
-      availability_calendar_id: provider.availability_calendar_id || '',
     });
     setEditDialogOpen(true);
   };
@@ -134,13 +166,22 @@ export default function ProvidersPage() {
   };
 
   const handleCreateSubmit = () => {
+    // Build availability_schedule array from enabled days
+    const availability_schedule = Object.entries(availability)
+      .filter(([_, config]) => config.enabled)
+      .map(([day, config]) => ({
+        day_of_week: day,
+        start_time: config.start,
+        end_time: config.end,
+      }));
+
     createMutation.mutate({
       name: formData.name,
       type: formData.type,
       department: formData.department,
       specialty: formData.specialty || null,
       bio: formData.bio || null,
-      availability_calendar_id: formData.availability_calendar_id || null,
+      availability_schedule,
     });
   };
 
@@ -154,7 +195,6 @@ export default function ProvidersPage() {
         department: formData.department,
         specialty: formData.specialty || null,
         bio: formData.bio || null,
-        availability_calendar_id: formData.availability_calendar_id || null,
       },
     });
   };
@@ -188,16 +228,25 @@ export default function ProvidersPage() {
         View and manage all doctors and healthcare providers
       </Typography>
 
-      {/* Add Button and Filters */}
-      <Box sx={{ display: 'flex', gap: 2, my: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreate}
-          sx={{ bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' } }}
-        >
-          Add Provider
-        </Button>
+      {/* Tabs */}
+      <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ mb: 3, mt: 2 }}>
+        <Tab label="Providers" />
+        <Tab label="Hospital Documents" />
+      </Tabs>
+
+      {/* Tab Content - Providers */}
+      {tabValue === 0 && (
+        <>
+          {/* Add Button and Filters */}
+          <Box sx={{ display: 'flex', gap: 2, my: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleCreate}
+              sx={{ bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' } }}
+            >
+              Add Provider
+            </Button>
         <TextField
           fullWidth
           placeholder="Search by name, department, or specialty..."
@@ -359,6 +408,62 @@ export default function ProvidersPage() {
           </Card>
         </Grid>
       </Grid>
+        </>
+      )}
+
+      {/* Tab Content - Hospital Documents */}
+      {tabValue === 1 && (
+        <Card sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Upload General Hospital Documents (PDF)
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Upload documents like general information, parking, facilities, policies, etc.
+              These will be used by the AI assistant to answer general hospital questions.
+            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Button
+                variant="outlined"
+                component="label"
+                sx={{ textTransform: 'none', maxWidth: 300 }}
+              >
+                {generalDocFile ? generalDocFile.name : 'Choose PDF File'}
+                <input
+                  type="file"
+                  accept=".pdf"
+                  hidden
+                  onChange={(e) => setGeneralDocFile(e.target.files ? e.target.files[0] : null)}
+                />
+              </Button>
+              {generalDocFile && (
+                <Typography variant="caption" color="text.secondary">
+                  Selected: {generalDocFile.name}
+                </Typography>
+              )}
+              <Button
+                variant="contained"
+                disabled={!generalDocFile}
+                onClick={async () => {
+                  if (!generalDocFile) return;
+                  try {
+                    await api.uploadGeneralDocument(generalDocFile, 'general');
+                    queryClient.invalidateQueries({ queryKey: ['rag-stats'] });
+                    setGeneralDocFile(null);
+                    alert('Document uploaded and indexed successfully!');
+                  } catch (err) {
+                    console.error('general doc upload failed', err);
+                    alert('Failed to upload document');
+                  }
+                }}
+                sx={{ bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' }, maxWidth: 200 }}
+              >
+                Upload and Index
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Details Dialog */}
       <Dialog
@@ -527,16 +632,94 @@ export default function ProvidersPage() {
                 placeholder="Brief professional bio..."
               />
             </Grid>
+            
+            {/* Weekly Availability Schedule */}
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Availability Calendar ID"
-                value={formData.availability_calendar_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, availability_calendar_id: e.target.value })
-                }
-                placeholder="Optional calendar integration ID"
-              />
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                Weekly Availability
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Set provider's working hours for each day. Appointments will be 30 minutes each.
+              </Typography>
+            </Grid>
+            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+              <Grid item xs={12} key={day}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography sx={{ minWidth: 100, textTransform: 'capitalize' }}>
+                    {day}
+                  </Typography>
+                  <input
+                    type="checkbox"
+                    checked={availability[day].enabled}
+                    onChange={(e) => {
+                      setAvailability({
+                        ...availability,
+                        [day]: { ...availability[day], enabled: e.target.checked },
+                      });
+                    }}
+                  />
+                  {availability[day].enabled && (
+                    <>
+                      <TextField
+                        type="time"
+                        label="Start"
+                        value={availability[day].start}
+                        onChange={(e) => {
+                          setAvailability({
+                            ...availability,
+                            [day]: { ...availability[day], start: e.target.value },
+                          });
+                        }}
+                        sx={{ width: 150 }}
+                        size="small"
+                      />
+                      <TextField
+                        type="time"
+                        label="End"
+                        value={availability[day].end}
+                        onChange={(e) => {
+                          setAvailability({
+                            ...availability,
+                            [day]: { ...availability[day], end: e.target.value },
+                          });
+                        }}
+                        sx={{ width: 150 }}
+                        size="small"
+                      />
+                    </>
+                  )}
+                </Box>
+              </Grid>
+            ))}
+            
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>
+                Provider Document (PDF, optional)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Upload a PDF document with provider information for RAG retrieval
+              </Typography>
+              <Button
+                variant="outlined"
+                component="label"
+                sx={{ textTransform: 'none' }}
+              >
+                {selectedFile ? selectedFile.name : 'Choose PDF File'}
+                <input
+                  type="file"
+                  accept=".pdf"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files && e.target.files[0];
+                    setSelectedFile(f || null);
+                  }}
+                />
+              </Button>
+              {selectedFile && (
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Selected: {selectedFile.name}
+                </Typography>
+              )}
             </Grid>
           </Grid>
         </DialogContent>

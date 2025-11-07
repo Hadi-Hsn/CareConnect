@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 60
 
     # Database
-    database_url: str = "sqlite+aiosqlite:///./careconnect.db"
+    database_url: str = "sqlite+aiosqlite:///./data/careconnect.db"
 
     # OpenAI
     openai_api_key: str
@@ -36,7 +36,12 @@ class Settings(BaseSettings):
 
     # Vector Store
     vector_store_path: str = "./data/faiss_index"
-    vector_store_type: Literal["faiss", "pgvector", "weaviate"] = "faiss"
+    vector_store_type: Literal["faiss", "chromadb", "pgvector", "weaviate"] = "chromadb"
+    
+    # ChromaDB settings
+    chroma_host: str = "chromadb"
+    chroma_port: int = 8000
+    chroma_collection_name: str = "careconnect_docs"
 
     # Email (SendGrid)
     sendgrid_api_key: str = ""

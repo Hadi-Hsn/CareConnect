@@ -30,6 +30,10 @@ async def chat(
     start_time = time.perf_counter()
 
     try:
+        logger.info("chat_request_received", 
+                   user_id=chat_request.user_id, 
+                   message_count=len(chat_request.messages))
+        
         agent = AgentRouter(db)
         message, tool_calls, tool_results, usage = await agent.chat_turn(
             chat_request.messages, chat_request.user_id
@@ -42,6 +46,11 @@ async def chat(
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
+        logger.info("chat_response_successful",
+                   message_content_length=len(message.content),
+                   tool_calls_count=len(tool_calls),
+                   latency_ms=elapsed_ms)
+
         return ChatResponse(
             message=message,
             tool_calls=tool_calls,
@@ -53,7 +62,11 @@ async def chat(
 
     except Exception as e:
         import traceback
-        logger.error("chat_error", error=str(e), traceback=traceback.format_exc())
+        error_details = traceback.format_exc()
+        logger.error("chat_error", 
+                    error=str(e), 
+                    error_type=type(e).__name__,
+                    traceback=error_details)
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
 
 

@@ -41,11 +41,19 @@ class ApiClient {
   }
 
   // Auth
-  async register(email: string, name: string, password: string): Promise<TokenResponse> {
+  async register(
+    email: string,
+    name: string,
+    password: string,
+    confirmPassword: string,
+    phone?: string
+  ): Promise<TokenResponse> {
     const { data } = await this.client.post<TokenResponse>('/auth/register', {
       email,
       name,
       password,
+      confirm_password: confirmPassword,
+      phone: phone || null,
       role: 'patient',
     });
     localStorage.setItem('access_token', data.access_token);
@@ -212,6 +220,25 @@ class ApiClient {
   async indexDocuments(documents: Document[], replace: boolean = false): Promise<any> {
     const { data } = await this.client.post('/rag/index', { documents, replace });
     return data;
+  }
+
+  // File uploads (PDF)
+  async uploadPDF(file: File, doc_type: string = 'document', provider_id?: number): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('doc_type', doc_type);
+    if (provider_id !== undefined && provider_id !== null) {
+      formData.append('provider_id', String(provider_id));
+    }
+
+    const { data } = await this.client.post('/files/upload-pdf', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  }
+
+  async uploadGeneralDocument(file: File, doc_type: string = 'general'): Promise<any> {
+    return this.uploadPDF(file, doc_type);
   }
 
   async getRAGStats(): Promise<any> {

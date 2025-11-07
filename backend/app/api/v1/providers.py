@@ -1,14 +1,15 @@
 """Provider endpoints."""
-from datetime import datetime
+from datetime import datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.db import get_db
 from app.core.logging import get_logger
 from app.core.security import require_admin
-from app.models import Provider
+from app.models import Provider, ProviderAvailability
 from app.schemas.provider import ProviderCreate, ProviderResponse, ProviderTimeslots, ProviderUpdate
 from app.services.mock_scheduling_client import MockSchedulingClient
 
@@ -25,7 +26,7 @@ async def list_providers(
     db: AsyncSession = Depends(get_db),
 ) -> list[ProviderResponse]:
     """List providers with optional filters."""
-    query = select(Provider)
+    query = select(Provider).options(selectinload(Provider.availability_schedule))
 
     if department:
         query = query.where(Provider.department.ilike(f"%{department}%"))
@@ -43,7 +44,11 @@ async def list_providers(
 @router.get("/{provider_id}", response_model=ProviderResponse)
 async def get_provider(provider_id: int, db: AsyncSession = Depends(get_db)) -> ProviderResponse:
     """Get provider by ID."""
-    result = await db.execute(select(Provider).where(Provider.id == provider_id))
+    result = await db.execute(
+        select(Provider)
+        .options(selectinload(Provider.availability_schedule))
+        .where(Provider.id == provider_id)
+    )
     provider = result.scalar_one_or_none()
 
     if not provider:
@@ -65,16 +70,59 @@ async def get_timeslots(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
-    # Get provider
-    result = await db.execute(select(Provider).where(Provider.id == provider_id))
+    # Get provider with availability schedule
+    result = await db.execute(
+        select(Provider)
+        .options(selectinload(Provider.availability_schedule))
+        .where(Provider.id == provider_id)
+    )
     provider = result.scalar_one_or_none()
 
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
 
-    # Get timeslots
-    scheduling_client = MockSchedulingClient()
-    slots = await scheduling_client.get_timeslots(provider_id, target_date)
+    # Get day of week (0=Monday, 6=Sunday)
+    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    day_of_week = day_names[target_date.weekday()]
+    
+    # Find availability for this day
+    day_availability = [
+        slot for slot in provider.availability_schedule
+        if slot.day_of_week.value == day_of_week
+    ]
+    
+    slots = []
+    
+    if day_availability:
+        # Generate 30-minute slots based on provider availability
+        for avail in day_availability:
+            current_time = datetime.combine(target_date, avail.start_time)
+            end_datetime = datetime.combine(target_date, avail.end_time)
+            
+            while current_time < end_datetime:
+                slot_end = current_time + timedelta(minutes=30)
+                if slot_end <= end_datetime:
+                    # Check if slot is already booked
+                    from app.models import Appointment
+                    booking_result = await db.execute(
+                        select(Appointment).where(
+                            Appointment.provider_id == provider_id,
+                            Appointment.time_start == current_time,
+                        )
+                    )
+                    is_booked = booking_result.scalar_one_or_none() is not None
+                    
+                    from app.schemas.provider import TimeSlot
+                    slots.append(
+                        TimeSlot(
+                            slot_id=f"{provider_id}_{current_time.isoformat()}",
+                            start=current_time,
+                            end=slot_end,
+                            available=not is_booked,
+                        )
+                    )
+                
+                current_time = slot_end
 
     return ProviderTimeslots(
         provider_id=provider.id,
@@ -101,8 +149,28 @@ async def create_provider(
     )
     
     db.add(provider)
+    await db.flush()  # Get provider ID before adding availability
+    
+    # Add availability schedule
+    for slot in provider_data.availability_schedule:
+        availability = ProviderAvailability(
+            provider_id=provider.id,
+            day_of_week=slot.day_of_week,
+            start_time=slot.start_time,
+            end_time=slot.end_time,
+        )
+        db.add(availability)
+    
     await db.commit()
     await db.refresh(provider)
+    
+    # Reload with availability
+    result = await db.execute(
+        select(Provider)
+        .options(selectinload(Provider.availability_schedule))
+        .where(Provider.id == provider.id)
+    )
+    provider = result.scalar_one()
     
     logger.info("provider_created", provider_id=provider.id, name=provider.name)
     
@@ -117,7 +185,11 @@ async def update_provider(
     current_user = Depends(require_admin),
 ) -> ProviderResponse:
     """Update a provider (admin only)."""
-    result = await db.execute(select(Provider).where(Provider.id == provider_id))
+    result = await db.execute(
+        select(Provider)
+        .options(selectinload(Provider.availability_schedule))
+        .where(Provider.id == provider_id)
+    )
     provider = result.scalar_one_or_none()
     
     if not provider:
@@ -135,8 +207,36 @@ async def update_provider(
     if updates.availability_calendar_id is not None:
         provider.availability_calendar_id = updates.availability_calendar_id
     
+    # Update availability schedule if provided
+    if updates.availability_schedule is not None:
+        # Delete existing schedule
+        await db.execute(
+            select(ProviderAvailability)
+            .where(ProviderAvailability.provider_id == provider_id)
+        )
+        for existing in provider.availability_schedule:
+            await db.delete(existing)
+        
+        # Add new schedule
+        for slot in updates.availability_schedule:
+            availability = ProviderAvailability(
+                provider_id=provider.id,
+                day_of_week=slot.day_of_week,
+                start_time=slot.start_time,
+                end_time=slot.end_time,
+            )
+            db.add(availability)
+    
     await db.commit()
     await db.refresh(provider)
+    
+    # Reload with availability
+    result = await db.execute(
+        select(Provider)
+        .options(selectinload(Provider.availability_schedule))
+        .where(Provider.id == provider_id)
+    )
+    provider = result.scalar_one()
     
     logger.info("provider_updated", provider_id=provider.id, name=provider.name)
     

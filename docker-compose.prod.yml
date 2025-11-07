@@ -1,46 +1,23 @@
 version: '3.9'
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: careconnect-db
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-careconnect}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-careconnect_prod}
-      POSTGRES_DB: ${POSTGRES_DB:-careconnect}
+  # ChromaDB vector database for RAG embeddings
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: careconnect-chromadb
     ports:
-      - "5432:5432"
+      - "8001:8000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U careconnect"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/heartbeat || exit 0"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
-  setup:
-    build:
-      context: .
-      dockerfile: setup/Dockerfile
-    container_name: careconnect-setup
-    environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-careconnect}:${POSTGRES_PASSWORD:-careconnect_prod}@db:5432/${POSTGRES_DB:-careconnect}
-      VECTOR_STORE_PATH: /app/data/vectorstore
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
-      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
-      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-3072}
-      PYTHONPATH: /app/backend
-      # Control seeding behavior (set SEED_DB=true to seed; SEED_DB_FORCE=true to clear and seed)
-      SEED_DB: ${SEED_DB:-false}
-      SEED_DB_FORCE: ${SEED_DB_FORCE:-false}
-    volumes:
-      - vector_data:/app/data/vectorstore
-      - pdf_data:/app/data/doctor_pdfs
-    depends_on:
-      db:
-        condition: service_healthy
 
   backend:
     build:
@@ -50,16 +27,28 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-careconnect}:${POSTGRES_PASSWORD:-careconnect_prod}@db:5432/${POSTGRES_DB:-careconnect}
-      VECTOR_STORE_PATH: /data/faiss_index
+      # SQLite database (no credentials needed, stored in volume)
+      DATABASE_URL: sqlite+aiosqlite:///./data/careconnect.db
+      
+      # ChromaDB configuration
+      VECTOR_STORE_TYPE: chromadb
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: "8000"
+      CHROMA_COLLECTION_NAME: careconnect_docs
+      
+      # OpenAI
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
       OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-3072}
+      
+      # Auth
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: careconnect
       JWT_ALGORITHM: HS256
       JWT_EXPIRATION_MINUTES: "1440"
+      
+      # App settings
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://46.62.253.61:5173}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       ENVIRONMENT: production
@@ -67,18 +56,18 @@ services:
       ENABLE_PROMETHEUS: "true"
       ENABLE_PRIVACY_MODE: "false"
       MOCK_SCHEDULING: "true"
+      
+      # Email
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       EMAIL_FROM: ${EMAIL_FROM}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-CareConnect}
       ADMIN_EMAILS: ${ADMIN_EMAILS}
     volumes:
-      - vector_data:/data/faiss_index
+      - sqlite_data:/app/data
       - pdf_data:/data/doctor_pdfs
     depends_on:
-      db:
+      chromadb:
         condition: service_healthy
-      setup:
-        condition: service_completed_successfully
     restart: unless-stopped
 
   frontend:
@@ -97,6 +86,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
-  vector_data:
+  chroma_data:
+  sqlite_data:
   pdf_data:

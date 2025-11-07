@@ -6,6 +6,8 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
+from sqlalchemy import select
+
 from app.core.db import async_session_maker, init_db
 from app.core.security import get_password_hash
 from app.models import (
@@ -30,10 +32,10 @@ async def seed_users():
                 hashed_password=get_password_hash("password123"),
             ),
             User(
-                email="hadi.wmail@gmail.com",
+                email="admin@aub.com",
                 name="Admin User",
                 role=UserRole.ADMIN,
-                hashed_password=get_password_hash("admin123"),
+                hashed_password=get_password_hash("Admin@123"),
             ),
         ]
 
@@ -165,21 +167,21 @@ async def seed_providers():
             Provider(
                 name="Dr. Thomas Anderson",
                 department="General Surgery",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Abdominal Surgery",
                 bio="General surgeon specializing in laparoscopic and minimally invasive procedures",
             ),
             Provider(
                 name="Dr. Linda Martinez",
                 department="General Surgery",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Trauma Surgery",
                 bio="Trauma surgeon with expertise in emergency surgical interventions",
             ),
             Provider(
                 name="Dr. Kevin O'Brien",
                 department="General Surgery",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Colorectal Surgery",
                 bio="Colorectal surgeon specializing in bowel and rectal procedures",
             ),
@@ -303,21 +305,21 @@ async def seed_providers():
             Provider(
                 name="Dr. Christopher Adams",
                 department="Neurosurgery",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Brain Surgery",
                 bio="Neurosurgeon specializing in brain tumor removal and complex cranial procedures",
             ),
             Provider(
                 name="Dr. Michelle Turner",
                 department="Neurosurgery",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Spine Surgery",
                 bio="Spine surgeon treating herniated discs, spinal stenosis, and scoliosis",
             ),
             Provider(
                 name="Dr. Victor Petrov",
                 department="Neurosurgery",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Pediatric Neurosurgery",
                 bio="Pediatric neurosurgeon treating congenital brain and spine conditions",
             ),
@@ -402,7 +404,7 @@ async def seed_providers():
             Provider(
                 name="Dr. William Brown",
                 department="Orthopedics",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Joint Replacement",
                 bio="Joint replacement specialist performing hip and knee replacements",
             ),
@@ -616,7 +618,7 @@ async def seed_providers():
             Provider(
                 name="Dr. Gregory White",
                 department="Urology",
-                type=ProviderType.SURGEON,
+                type=ProviderType.SPECIALIST,
                 specialty="Minimally Invasive Urology",
                 bio="Robotic surgery specialist performing advanced urologic procedures",
             ),
@@ -850,7 +852,58 @@ async def seed_documents():
 
     rag_service = RAGService()
     result = await rag_service.index_documents(documents, replace=True)
-    print(f"✓ Indexed {result.indexed_count} documents ({result.total_chunks} chunks)")
+    print(f"✓ Indexed {result.indexed_count} facility documents ({result.total_chunks} chunks)")
+
+
+async def seed_doctor_documents():
+    """Seed doctor profile documents for RAG."""
+    # Get all providers from database
+    async with async_session_maker() as session:
+        result = await session.execute(select(Provider))
+        providers = result.scalars().all()
+        
+        if not providers:
+            print("⚠ No providers found - skipping doctor document indexing")
+            return
+        
+        # Create RAG documents for each doctor
+        documents = []
+        for provider in providers:
+            # Build a comprehensive profile document
+            content = f"""
+            {provider.name} - {provider.specialty}
+            Department: {provider.department}
+            
+            ABOUT:
+            {provider.bio}
+            
+            SPECIALTIES:
+            {provider.specialty}
+            
+            TYPE:
+            {provider.type.value}
+            
+            To book an appointment with {provider.name}, you can search for available slots in the {provider.department} department or directly by provider ID {provider.id}.
+            """
+            
+            documents.append(
+                Document(
+                    title=f"{provider.name} - {provider.specialty}",
+                    content=content.strip(),
+                    metadata={
+                        "type": "doctor_profile",
+                        "department": provider.department,
+                        "specialty": provider.specialty,
+                        "provider_id": str(provider.id),
+                        "provider_name": provider.name,
+                    },
+                )
+            )
+        
+        # Index all doctor documents
+        rag_service = RAGService()
+        result = await rag_service.index_documents(documents, replace=False)
+        print(f"✓ Indexed {result.indexed_count} doctor profiles ({result.total_chunks} chunks)")
 
 
 async def main():
@@ -867,13 +920,14 @@ async def main():
     await seed_providers()
     await seed_lab_tests()
     await seed_documents()
+    await seed_doctor_documents()
 
     print()
     print("✅ Database seeding completed successfully!")
     print()
     print("Demo credentials:")
     print("  Patient: hadihacan@gmail.com / password123")
-    print("  Admin:   hadi.wmail@gmail.com / admin123")
+    print("  Admin:   admin@aub.com / Admin@123")
 
 
 if __name__ == "__main__":

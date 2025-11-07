@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.logging import get_logger
+from app.core.security import require_admin
 from app.schemas.rag import Document, IndexResponse
 from app.services.pdf_parser import PDFParser
 from app.services.rag_service import RAGService
@@ -16,7 +17,9 @@ logger = get_logger(__name__)
 async def upload_pdf(
     file: UploadFile = File(...),
     doc_type: str = "document",
-    db: AsyncSession = Depends(get_db)
+    provider_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(require_admin),
 ) -> IndexResponse:
     """
     Upload and index a PDF document.
@@ -44,16 +47,21 @@ async def upload_pdf(
                 detail="PDF appears to be empty or could not be parsed"
             )
         
+        # Create document metadata and include provider linkage when provided
+        metadata = {
+            "source": file.filename,
+            "doc_type": doc_type,
+            "upload_type": "api",
+        }
+        if provider_id is not None:
+            metadata["provider_id"] = str(provider_id)
+
         # Create document
         document = Document(
-            title=file.filename.replace('.pdf', '').replace('_', ' ').title(),
+            title=file.filename.replace('.pdf', '').replace('_', ' ').replace('.PDF', '').title(),
             content=text,
-            metadata={
-                "source": file.filename,
-                "doc_type": doc_type,
-                "upload_type": "api",
-            },
-            doc_type="pdf"
+            metadata=metadata,
+            doc_type="pdf",
         )
         
         # Index document

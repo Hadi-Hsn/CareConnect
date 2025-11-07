@@ -1,64 +1,120 @@
-# CareConnect - Your Smart Health Assistant
+# CareConnect - AI Healthcare Assistant# CareConnect - Your Smart Health Assistant
 
-**A production-grade AI-powered healthcare logistics assistant built with React, FastAPI, and OpenAI.**
 
-CareConnect is a full-stack application that uses OpenAI's function calling (Responses API) and RAG (Retrieval-Augmented Generation) to help patients book appointments, find providers, and get facility information through natural conversation.
 
-## 🚀 Quick Start
+## Quick Start**A production-grade AI-powered healthcare logistics assistant built with React, FastAPI, and OpenAI.**
 
-```bash
+
+
+### 1. SetupCareConnect is a full-stack application that uses OpenAI's function calling (Responses API) and RAG (Retrieval-Augmented Generation) to help patients book appointments, find providers, and get facility information through natural conversation.
+
+
+
+```bash## 🚀 Quick Start
+
+# Copy environment file
+
+cp .env.example .env```bash
+
 # Clone and setup
-cd CareConnect
 
-# Copy environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+# Edit .env and add your OpenAI API keycd CareConnect
 
-# Add your OpenAI API key to backend/.env
+OPENAI_API_KEY=sk-your-key-here
+
+JWT_SECRET=your-random-secret-key# Copy environment file
+
+```cp .env.example .env
+
+
+
+### 2. Run# Add your OpenAI API key to .env
+
 # OPENAI_API_KEY=sk-your-key-here
 
-# Start with Docker (includes automatic data population)
-docker-compose up --build
-```
+```bash# JWT_SECRET=your-random-secret-here
 
-**What happens on first start:**
-1. 🗄️ PostgreSQL database starts
-2. 🔧 Setup container runs (one-time):
-   - Applies database migrations
-   - Seeds demo users, providers, and lab tests
-   - Generates 5 doctor profile PDFs
-   - Indexes all documents into RAG system
-3. 🚀 Backend API starts (after setup completes)
-4. 🎨 Frontend starts
+docker-compose up -d
 
-Visit:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- Metrics: http://localhost:8000/metrics
+```# Start with Docker
 
-Demo credentials:
-- Patient: `hadihacan@gmail.com` / `password123`
-- Admin: `hadi.wmail@gmail.com` / `admin123`
+docker-compose up -d
 
-**Admin Features:**
-- Full CRUD operations for doctors/providers
-- Comprehensive appointment management
-- Schedule management and time blocking
-- PDF upload and RAG integration for doctor profiles
-- System statistics and reporting
+### 3. Access```
 
-### Resetting Data
 
-To reset and re-populate all data:
+
+- **Frontend**: http://localhost:5173**What happens on first start:**
+
+- **API Docs**: http://localhost:8000/docs1. 🗄️ **ChromaDB** starts (vector database for RAG)
+
+- **Health Check**: http://localhost:8000/healthz2. � **Backend** starts (FastAPI + SQLite database)
+
+3. 🎨 **Frontend** starts (React UI)
+
+### 4. Seed Demo Data (Optional)4. Database migrations run automatically
+
+5. Ready to use!
 
 ```bash
+
+docker exec careconnect-backend python scripts/seed_demo_data.pyVisit:
+
+```- Frontend: http://localhost:5173
+
+- Backend API: http://localhost:8000
+
+Demo users:- API Docs: http://localhost:8000/docs
+
+- Patient: `hadihacan@gmail.com` / `password123`- Metrics: http://localhost:8000/metrics
+
+- Admin: `admin@aub.com` / `Admin@123`
+
+**Demo credentials** (create via UI or see scripts/):
+
+## Stack- Patient: `hadihacan@gmail.com` / `password123`
+
+- Admin: `hadi.wmail@gmail.com` / `admin123`
+
+- **Frontend**: React + TypeScript + Material UI
+
+- **Backend**: FastAPI + Python 3.11**Admin Features:**
+
+- **Database**: SQLite (no credentials needed)- Full CRUD operations for doctors/providers
+
+- **Vector DB**: ChromaDB (for RAG)- Comprehensive appointment management
+
+- **AI**: OpenAI GPT-4 + Embeddings- Schedule management and time blocking
+
+- PDF upload and RAG integration for doctor profiles
+
+## Stop- System statistics and reporting
+
+
+
+```bash### Resetting Data
+
+docker-compose down
+
+```To reset and re-populate all data:
+
+
+
+## Reset Everything```bash
+
 # Stop and remove everything
+
+```bashdocker-compose down -v
+
 docker-compose down -v
 
-# Restart fresh (will re-run setup)
-docker-compose up --build
+docker-compose up -d# Restart fresh
+
+```docker-compose up -d
+
 ```
+
+That's it! 🚀
 
 ## 🏗️ Architecture
 
@@ -66,9 +122,9 @@ docker-compose up --build
 - **Frontend**: React 18 + TypeScript + Material UI + Vite
 - **Backend**: FastAPI + Python 3.11 + SQLAlchemy
 - **AI**: OpenAI GPT-4 (Responses API) + Embeddings (text-embedding-3-large)
-- **Vector DB**: FAISS (dev) → swappable to pgvector/Weaviate
-- **Database**: PostgreSQL (prod) / SQLite (dev)
-- **Email**: SMTP (Gmail/custom SMTP server)
+- **Vector DB**: ChromaDB (Docker container, no credentials needed)
+- **Database**: SQLite (file-based, no credentials needed, persistent in Docker volumes)
+- **Email**: SendGrid / SMTP (configurable)
 - **Observability**: Prometheus + structured logging (structlog)
 
 ### Key Features

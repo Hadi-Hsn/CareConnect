@@ -186,10 +186,18 @@ class AgentRouter:
                     return final_message, all_tool_calls, all_tool_results, total_usage
 
             except Exception as e:
-                logger.error("chat_turn_error", error=str(e), iteration=iteration)
+                import traceback
+                error_details = traceback.format_exc()
+                logger.error(
+                    "chat_turn_error", 
+                    error=str(e), 
+                    error_type=type(e).__name__,
+                    iteration=iteration,
+                    traceback=error_details
+                )
                 error_message = ChatMessage(
                     role="assistant",
-                    content=f"I encountered an error: {str(e)}. Please try again.",
+                    content=f"I encountered an error while processing your request. Please try again or contact support if the issue persists.",
                 )
                 return error_message, all_tool_calls, all_tool_results, total_usage
 
