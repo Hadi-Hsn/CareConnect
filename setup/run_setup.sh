@@ -1,4 +1,5 @@
 #!/bin/bash
+# Exit on error for critical steps, but we'll handle some non-critical steps explicitly
 set -e
 
 echo "=================================================="
@@ -24,17 +25,17 @@ echo ""
 # Seed demo data
 echo "🌱 Seeding demo data..."
 cd /app/setup
-python scripts/seed_demo_data.py
+python scripts/seed_demo_data.py || echo "⚠️  Seed script failed (non-fatal). Continuing setup."
 echo ""
 
 # Generate doctor PDFs
 echo "📄 Generating doctor PDFs..."
-python scripts/generate_doctor_pdfs.py
+python scripts/generate_doctor_pdfs.py || echo "⚠️  PDF generation failed (non-fatal). Continuing setup."
 echo ""
 
 # Index PDFs into RAG
 echo "🔍 Indexing PDFs into RAG system..."
-python scripts/index_pdfs.py
+python scripts/index_pdfs.py || echo "⚠️  PDF indexing failed (non-fatal). Continuing setup."
 echo ""
 
 echo "=================================================="

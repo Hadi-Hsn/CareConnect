@@ -292,9 +292,14 @@ async def seed_documents():
         ),
     ]
 
-    rag_service = RAGService()
-    result = await rag_service.index_documents(documents, replace=False)
-    print(f"✓ Indexed {result.indexed_count} documents ({result.total_chunks} chunks)")
+    try:
+        rag_service = RAGService()
+        result = await rag_service.index_documents(documents, replace=False)
+        print(f"✓ Indexed {result.indexed_count} documents ({result.total_chunks} chunks)")
+    except Exception as e:
+        # Make indexing non-fatal during setup (OpenAI key or vectorstore might be missing)
+        print(f"⚠️  RAG indexing failed: {e}")
+        print("⚠️  Continuing without RAG index. Ensure OPENAI_API_KEY and vector store are configured for full functionality.")
 
 
 async def main():

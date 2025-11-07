@@ -116,8 +116,10 @@ async def main():
         print()
         print("✅ PDF indexing completed!")
     except Exception as e:
+        # Make indexing non-fatal during setup. Log the error and continue.
         print(f"\n✗ Failed to index PDFs: {str(e)}")
-        sys.exit(1)
+        print("⚠️  Continuing without PDF indexing. Ensure pdfs are present and OPENAI_API_KEY is configured for RAG indexing.")
+        return
 
 
 if __name__ == "__main__":
