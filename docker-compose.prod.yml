@@ -20,7 +20,9 @@ services:
     restart: unless-stopped
 
   setup:
-    image: ghcr.io/hadi-hsn/careconnect-backend:latest
+    build:
+      context: .
+      dockerfile: setup/Dockerfile
     container_name: careconnect-setup
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-careconnect}:${POSTGRES_PASSWORD:-careconnect_prod}@db:5432/${POSTGRES_DB:-careconnect}
@@ -29,25 +31,18 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
       OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-3072}
-      PYTHONPATH: /app
+      PYTHONPATH: /app/backend
     volumes:
       - vector_data:/app/data/vectorstore
       - pdf_data:/app/data/doctor_pdfs
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "
-        python -m alembic upgrade head &&
-        python scripts/seed_providers.py &&
-        python scripts/seed_demo_data.py &&
-        python scripts/generate_doctor_pdfs.py &&
-        python scripts/index_pdfs.py
-      "
-    restart: on-failure
 
   backend:
-    image: ghcr.io/hadi-hsn/careconnect-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: careconnect-backend
     ports:
       - "8000:8000"
@@ -81,11 +76,12 @@ services:
         condition: service_healthy
       setup:
         condition: service_completed_successfully
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/hadi-hsn/careconnect-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: careconnect-frontend
     ports:
       - "5173:80"
@@ -93,6 +89,8 @@ services:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://46.62.253.61:8000/api/v1}
       VITE_APP_NAME: CareConnect
       VITE_ENABLE_ANALYTICS: "false"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
