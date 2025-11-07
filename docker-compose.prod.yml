@@ -32,6 +32,9 @@ services:
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-large}
       OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-3072}
       PYTHONPATH: /app/backend
+      # Control seeding behavior (set SEED_DB=true to seed; SEED_DB_FORCE=true to clear and seed)
+      SEED_DB: ${SEED_DB:-false}
+      SEED_DB_FORCE: ${SEED_DB_FORCE:-false}
     volumes:
       - vector_data:/app/data/vectorstore
       - pdf_data:/app/data/doctor_pdfs

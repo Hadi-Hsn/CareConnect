@@ -22,10 +22,21 @@ alembic upgrade head
 echo "✅ Migrations completed!"
 echo ""
 
-# Seed demo data
-echo "🌱 Seeding demo data..."
+# Seed demo data (optional)
+echo "🌱 Seeding demo data (optional)..."
 cd /app/setup
-python scripts/seed_demo_data.py || echo "⚠️  Seed script failed (non-fatal). Continuing setup."
+# Control seeding via environment variables passed to the container or compose:
+# - SEED_DB=true        -> run seeds (does not clear existing data)
+# - SEED_DB_FORCE=true  -> clear DB (truncate) then seed
+if [ "${SEED_DB_FORCE:-}" = "true" ]; then
+  echo "⚠️  SEED_DB_FORCE=true detected — clearing DB and seeding"
+  python scripts/seed_demo_data.py --force || echo "⚠️  Seed script failed (non-fatal). Continuing setup."
+elif [ "${SEED_DB:-}" = "true" ]; then
+  echo "ℹ️  SEED_DB=true detected — seeding without clearing"
+  python scripts/seed_demo_data.py --seed || echo "⚠️  Seed script failed (non-fatal). Continuing setup."
+else
+  echo "ℹ️  Skipping database seeding (set SEED_DB or SEED_DB_FORCE to enable)"
+fi
 echo ""
 
 # Generate doctor PDFs

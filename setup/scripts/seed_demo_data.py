@@ -1,12 +1,22 @@
-"""Seed demo data for CareConnect."""
+"""Seed demo data for CareConnect.
+
+This script is now optional. By default it will not modify the database.
+Pass `--seed` or set the environment variable `SEED_DB=true` to force seeding.
+When seeding with `--force` the database tables will be truncated (cleared)
+before inserting seed data.
+"""
+import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
 
 # Add backend to path
 sys.path.append(str(Path(__file__).parent.parent.parent / "backend"))
 
-from app.core.db import async_session_maker, init_db
+from sqlalchemy import text
+
+from app.core.db import async_session_maker, init_db, Base
 from app.core.security import get_password_hash
 from app.models import (
     User,
@@ -302,14 +312,55 @@ async def seed_documents():
         print("⚠️  Continuing without RAG index. Ensure OPENAI_API_KEY and vector store are configured for full functionality.")
 
 
+async def clear_database():
+    """Truncate all tables in the metadata (RESTART IDENTITY CASCADE).
+
+    This will completely wipe user data and reset sequences. Use only when
+    intentionally re-seeding (for demos/tests).
+    """
+    tables = list(Base.metadata.tables.keys())
+    if not tables:
+        print("⚠️  No tables found in metadata to truncate.")
+        return
+
+    truncate_stmt = "TRUNCATE TABLE " + ", ".join([f'\"{t}\"' for t in tables]) + " RESTART IDENTITY CASCADE"
+    async with async_session_maker() as session:
+        print(f"⚠️  Clearing database tables: {', '.join(tables)}")
+        await session.execute(text(truncate_stmt))
+        await session.commit()
+        print("✓ Database cleared")
+
+
 async def main():
-    """Run all seed functions."""
-    print("🌱 Starting database seeding...")
+    """Run seeding optionally.
+
+    Behavior:
+    - Always run migrations (init_db())
+    - Only seed when `--seed` / `--force` is passed or env var `SEED_DB=true`.
+    - When `--force` is used the database is cleared before seeding.
+    """
+
+    parser = argparse.ArgumentParser(description="Seed demo data (optional)")
+    parser.add_argument("--seed", action="store_true", help="Run seeding (does not clear DB)")
+    parser.add_argument("--force", action="store_true", help="Clear DB and then seed")
+    args = parser.parse_args()
+
+    env_seed = os.getenv("SEED_DB", "false").lower() in ("1", "true", "yes")
+    should_seed = args.seed or args.force or env_seed
+
+    print("🌱 Starting database seed task (optional)")
     print()
 
-    # Initialize database
+    # Initialize database (always)
     await init_db()
     print("✓ Database initialized")
+
+    if not should_seed:
+        print("ℹ️  Skipping seeding (use --seed or set SEED_DB=true to enable)")
+        return
+
+    if args.force:
+        await clear_database()
 
     # Seed data
     await seed_users()
