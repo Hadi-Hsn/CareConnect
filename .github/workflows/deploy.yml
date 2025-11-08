@@ -44,18 +44,18 @@ jobs:
       - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASS }}
+          host: 46.62.253.61
+          username: root
+          password: P@ss@123
           source: "deployment.tar.gz"
           target: "/app/careconnect/"
 
       - name: Extract and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASS }}
+          host: 46.62.253.61
+          username: root
+          password: P@ss@123
           script: |
             cd /app/careconnect
             tar -xzf deployment.tar.gz
@@ -64,7 +64,7 @@ jobs:
             POSTGRES_USER=careconnect
             POSTGRES_PASSWORD=careconnect_prod
             POSTGRES_DB=careconnect
-            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            OPENAI_API_KEY=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
             OPENAI_MODEL=gpt-4o
             OPENAI_EMBEDDING_MODEL=text-embedding-3-large
             OPENAI_EMBEDDING_DIMENSIONS=3072
@@ -72,10 +72,10 @@ jobs:
             JWT_EXPIRATION_MINUTES=1440
             FRONTEND_ORIGIN=http://46.62.253.61:5173
             VITE_API_BASE_URL=http://46.62.253.61:8000/api/v1
-            SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
-            EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+            SENDGRID_API_KEY=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
+            EMAIL_FROM=hadihacan@gmail.com
             EMAIL_FROM_NAME=CareConnect
-            ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}
+            ADMIN_EMAILS=admin@careconnect.com
             LOG_LEVEL=INFO
             ENVIRONMENT=production
             ENVEOF
