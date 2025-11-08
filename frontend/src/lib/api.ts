@@ -17,7 +17,10 @@ import type {
   HealthMetrics,
 } from '@/types/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api/v1';
+// Support both VITE_API_BASE and VITE_API_BASE_URL (some deployments use the _URL name)
+const API_BASE =
+  (import.meta.env as any).VITE_API_BASE || (import.meta.env as any).VITE_API_BASE_URL ||
+  'http://localhost:8000/api/v1';
 
 class ApiClient {
   private client: AxiosInstance;

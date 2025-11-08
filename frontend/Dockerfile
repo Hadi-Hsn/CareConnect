@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS build
 
+ARG VITE_API_BASE
+ENV VITE_API_BASE=${VITE_API_BASE:-http://localhost:8000/api/v1}
+
 WORKDIR /app
 
 # Copy package files
@@ -12,7 +15,7 @@ RUN npm ci
 # Copy application code
 COPY . .
 
-# Build the application
+# Build the application (Vite will pick up VITE_* env vars at build-time)
 RUN npm run build
 
 # Production stage
