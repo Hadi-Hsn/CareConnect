@@ -22,26 +22,36 @@ class ChromaVectorStore(VectorStore):
         self.client_openai = AsyncOpenAI(api_key=settings.openai_api_key)
         self.dimension = settings.openai_embedding_dimensions
         
-        # Connect to ChromaDB server
-        # Note: Using HttpClient without tenant/database params for newer ChromaDB versions
-        self.client = chromadb.HttpClient(
-            host=settings.chroma_host,
-            port=settings.chroma_port,
-        )
-        
-        # Get or create collection
-        self.collection = self.client.get_or_create_collection(
-            name=settings.chroma_collection_name,
-            metadata={"hnsw:space": "cosine"},
-        )
-        
-        logger.info(
-            "initialized_chromadb",
-            host=settings.chroma_host,
-            port=settings.chroma_port,
-            collection=settings.chroma_collection_name,
-            count=self.collection.count(),
-        )
+        # Connect to ChromaDB server using simple HttpClient
+        # For chromadb 0.4.24, avoid tenant/database params
+        try:
+            self.client = chromadb.HttpClient(
+                host=settings.chroma_host,
+                port=settings.chroma_port,
+            )
+            
+            # Get or create collection
+            self.collection = self.client.get_or_create_collection(
+                name=settings.chroma_collection_name,
+                metadata={"hnsw:space": "cosine"},
+            )
+            
+            logger.info(
+                "initialized_chromadb",
+                host=settings.chroma_host,
+                port=settings.chroma_port,
+                collection=settings.chroma_collection_name,
+                count=self.collection.count(),
+            )
+        except Exception as e:
+            logger.error("chromadb_initialization_failed", error=str(e), error_type=type(e).__name__)
+            # Create a fallback - use in-memory client for development
+            logger.warning("using_ephemeral_chromadb_client")
+            self.client = chromadb.EphemeralClient()
+            self.collection = self.client.get_or_create_collection(
+                name=settings.chroma_collection_name,
+                metadata={"hnsw:space": "cosine"},
+            )
 
     def _chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
         """

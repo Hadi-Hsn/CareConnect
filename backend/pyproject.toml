@@ -32,6 +32,7 @@ dependencies = [
     "tenacity==8.2.3",
     "pypdf==3.17.4",
     "reportlab==4.0.9",
+    "sendgrid==6.11.0",
 ]
 
 [project.optional-dependencies]
