@@ -73,13 +73,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE: "http://46.62.253.61:8000/api/v1"
+        VITE_API_BASE: "http://localhost:8000/api/v1"
     container_name: careconnect-frontend
     ports:
       - "5173:80"
     environment:
-      VITE_API_BASE: "http://46.62.253.61:8000/api/v1"
-      FRONTEND_ORIGIN: "http://46.62.253.61:5173"
+      VITE_API_BASE: "http://localhost:8000/api/v1"
       VITE_APP_NAME: CareConnect
       VITE_ENABLE_ANALYTICS: "false"
     depends_on:
