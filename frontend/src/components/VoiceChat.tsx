@@ -45,7 +45,7 @@ export default function VoiceChat({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const silenceTimeoutRef = useRef<number | null>(null);
   const lastSpeechTimeRef = useRef<number>(Date.now());
 
   // VAD (Voice Activity Detection) thresholds
