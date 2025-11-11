@@ -5,8 +5,8 @@ services:
   chromadb:
     image: chromadb/chroma:latest
     container_name: careconnect-chromadb
-    ports:
-      - "8001:8000"
+    expose:
+      - "8000"
     volumes:
       - chroma_data:/chroma/chroma
     environment:
@@ -17,15 +17,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+    restart: always
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: careconnect-backend
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       # SQLite database (no credentials needed, stored in volume)
       DATABASE_URL: sqlite+aiosqlite:///./data/careconnect.db
@@ -68,7 +68,7 @@ services:
     depends_on:
       chromadb:
         condition: service_healthy
-    restart: unless-stopped
+    restart: always
 
   frontend:
     build:
@@ -78,14 +78,14 @@ services:
         VITE_API_BASE: ${VITE_API_BASE_URL:-http://46.62.253.61:8000/api/v1}
     container_name: careconnect-frontend
     ports:
-      - "80:80"
+      - "5173:80"
     environment:
       VITE_API_BASE: ${VITE_API_BASE_URL:-http://46.62.253.61:8000/api/v1}
       VITE_APP_NAME: CareConnect
       VITE_ENABLE_ANALYTICS: "false"
     depends_on:
       - backend
-    restart: unless-stopped
+    restart: always
 
 volumes:
   chroma_data:
