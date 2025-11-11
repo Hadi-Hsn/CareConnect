@@ -90,11 +90,12 @@ class ApiClient {
   }
 
   // Chat
-  async chat(messages: ChatMessage[], userId?: number): Promise<ChatResponse> {
+  async chat(messages: ChatMessage[], userId?: number, voiceMode?: boolean): Promise<ChatResponse> {
     const { data } = await this.client.post<ChatResponse>('/agent/chat', {
       messages,
       user_id: userId,
       stream: false,
+      voice_mode: voiceMode || false,
     });
     return data;
   }

@@ -23,6 +23,8 @@ async def chat(
 
     This endpoint uses OpenAI's function calling to orchestrate booking flows
     and information retrieval.
+    
+    Supports voice_mode parameter for phone-call-style short responses.
     """
     if not chat_request.messages:
         raise HTTPException(status_code=400, detail="Messages list cannot be empty")
@@ -32,9 +34,10 @@ async def chat(
     try:
         logger.info("chat_request_received", 
                    user_id=chat_request.user_id, 
-                   message_count=len(chat_request.messages))
+                   message_count=len(chat_request.messages),
+                   voice_mode=chat_request.voice_mode)
         
-        agent = AgentRouter(db)
+        agent = AgentRouter(db, voice_mode=chat_request.voice_mode)
         message, tool_calls, tool_results, usage = await agent.chat_turn(
             chat_request.messages, chat_request.user_id
         )

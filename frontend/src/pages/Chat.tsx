@@ -60,7 +60,7 @@ export default function ChatPage() {
   };
 
   const chatMutation = useMutation({
-    mutationFn: (messages: ChatMessage[]) => api.chat(messages, getCurrentUserId()),
+    mutationFn: (messages: ChatMessage[]) => api.chat(messages, getCurrentUserId(), voiceMode),
     onSuccess: (data) => {
       setMessages((prev) => [...prev, data.message]);
       setToolResults(data.tool_results);

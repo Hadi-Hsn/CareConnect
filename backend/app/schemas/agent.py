@@ -36,6 +36,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     user_id: int | None = None
     stream: bool = False
+    voice_mode: bool = False  # Enable phone-call style short responses
 
 
 class ChatResponse(BaseModel):

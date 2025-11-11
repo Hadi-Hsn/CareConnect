@@ -9,7 +9,7 @@ from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.prompts import SYSTEM_PROMPT
+from app.agents.prompts import SYSTEM_PROMPT, VOICE_MODE_INSTRUCTION
 from app.agents.tools import TOOLS
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -31,10 +31,11 @@ LEBANON_TZ = ZoneInfo("Asia/Beirut")
 class AgentRouter:
     """Agent router using OpenAI function calling."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, voice_mode: bool = False) -> None:
         """Initialize agent router."""
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.db = db
+        self.voice_mode = voice_mode  # Enable phone-call style responses
         self.rag_service = RAGService()
         self.email_service = EmailService()
         self.intent_classifier = IntentClassifier()
@@ -68,11 +69,15 @@ class AgentRouter:
         current_date = lebanon_now.strftime("%Y-%m-%d")
         current_time = lebanon_now.strftime("%I:%M %p")  # e.g., "08:10 PM"
         
+        # Build system prompt with voice mode instruction if enabled
         system_prompt = SYSTEM_PROMPT.format(
             current_date=current_date,
             current_time=current_time,
             user_id=user_id if user_id else "Not authenticated"
         )
+        
+        if self.voice_mode:
+            system_prompt = VOICE_MODE_INSTRUCTION + "\n\n" + system_prompt
 
         # Build messages for OpenAI
         openai_messages = [{"role": "system", "content": system_prompt}]
