@@ -5,7 +5,6 @@ from typing import AsyncGenerator
 
 import structlog
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -53,16 +52,8 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS middleware - ALLOW ALL ORIGINS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
-
+# CORS is handled by Nginx reverse proxy - no need to add it here
+# This prevents duplicate CORS headers which cause browser errors
 
 # Request ID middleware
 @app.middleware("http")
