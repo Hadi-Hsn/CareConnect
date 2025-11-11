@@ -24,8 +24,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: careconnect-backend
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:8000:8000"
     environment:
       # SQLite database (no credentials needed, stored in volume)
       DATABASE_URL: sqlite+aiosqlite:///./data/careconnect.db
@@ -49,7 +49,7 @@ services:
       JWT_EXPIRATION_MINUTES: "1440"
       
       # App settings
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://46.62.253.61}
+      FRONTEND_ORIGIN: https://carecon.online
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       ENVIRONMENT: production
       RATE_LIMIT_PER_MINUTE: "60"
@@ -75,12 +75,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE: ${VITE_API_BASE_URL:-http://46.62.253.61:8000/api/v1}
+        VITE_API_BASE: https://carecon.online/api/v1
     container_name: careconnect-frontend
     ports:
       - "5173:80"
     environment:
-      VITE_API_BASE: ${VITE_API_BASE_URL:-http://46.62.253.61:8000/api/v1}
+      VITE_API_BASE: https://carecon.online/api/v1
       VITE_APP_NAME: CareConnect
       VITE_ENABLE_ANALYTICS: "false"
     depends_on:

@@ -21,12 +21,22 @@ jobs:
           cp -r backend deploy/
           cp -r frontend deploy/
           cp docker-compose.prod.yml deploy/
+          cp nginx-server.conf deploy/
+          cp setup-nginx.sh deploy/
           cp .dockerignore deploy/ 2>/dev/null || true
           cat > deploy/deploy.sh << 'DEPLOYEOF'
           #!/bin/bash
           set -e
           echo "=== Starting Deployment ==="
           df -h
+          
+          # Setup Nginx if not already configured
+          if [ ! -f /etc/nginx/sites-available/carecon.online ]; then
+            echo "Setting up Nginx..."
+            chmod +x setup-nginx.sh
+            ./setup-nginx.sh || echo "Nginx setup failed, continuing..."
+          fi
+          
           docker system prune -af --volumes 2>/dev/null || true
           docker compose -f docker-compose.prod.yml down 2>/dev/null || true
           docker compose -f docker-compose.prod.yml up -d --build
@@ -70,8 +80,8 @@ jobs:
             OPENAI_EMBEDDING_DIMENSIONS=3072
             JWT_SECRET=8f7d6c5b4a3e2d1c0b9a8f7e6d5c4b3a2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5
             JWT_EXPIRATION_MINUTES=1440
-            FRONTEND_ORIGIN=http://46.62.253.61
-            VITE_API_BASE_URL=http://46.62.253.61:8000/api/v1
+            FRONTEND_ORIGIN=https://carecon.online
+            VITE_API_BASE_URL=https://carecon.online/api/v1
             SENDGRID_API_KEY=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
             EMAIL_FROM=hadihacan@gmail.com
             EMAIL_FROM_NAME=CareConnect
