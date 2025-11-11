@@ -16,7 +16,6 @@ import {
   Link,
 } from '@mui/material';
 import {
-  LocalHospital as HospitalIcon,
   Login as LoginIcon,
   PersonAdd as RegisterIcon,
 } from '@mui/icons-material';
@@ -111,29 +110,50 @@ export default function LoginPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #840132 0%, #5e0124 50%, #000000 100%)',
+        background: 'linear-gradient(135deg, #840132 0%, #5e0124 40%, #000000 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         py: { xs: 3, sm: 4 },
         px: { xs: 2, sm: 3 },
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0, 90, 67, 0.15) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        },
       }}
     >
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {/* Logo and Title */}
           <Box
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 2,
+              gap: 2.5,
               mb: 2,
+              animation: 'fadeInDown 0.6s ease-out',
+              '@keyframes fadeInDown': {
+                '0%': { opacity: 0, transform: 'translateY(-30px)' },
+                '100%': { opacity: 1, transform: 'translateY(0)' },
+              },
             }}
           >
-            <HospitalIcon
+            <Box
+              component="img"
+              src="/images/aub-logo.png"
+              alt="AUB Logo"
               sx={{
-                fontSize: { xs: 48, sm: 64 },
-                color: 'white',
+                width: { xs: 56, sm: 72 },
+                height: { xs: 56, sm: 72 },
+                filter: 'brightness(0) invert(1) drop-shadow(0 4px 12px rgba(255, 255, 255, 0.3))',
               }}
             />
             <Typography
@@ -141,8 +161,10 @@ export default function LoginPage() {
               variant="h2"
               sx={{
                 color: 'white',
-                fontWeight: 700,
-                fontSize: { xs: '2rem', sm: '2.5rem' },
+                fontWeight: 800,
+                fontSize: { xs: '2.25rem', sm: '3rem' },
+                textShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+                letterSpacing: '1px',
               }}
             >
               CareConnect
@@ -152,10 +174,12 @@ export default function LoginPage() {
           <Typography
             variant="h6"
             sx={{
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: 'rgba(255, 255, 255, 0.95)',
               textAlign: 'center',
               mb: 1,
-              fontSize: { xs: '1rem', sm: '1.25rem' },
+              fontSize: { xs: '1.125rem', sm: '1.375rem' },
+              fontWeight: 600,
+              textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
             }}
           >
             AUB Medical Center
@@ -164,10 +188,16 @@ export default function LoginPage() {
           <Typography
             variant="body1"
             sx={{
-              color: 'rgba(255, 255, 255, 0.7)',
+              color: 'rgba(255, 255, 255, 0.8)',
               textAlign: 'center',
               mb: 4,
-              fontSize: { xs: '0.875rem', sm: '1rem' },
+              fontSize: { xs: '0.9375rem', sm: '1.0625rem' },
+              fontWeight: 500,
+              animation: 'fadeIn 0.8s ease-out 0.3s both',
+              '@keyframes fadeIn': {
+                '0%': { opacity: 0 },
+                '100%': { opacity: 1 },
+              },
             }}
           >
             Your Smart Health Assistant
@@ -177,8 +207,15 @@ export default function LoginPage() {
           <Card
             sx={{
               width: '100%',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              borderRadius: { xs: 2, sm: 3 },
+              boxShadow: '0 16px 48px rgba(0, 0, 0, 0.4)',
+              borderRadius: { xs: 3, sm: 5 },
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(20px)',
+              animation: 'fadeInUp 0.6s ease-out 0.2s both',
+              '@keyframes fadeInUp': {
+                '0%': { opacity: 0, transform: 'translateY(30px)' },
+                '100%': { opacity: 1, transform: 'translateY(0)' },
+              },
             }}
           >
             <CardContent sx={{ p: { xs: 2, sm: 4 } }}>
@@ -396,17 +433,37 @@ export default function LoginPage() {
           </Card>
 
           {/* Footer */}
-          <Typography
-            variant="body2"
+          <Box
             sx={{
-              color: 'rgba(255, 255, 255, 0.6)',
-              textAlign: 'center',
-              mt: 3,
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              mt: 4,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2,
+              animation: 'fadeIn 1s ease-out 0.5s both',
             }}
           >
-            © 2025 American University of Beirut Medical Center
-          </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                textAlign: 'center',
+                fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+              }}
+            >
+              © 2025 American University of Beirut Medical Center
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'rgba(255, 255, 255, 0.5)',
+                textAlign: 'center',
+                fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+              }}
+            >
+              Powered by AI • Designed with Care
+            </Typography>
+          </Box>
         </Box>
       </Container>
     </Box>

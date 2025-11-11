@@ -26,8 +26,6 @@ import {
   AdminPanelSettings as AdminIcon,
   Logout as LogoutIcon,
   Menu as MenuIcon,
-  LocalHospital as HospitalIcon,
-  Person as PersonIcon,
   ReportProblem as IncidentIcon,
   MedicalServices as ProvidersIcon,
 } from '@mui/icons-material';
@@ -91,26 +89,37 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const drawer = (
-    <Box>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Toolbar
         sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
           px: 2.5,
-          py: 2,
+          py: 2.5,
           background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)',
+          boxShadow: '0 2px 8px rgba(132, 1, 50, 0.2)',
         }}
       >
-        <HospitalIcon sx={{ fontSize: 32, color: 'white' }} />
+        <Box
+          component="img"
+          src="/images/aub-logo.png"
+          alt="AUB Logo"
+          sx={{
+            width: 40,
+            height: 40,
+            filter: 'brightness(0) invert(1)',
+          }}
+        />
         <Box>
           <Typography
             variant="h6"
             sx={{
               color: 'white',
               fontWeight: 700,
-              fontSize: '1.1rem',
+              fontSize: '1.2rem',
               lineHeight: 1.2,
+              letterSpacing: '0.5px',
             }}
           >
             CareConnect
@@ -118,16 +127,18 @@ export default function Layout({ children }: LayoutProps) {
           <Typography
             variant="caption"
             sx={{
-              color: 'rgba(255, 255, 255, 0.8)',
+              color: 'rgba(255, 255, 255, 0.85)',
               fontSize: '0.7rem',
+              fontWeight: 500,
+              letterSpacing: '0.3px',
             }}
           >
             AUB Medical Center
           </Typography>
         </Box>
       </Toolbar>
-      <Divider />
-      <List sx={{ px: 1.5, py: 2 }}>
+      <Divider sx={{ borderColor: 'rgba(132, 1, 50, 0.12)' }} />
+      <List sx={{ px: 1.5, py: 2, flexGrow: 1 }}>
         {menuItems.map((item) => {
           const isSelected = location.pathname === item.path;
           return (
@@ -136,7 +147,7 @@ export default function Layout({ children }: LayoutProps) {
                 selected={isSelected}
                 onClick={() => handleMenuClick(item.path)}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: 3,
                   py: 1.5,
                   px: 2,
                   '&.Mui-selected': {
@@ -147,7 +158,7 @@ export default function Layout({ children }: LayoutProps) {
                     },
                   },
                   '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    backgroundColor: 'rgba(132, 1, 50, 0.06)',
                   },
                 }}
               >
@@ -162,7 +173,7 @@ export default function Layout({ children }: LayoutProps) {
                 <ListItemText
                   primary={item.text}
                   primaryTypographyProps={{
-                    fontWeight: isSelected ? 600 : 500,
+                    fontWeight: isSelected ? 700 : 500,
                     fontSize: '0.95rem',
                     color: isSelected ? '#000000' : '#808080',
                   }}
@@ -172,52 +183,126 @@ export default function Layout({ children }: LayoutProps) {
           );
         })}
       </List>
+      
+      {/* User info at bottom */}
+      <Divider sx={{ borderColor: 'rgba(132, 1, 50, 0.12)' }} />
+      <Box
+        sx={{
+          p: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          background: 'linear-gradient(180deg, transparent 0%, rgba(132, 1, 50, 0.02) 100%)',
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 36,
+            height: 36,
+            bgcolor: '#840132',
+            fontSize: '0.9rem',
+            fontWeight: 600,
+          }}
+        >
+          {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+        </Avatar>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              color: '#000000',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {currentUser?.name || 'User'}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: '#808080',
+              fontSize: '0.75rem',
+              textTransform: 'capitalize',
+            }}
+          >
+            {userRole}
+          </Typography>
+        </Box>
+      </Box>
     </Box>
   );
 
   return (
-    <Box sx={{ display: 'flex', width: '100%', minHeight: '100vh', bgcolor: '#f8f8f8' }}>
+        <Box sx={{ display: 'flex', width: '100%', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
+      {/* Rest of JSX */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(90deg, #840132 0%, #5e0124 100%)',
+          zIndex: (theme: any) => theme.zIndex.drawer + 1,
+          background: 'linear-gradient(90deg, #840132 0%, #5e0124 80%, #000000 100%)',
+          backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 4px 16px rgba(132, 1, 50, 0.2)',
         }}
       >
-        <Toolbar>
-          {isMobile && (
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2 }}
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {isMobile && (
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{
+                  borderRadius: 2,
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  },
+                }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Box
+              component="img"
+              src="/images/aub-logo.png"
+              alt="AUB Logo"
+              sx={{
+                width: { xs: 28, sm: 32 },
+                height: { xs: 28, sm: 32 },
+                filter: 'brightness(0) invert(1)',
+                display: { xs: 'none', sm: 'block' },
+              }}
+            />
+            <Typography
+              variant="h6"
+              noWrap
+              component="div"
+              sx={{
+                fontWeight: 700,
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                letterSpacing: '0.5px',
+                background: 'linear-gradient(90deg, #ffffff 0%, rgba(255,255,255,0.9) 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
             >
-              <MenuIcon />
-            </IconButton>
-          )}
-          <HospitalIcon sx={{ mr: 1.5, display: { xs: 'none', sm: 'block' } }} />
-          <Typography
-            variant="h6"
-            noWrap
-            component="div"
-            sx={{
-              flexGrow: 1,
-              fontWeight: 600,
-              fontSize: { xs: '1rem', sm: '1.25rem' },
-            }}
-          >
-            {isMobile ? 'CareConnect' : 'CareConnect - Smart Health Assistant'}
-          </Typography>
+              {isMobile ? 'CareConnect' : 'CareConnect - Smart Health Assistant'}
+            </Typography>
+          </Box>
           <IconButton
             color="inherit"
             onClick={handleProfileMenuOpen}
             sx={{
-              ml: 1,
+              borderRadius: 2,
+              transition: 'all 0.2s ease',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                transform: 'scale(1.05)',
               },
             }}
           >
@@ -225,11 +310,13 @@ export default function Layout({ children }: LayoutProps) {
               sx={{
                 width: 36,
                 height: 36,
-                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                bgcolor: 'rgba(255, 255, 255, 0.25)',
                 fontSize: '1rem',
+                fontWeight: 700,
+                border: '2px solid rgba(255, 255, 255, 0.3)',
               }}
             >
-              <PersonIcon />
+              {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
             </Avatar>
           </IconButton>
           <Menu
@@ -246,21 +333,54 @@ export default function Layout({ children }: LayoutProps) {
             }}
             PaperProps={{
               sx: {
-                mt: 1,
-                minWidth: 200,
+                mt: 1.5,
+                minWidth: 220,
+                borderRadius: 3,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
               },
             }}
           >
-            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Box sx={{ px: 2.5, py: 2, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                 {currentUser?.name || 'User'}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
                 {currentUser?.email}
               </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  mt: 0.5,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: 1,
+                  bgcolor: 'rgba(132, 1, 50, 0.1)',
+                  color: '#840132',
+                  textTransform: 'capitalize',
+                  fontWeight: 600,
+                  display: 'inline-block',
+                }}
+              >
+                {userRole}
+              </Typography>
             </Box>
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
+            <MenuItem
+              onClick={handleLogout}
+              sx={{
+                py: 1.5,
+                px: 2.5,
+                mt: 1,
+                mx: 1,
+                mb: 1,
+                borderRadius: 2,
+                color: '#d32f2f',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                },
+              }}
+            >
+              <ListItemIcon sx={{ color: '#d32f2f' }}>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText>Logout</ListItemText>
@@ -279,7 +399,8 @@ export default function Layout({ children }: LayoutProps) {
             '& .MuiDrawer-paper': {
               width: DRAWER_WIDTH,
               boxSizing: 'border-box',
-              borderRight: '1px solid rgba(0, 0, 0, 0.08)',
+              borderRight: '1px solid rgba(132, 1, 50, 0.08)',
+              boxShadow: '4px 0 12px rgba(0, 0, 0, 0.05)',
             },
           }}
         >
@@ -300,6 +421,7 @@ export default function Layout({ children }: LayoutProps) {
             '& .MuiDrawer-paper': {
               width: DRAWER_WIDTH,
               boxSizing: 'border-box',
+              boxShadow: '8px 0 24px rgba(0, 0, 0, 0.15)',
             },
           }}
         >
@@ -311,13 +433,17 @@ export default function Layout({ children }: LayoutProps) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3 },
+          p: { xs: 2, sm: 3, md: 4 },
           width: { xs: '100%', md: `calc(100% - ${DRAWER_WIDTH}px)` },
           minHeight: '100vh',
+          bgcolor: '#f5f7fa',
+          backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(132, 1, 50, 0.03) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(0, 90, 67, 0.02) 0%, transparent 50%)',
         }}
       >
         <Toolbar />
-        {children}
+        <Box sx={{ mt: { xs: 2, sm: 3 } }}>
+          {children}
+        </Box>
       </Box>
     </Box>
   );

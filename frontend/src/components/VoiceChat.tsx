@@ -308,25 +308,59 @@ export default function VoiceChat({
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        gap: { xs: 3, sm: 4 },
-        padding: { xs: 2, sm: 4 },
+        gap: { xs: 3, sm: 4, md: 5 },
+        padding: { xs: 2, sm: 4, md: 6 },
+        position: 'relative',
+        background: 'radial-gradient(circle at center, rgba(132, 1, 50, 0.03) 0%, transparent 70%)',
       }}
     >
-      {/* Auto mode toggle */}
-      <FormControlLabel
-        control={
-          <Switch
-            checked={autoMode}
-            onChange={(e) => setAutoMode(e.target.checked)}
-            disabled={voiceState !== 'idle'}
-          />
-        }
-        label={
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-            Auto-detect when I stop speaking
-          </Typography>
-        }
-      />
+      {/* Auto mode toggle with enhanced styling */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          p: { xs: 1.5, sm: 2 },
+          borderRadius: 4,
+          bgcolor: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+          border: '1px solid rgba(132, 1, 50, 0.1)',
+        }}
+      >
+        <FormControlLabel
+          control={
+            <Switch
+              checked={autoMode}
+              onChange={(e) => setAutoMode(e.target.checked)}
+              disabled={voiceState !== 'idle'}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': {
+                  color: '#840132',
+                  '&:hover': {
+                    backgroundColor: 'rgba(132, 1, 50, 0.08)',
+                  },
+                },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                  backgroundColor: '#840132',
+                },
+              }}
+            />
+          }
+          label={
+            <Typography
+              variant="body2"
+              sx={{
+                color: theme.palette.text.primary,
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+              }}
+            >
+              Auto-detect when I stop speaking
+            </Typography>
+          }
+        />
+      </Box>
 
       {/* Main circular button */}
       <Box
@@ -339,21 +373,51 @@ export default function VoiceChat({
       >
         {/* Outer glow ring - animated during listening */}
         {voiceState === 'listening' && (
-          <Box
-            sx={{
-              position: 'absolute',
-              width: { xs: 200, sm: 280 },
-              height: { xs: 200, sm: 280 },
-              borderRadius: '50%',
-              background: `radial-gradient(circle, ${alpha(getStateColor(), 0.4)} 0%, transparent 70%)`,
-              filter: `blur(${glowIntensity}px)`,
-              animation: 'pulse 2s ease-in-out infinite',
-              '@keyframes pulse': {
-                '0%, 100%': { transform: 'scale(1)', opacity: 0.5 },
-                '50%': { transform: 'scale(1.1)', opacity: 0.8 },
-              },
-            }}
-          />
+          <>
+            <Box
+              sx={{
+                position: 'absolute',
+                width: { xs: 220, sm: 300, md: 320 },
+                height: { xs: 220, sm: 300, md: 320 },
+                borderRadius: '50%',
+                background: `radial-gradient(circle, ${alpha(getStateColor(), 0.5)} 0%, transparent 70%)`,
+                filter: `blur(${glowIntensity}px)`,
+                animation: 'pulse 2s ease-in-out infinite',
+                '@keyframes pulse': {
+                  '0%, 100%': { transform: 'scale(1)', opacity: 0.5 },
+                  '50%': { transform: 'scale(1.15)', opacity: 0.8 },
+                },
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                width: { xs: 200, sm: 260, md: 280 },
+                height: { xs: 200, sm: 260, md: 280 },
+                borderRadius: '50%',
+                border: `2px solid ${alpha(getStateColor(), 0.3)}`,
+                animation: 'rotate 10s linear infinite',
+                '@keyframes rotate': {
+                  '0%': { transform: 'rotate(0deg)' },
+                  '100%': { transform: 'rotate(360deg)' },
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: '10%',
+                  left: '50%',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor: getStateColor(),
+                  transform: 'translateX(-50%)',
+                  boxShadow: `0 0 20px ${alpha(getStateColor(), 0.6)}`,
+                }}
+              />
+            </Box>
+          </>
         )}
 
         {/* Silence detection progress ring */}
@@ -422,34 +486,88 @@ export default function VoiceChat({
         <Paper
           elevation={8}
           sx={{
-            width: { xs: 140, sm: 180 },
-            height: { xs: 140, sm: 180 },
+            width: { xs: 160, sm: 200, md: 220 },
+            height: { xs: 160, sm: 200, md: 220 },
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: `linear-gradient(135deg, ${getStateColor()} 0%, ${alpha(getStateColor(), 0.7)} 100%)`,
+            background: voiceState === 'idle' 
+              ? `linear-gradient(135deg, ${alpha(getStateColor(), 0.9)} 0%, ${alpha(getStateColor(), 0.7)} 100%)`
+              : `linear-gradient(135deg, ${getStateColor()} 0%, ${alpha(getStateColor(), 0.8)} 100%)`,
             cursor: voiceState !== 'processing' ? 'pointer' : 'default',
-            transition: 'all 0.3s ease',
+            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             transform: voiceState === 'listening' ? `scale(${pulseScale})` : 'scale(1)',
-            boxShadow: `0 0 ${glowIntensity * 2}px ${alpha(getStateColor(), 0.5)}`,
+            boxShadow: voiceState === 'idle'
+              ? '0 8px 24px rgba(132, 1, 50, 0.3)'
+              : `0 0 ${glowIntensity * 3}px ${alpha(getStateColor(), 0.6)}, 0 8px 32px ${alpha(getStateColor(), 0.4)}`,
+            border: `3px solid ${alpha('#ffffff', 0.3)}`,
+            position: 'relative',
+            overflow: 'visible',
             '&:hover': {
-              transform: voiceState !== 'processing' ? 'scale(1.05)' : 'scale(1)',
+              transform: voiceState !== 'processing' ? 'scale(1.08)' : 'scale(1)',
+              boxShadow: `0 0 ${glowIntensity * 4}px ${alpha(getStateColor(), 0.7)}, 0 12px 40px ${alpha(getStateColor(), 0.5)}`,
             },
             '&:active': {
-              transform: voiceState !== 'processing' ? 'scale(0.95)' : 'scale(1)',
+              transform: voiceState !== 'processing' ? 'scale(0.98)' : 'scale(1)',
             },
+            '&::before': voiceState !== 'idle' ? {
+              content: '""',
+              position: 'absolute',
+              top: -10,
+              left: -10,
+              right: -10,
+              bottom: -10,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${alpha(getStateColor(), 0.2)} 0%, transparent 70%)`,
+              animation: 'ripple 2s infinite ease-out',
+              '@keyframes ripple': {
+                '0%': { transform: 'scale(0.8)', opacity: 1 },
+                '100%': { transform: 'scale(1.3)', opacity: 0 },
+              },
+            } : {},
           }}
           onClick={handleMainButtonClick}
         >
           {voiceState === 'processing' || isProcessing ? (
-            <CircularProgress size={60} sx={{ color: 'white' }} />
+            <CircularProgress 
+              size={70} 
+              sx={{ 
+                color: 'white',
+                '& .MuiCircularProgress-circle': {
+                  strokeLinecap: 'round',
+                },
+              }} 
+            />
           ) : voiceState === 'listening' ? (
-            <StopIcon sx={{ fontSize: { xs: 60, sm: 80 }, color: 'white' }} />
+            <StopIcon 
+              sx={{ 
+                fontSize: { xs: 70, sm: 90, md: 100 }, 
+                color: 'white',
+                filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))',
+              }} 
+            />
           ) : voiceState === 'speaking' ? (
-            <VolumeUpIcon sx={{ fontSize: { xs: 60, sm: 80 }, color: 'white' }} />
+            <VolumeUpIcon 
+              sx={{ 
+                fontSize: { xs: 70, sm: 90, md: 100 }, 
+                color: 'white',
+                animation: 'bounce 0.6s infinite alternate',
+                filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))',
+                '@keyframes bounce': {
+                  '0%': { transform: 'scale(1)' },
+                  '100%': { transform: 'scale(1.1)' },
+                },
+              }} 
+            />
           ) : (
-            <MicIcon sx={{ fontSize: { xs: 60, sm: 80 }, color: 'white' }} />
+            <MicIcon 
+              sx={{ 
+                fontSize: { xs: 70, sm: 90, md: 100 }, 
+                color: 'white',
+                filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))',
+              }} 
+            />
           )}
         </Paper>
 
@@ -481,49 +599,101 @@ export default function VoiceChat({
       </Box>
 
       {/* Status text */}
-      <Typography
-        variant="h6"
+      <Box
         sx={{
-          color: getStateColor(),
-          fontWeight: 600,
           textAlign: 'center',
-          fontSize: { xs: '1rem', sm: '1.25rem' },
+          px: 2,
         }}
       >
-        {getStateText()}
-      </Typography>
+        <Typography
+          variant="h5"
+          sx={{
+            color: getStateColor(),
+            fontWeight: 700,
+            textAlign: 'center',
+            fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+            mb: 1,
+            textShadow: `0 2px 8px ${alpha(getStateColor(), 0.3)}`,
+            letterSpacing: '0.5px',
+          }}
+        >
+          {getStateText()}
+        </Typography>
+        {voiceState === 'listening' && (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 0.5,
+              mt: 2,
+            }}
+          >
+            {[...Array(5)].map((_, i) => (
+              <Box
+                key={i}
+                sx={{
+                  width: { xs: 4, sm: 5 },
+                  height: { xs: 20, sm: 24 },
+                  bgcolor: getStateColor(),
+                  borderRadius: 2,
+                  animation: `wave 1s ease-in-out infinite ${i * 0.1}s`,
+                  opacity: 0.7 + (audioLevel * 0.3),
+                  '@keyframes wave': {
+                    '0%, 100%': { transform: 'scaleY(0.5)' },
+                    '50%': { transform: 'scaleY(1.2)' },
+                  },
+                }}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
 
       {/* Transcription display */}
       {transcription && (
         <Paper
-          elevation={2}
+          elevation={3}
           sx={{
-            padding: { xs: 2, sm: 3 },
-            maxWidth: { xs: '100%', sm: 600 },
+            padding: { xs: 2.5, sm: 3.5 },
+            maxWidth: { xs: '100%', sm: 600, md: 700 },
             width: '100%',
-            borderRadius: 3,
-            backgroundColor: alpha(theme.palette.background.paper, 0.9),
-            borderLeft: '4px solid #840132',
+            borderRadius: 4,
+            backgroundColor: alpha(theme.palette.background.paper, 0.95),
+            backdropFilter: 'blur(10px)',
+            borderLeft: '5px solid #840132',
+            boxShadow: '0 8px 24px rgba(132, 1, 50, 0.15)',
+            animation: 'slideIn 0.3s ease-out',
+            '@keyframes slideIn': {
+              '0%': { opacity: 0, transform: 'translateY(20px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' },
+            },
           }}
         >
-          <Typography
-            variant="body2"
-            sx={{
-              color: theme.palette.text.secondary,
-              textAlign: 'left',
-              mb: 0.5,
-              fontWeight: 600,
-            }}
-          >
-            You said:
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <MicIcon sx={{ color: '#840132', mr: 1, fontSize: '1.25rem' }} />
+            <Typography
+              variant="subtitle2"
+              sx={{
+                color: theme.palette.text.secondary,
+                fontWeight: 700,
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                fontSize: '0.75rem',
+              }}
+            >
+              You said:
+            </Typography>
+          </Box>
           <Typography
             variant="body1"
             sx={{
               color: theme.palette.text.primary,
               textAlign: 'left',
               fontStyle: 'italic',
-              fontSize: { xs: '0.875rem', sm: '1rem' },
+              fontSize: { xs: '0.9375rem', sm: '1.0625rem' },
+              lineHeight: 1.7,
+              pl: 2,
+              borderLeft: '2px solid rgba(132, 1, 50, 0.2)',
             }}
           >
             "{transcription}"
@@ -533,30 +703,72 @@ export default function VoiceChat({
 
       {/* Instructions */}
       {voiceState === 'idle' && (
-        <Box sx={{ textAlign: 'center', maxWidth: { xs: 300, sm: 500 }, px: 2 }}>
+        <Box
+          sx={{
+            textAlign: 'center',
+            maxWidth: { xs: 340, sm: 500, md: 600 },
+            px: { xs: 2, sm: 3 },
+          }}
+        >
           <Typography
-            variant="body2"
+            variant="body1"
             sx={{
               color: theme.palette.text.secondary,
-              fontSize: { xs: '0.8rem', sm: '0.875rem' },
-              mb: 2,
+              fontSize: { xs: '0.9375rem', sm: '1rem' },
+              mb: 3,
+              lineHeight: 1.7,
+              fontWeight: 500,
             }}
           >
             {autoMode 
-              ? "Tap to start. Speak naturally and I'll respond when you pause. It's like a phone call!"
-              : "Tap the microphone to start speaking. Tap the stop button when you're done."
+              ? "🎤 Tap to start. Speak naturally and I'll respond when you pause. It's like a phone call!"
+              : "🎤 Tap the microphone to start speaking. Tap the stop button when you're done."
             }
           </Typography>
-          <Typography
-            variant="caption"
+          <Box
             sx={{
-              color: theme.palette.text.secondary,
-              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-              display: 'block',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 1.5,
+              justifyContent: 'center',
+              mb: 2,
             }}
           >
-            Try: "Book an appointment" • "Find a cardiologist" • "Lab test info"
-          </Typography>
+            {[
+              { icon: '📅', text: 'Book an appointment' },
+              { icon: '👨‍⚕️', text: 'Find a cardiologist' },
+              { icon: '🧪', text: 'Lab test info' },
+            ].map((item, idx) => (
+              <Box
+                key={idx}
+                sx={{
+                  px: 2,
+                  py: 1.5,
+                  borderRadius: 3,
+                  bgcolor: 'rgba(132, 1, 50, 0.05)',
+                  border: '1px solid rgba(132, 1, 50, 0.1)',
+                  transition: 'all 0.2s ease',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: 'rgba(132, 1, 50, 0.1)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(132, 1, 50, 0.15)',
+                  },
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                    fontWeight: 500,
+                  }}
+                >
+                  {item.icon} {item.text}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
         </Box>
       )}
     </Box>
