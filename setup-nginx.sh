@@ -10,11 +10,15 @@ echo "Installing required packages..."
 apt-get update
 apt-get install -y nginx certbot python3-certbot-nginx
 
+# Remove old configs
+echo "Removing old configurations..."
+rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-enabled/carecon.website
+
 # Copy nginx configuration
 echo "Setting up Nginx configuration..."
 cp nginx-server.conf /etc/nginx/sites-available/carecon.online
 ln -sf /etc/nginx/sites-available/carecon.online /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
 
 # Test nginx configuration
 echo "Testing Nginx configuration..."

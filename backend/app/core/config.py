@@ -85,7 +85,27 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         """Get CORS allowed origins."""
-        return [self.frontend_origin]
+        origins = [self.frontend_origin]
+        
+        # Add both http and https versions if not already included
+        if self.frontend_origin.startswith("https://"):
+            http_version = self.frontend_origin.replace("https://", "http://")
+            if http_version not in origins:
+                origins.append(http_version)
+        elif self.frontend_origin.startswith("http://"):
+            https_version = self.frontend_origin.replace("http://", "https://")
+            if https_version not in origins:
+                origins.append(https_version)
+        
+        # Add www subdomain variants
+        domain = self.frontend_origin.split("://")[-1]
+        if not domain.startswith("www."):
+            if self.frontend_origin.startswith("https://"):
+                origins.append(f"https://www.{domain}")
+            if self.frontend_origin.startswith("http://"):
+                origins.append(f"http://www.{domain}")
+        
+        return origins
 
 
 @lru_cache
