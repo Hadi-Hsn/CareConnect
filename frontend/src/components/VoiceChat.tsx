@@ -50,9 +50,9 @@ export default function VoiceChat({
   const lastSoundTimeRef = useRef<number>(0);
 
   // VAD (Voice Activity Detection) thresholds
-  const SILENCE_THRESHOLD = 0.03; // Audio level below this is considered silence (increased sensitivity)
-  const SILENCE_DURATION = 1200; // Stop recording after 1.2 seconds of silence
-  const MIN_RECORDING_TIME = 800; // Minimum recording time before checking for silence
+  const SILENCE_THRESHOLD = 0.02; // Audio level below this is considered silence (more sensitive)
+  const SILENCE_DURATION = 1000; // Stop recording after 1 second of silence
+  const MIN_RECORDING_TIME = 600; // Minimum recording time before checking for silence (reduced)
 
   // Initialize audio context for visualizations
   useEffect(() => {
@@ -182,8 +182,8 @@ export default function VoiceChat({
       setSilenceTimer(null);
     } else {
       // Silence detected
-      if (!silenceTimeoutRef.current && timeSinceLastSound > 100) {
-        // Start silence detection timer
+      if (!silenceTimeoutRef.current && timeSinceLastSound > 50) {
+        // Start silence detection timer (reduced from 100ms to 50ms)
         const silenceStartTime = Date.now();
         
         silenceTimeoutRef.current = window.setTimeout(() => {

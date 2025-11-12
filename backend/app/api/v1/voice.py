@@ -13,7 +13,7 @@ from app.services.voice_service import get_voice_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/voice", tags=["voice"])
+router = APIRouter()
 
 
 class TextToSpeechRequest(BaseModel):
