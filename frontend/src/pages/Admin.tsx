@@ -17,7 +17,7 @@ import {
   DialogContentText,
   DialogActions,
 } from '@mui/material';
-import { Database as DatabaseIcon, Warning as WarningIcon } from '@mui/icons-material';
+import { Storage as DatabaseIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { api } from '@/lib/api';
 
 interface TabPanelProps {
