@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   CardContent,
-  Container,
   TextField,
   Typography,
   Tab,
@@ -110,6 +109,7 @@ export default function LoginPage() {
     <Box
       sx={{
         minHeight: '100vh',
+        width: '100%',
         background: 'linear-gradient(135deg, #840132 0%, #5e0124 40%, #000000 100%)',
         display: 'flex',
         alignItems: 'center',
@@ -130,7 +130,7 @@ export default function LoginPage() {
         },
       }}
     >
-      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+      <Box sx={{ width: '100%', maxWidth: '500px', position: 'relative', zIndex: 1, px: { xs: 2, sm: 3 } }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           {/* Logo and Title */}
           <Box
@@ -465,7 +465,7 @@ export default function LoginPage() {
             </Typography>
           </Box>
         </Box>
-      </Container>
+      </Box>
     </Box>
   );
 }

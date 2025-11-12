@@ -46,12 +46,13 @@ export default function VoiceChat({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const silenceTimeoutRef = useRef<number | null>(null);
-  const lastSpeechTimeRef = useRef<number>(Date.now());
+  const recordingStartTimeRef = useRef<number>(0);
+  const lastSoundTimeRef = useRef<number>(0);
 
   // VAD (Voice Activity Detection) thresholds
-  const SILENCE_THRESHOLD = 0.02; // Audio level below this is considered silence
-  const SILENCE_DURATION = 1500; // Stop recording after 1.5 seconds of silence
-  const MIN_RECORDING_TIME = 1000; // Minimum recording time before checking for silence
+  const SILENCE_THRESHOLD = 0.03; // Audio level below this is considered silence (increased sensitivity)
+  const SILENCE_DURATION = 1200; // Stop recording after 1.2 seconds of silence
+  const MIN_RECORDING_TIME = 800; // Minimum recording time before checking for silence
 
   // Initialize audio context for visualizations
   useEffect(() => {
@@ -101,7 +102,8 @@ export default function VoiceChat({
         mimeType: 'audio/webm;codecs=opus',
       });
       audioChunksRef.current = [];
-      lastSpeechTimeRef.current = Date.now();
+      recordingStartTimeRef.current = Date.now();
+      lastSoundTimeRef.current = Date.now();
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -143,53 +145,63 @@ export default function VoiceChat({
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && voiceState === 'listening') {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-      }
     }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    setSilenceTimer(null);
   };
 
   const checkForSilence = (level: number) => {
-    if (!autoMode || voiceState !== 'listening') return;
+    if (!autoMode) return;
 
     const now = Date.now();
-    const recordingDuration = now - lastSpeechTimeRef.current;
+    const recordingDuration = now - recordingStartTimeRef.current;
+    const timeSinceLastSound = now - lastSoundTimeRef.current;
 
-    // Don't check for silence in the first second of recording
-    if (recordingDuration < MIN_RECORDING_TIME) return;
+    // Don't check for silence in the first portion of recording
+    if (recordingDuration < MIN_RECORDING_TIME) {
+      return;
+    }
 
     if (level > SILENCE_THRESHOLD) {
-      // User is speaking - reset silence timer
+      // User is speaking - update last sound time and reset silence timer
+      lastSoundTimeRef.current = now;
+      
       if (silenceTimeoutRef.current) {
         clearTimeout(silenceTimeoutRef.current);
         silenceTimeoutRef.current = null;
       }
       setSilenceTimer(null);
     } else {
-      // Silence detected - start or update timer
-      if (!silenceTimeoutRef.current) {
-        const startTime = Date.now();
-        silenceTimeoutRef.current = setTimeout(() => {
-          // User stopped speaking - auto-stop recording
+      // Silence detected
+      if (!silenceTimeoutRef.current && timeSinceLastSound > 100) {
+        // Start silence detection timer
+        const silenceStartTime = Date.now();
+        
+        silenceTimeoutRef.current = window.setTimeout(() => {
+          console.log('Silence detected - stopping recording');
           stopRecording();
         }, SILENCE_DURATION);
 
         // Update UI timer
-        const updateTimer = () => {
-          if (voiceState === 'listening') {
-            const elapsed = Date.now() - startTime;
-            setSilenceTimer(Math.min(elapsed, SILENCE_DURATION));
-            if (elapsed < SILENCE_DURATION) {
-              requestAnimationFrame(updateTimer);
-            }
+        const updateSilenceUI = () => {
+          const elapsed = Date.now() - silenceStartTime;
+          if (elapsed < SILENCE_DURATION && silenceTimeoutRef.current) {
+            setSilenceTimer(elapsed);
+            requestAnimationFrame(updateSilenceUI);
+          } else {
+            setSilenceTimer(null);
           }
         };
-        updateTimer();
+        updateSilenceUI();
       }
     }
   };
@@ -200,7 +212,10 @@ export default function VoiceChat({
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     
     const animate = () => {
-      if (voiceState !== 'listening') return;
+      // Check if still recording
+      if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
+        return;
+      }
       
       analyserRef.current?.getByteFrequencyData(dataArray);
       const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;

@@ -258,7 +258,7 @@ export default function Layout({ children }: LayoutProps) {
                 edge="start"
                 onClick={handleDrawerToggle}
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: 0,
                   '&:hover': {
                     backgroundColor: 'rgba(255, 255, 255, 0.15)',
                   },
@@ -298,7 +298,7 @@ export default function Layout({ children }: LayoutProps) {
             color="inherit"
             onClick={handleProfileMenuOpen}
             sx={{
-              borderRadius: 2,
+              borderRadius: 0,
               transition: 'all 0.2s ease',
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.15)',

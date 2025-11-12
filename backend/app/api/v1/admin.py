@@ -1,5 +1,8 @@
 """Admin endpoints for managing doctors, appointments, and schedules."""
+import asyncio
+import sys
 from datetime import date, datetime, time
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -660,3 +663,81 @@ async def get_admin_stats(
         "upcoming_appointments": upcoming,
         "appointments_by_status": status_counts,
     }
+
+
+# ============================================================================
+# DATABASE POPULATION
+# ============================================================================
+
+
+@router.post("/populate-database", status_code=status.HTTP_200_OK)
+async def populate_database(
+    admin: User = Depends(require_admin),
+) -> dict:
+    """
+    Populate database with comprehensive demo data.
+    
+    **Admin only.** This will:
+    - Ensure admin@aub.com exists with password Admin@123
+    - Clear existing demo data (except admin)
+    - Create 30 patient accounts
+    - Create 3+ providers per department
+    - Create 22 lab tests
+    - Create diverse appointments
+    - Index all documents for RAG
+    
+    WARNING: This will delete existing data!
+    """
+    try:
+        logger.info("database_population_started", admin_id=admin.id)
+        
+        # Import and run the population script
+        # We'll use subprocess to run the script to avoid module conflicts
+        import subprocess
+        
+        script_path = Path(__file__).parent.parent.parent.parent / "scripts" / "populate_demo_database.py"
+        
+        # Run the script
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            str(script_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            error_msg = stderr.decode() if stderr else "Unknown error"
+            logger.error("database_population_failed", error=error_msg, admin_id=admin.id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database population failed: {error_msg}"
+            )
+        
+        output = stdout.decode() if stdout else ""
+        
+        logger.info("database_population_completed", admin_id=admin.id)
+        
+        return {
+            "success": True,
+            "message": "Database populated successfully with demo data",
+            "details": {
+                "admin_email": "admin@aub.com",
+                "admin_password": "Admin@123",
+                "patients_created": 30,
+                "providers_created": "3+ per department",
+                "lab_tests_created": 22,
+                "appointments_created": "Varied across time periods",
+            },
+            "output": output,
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("database_population_error", error=str(e), admin_id=admin.id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to populate database: {str(e)}"
+        )
