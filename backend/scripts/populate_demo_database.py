@@ -912,6 +912,9 @@ async def seed_rag_documents(providers):
     
     # Add doctor profiles
     for provider in providers:
+        # Handle provider.type which can be either an enum or string
+        provider_type = provider.type.value if hasattr(provider.type, 'value') else provider.type
+        
         content = f"""
         {provider.name} - {provider.specialty}
         Department: {provider.department}
@@ -923,7 +926,7 @@ async def seed_rag_documents(providers):
         {provider.specialty}
         
         TYPE:
-        {provider.type.value}
+        {provider_type}
         
         To book an appointment with {provider.name}, you can search for available slots in the {provider.department} department or directly by provider ID {provider.id}.
         """
