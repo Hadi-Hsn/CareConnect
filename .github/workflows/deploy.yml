@@ -54,38 +54,35 @@ jobs:
       - name: Copy deployment files
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: 46.62.253.61
-          username: root
-          password: P@ss@123
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
           source: "deployment.tar.gz"
           target: "/app/careconnect/"
 
       - name: Extract and deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 46.62.253.61
-          username: root
-          password: P@ss@123
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
           script: |
             cd /app/careconnect
             tar -xzf deployment.tar.gz
             rm deployment.tar.gz
             cat > .env << ENVEOF
-            POSTGRES_USER=careconnect
-            POSTGRES_PASSWORD=careconnect_prod
-            POSTGRES_DB=careconnect
-            OPENAI_API_KEY=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
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             OPENAI_MODEL=gpt-4o
             OPENAI_EMBEDDING_MODEL=text-embedding-3-large
             OPENAI_EMBEDDING_DIMENSIONS=3072
-            JWT_SECRET=8f7d6c5b4a3e2d1c0b9a8f7e6d5c4b3a2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
             JWT_EXPIRATION_MINUTES=1440
             FRONTEND_ORIGIN=https://carecon.online
             VITE_API_BASE_URL=https://carecon.online/api/v1
-            SENDGRID_API_KEY=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
-            EMAIL_FROM=hadihacan@gmail.com
+            SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
+            EMAIL_FROM=${{ secrets.EMAIL_FROM }}
             EMAIL_FROM_NAME=CareConnect
-            ADMIN_EMAILS=admin@careconnect.com
+            ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}
             LOG_LEVEL=INFO
             ENVIRONMENT=production
             ENVEOF
