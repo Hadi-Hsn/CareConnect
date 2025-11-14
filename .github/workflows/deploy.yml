@@ -45,6 +45,11 @@ jobs:
           docker compose -f docker-compose.prod.yml ps
           docker compose -f docker-compose.prod.yml logs --tail=30
           curl -f http://localhost:8000/health || echo "Health check failed"
+          
+          # Create admin account
+          echo "=== Creating Admin Account ==="
+          docker exec careconnect-backend python scripts/create_admin.py || echo "Admin creation failed"
+          
           df -h
           echo "=== Deployment Complete ==="
           DEPLOYEOF
