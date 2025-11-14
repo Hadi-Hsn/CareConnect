@@ -40,15 +40,34 @@ jobs:
           docker system prune -af --volumes 2>/dev/null || true
           docker compose -f docker-compose.prod.yml down 2>/dev/null || true
           docker compose -f docker-compose.prod.yml up -d --build
-          sleep 20
+          
+          # Wait for services to be ready
+          echo "=== Waiting for services to start ==="
+          sleep 30
+          
+          # Check backend health
+          for i in {1..10}; do
+            if curl -f http://localhost:8000/health 2>/dev/null; then
+              echo "Backend is healthy!"
+              break
+            fi
+            echo "Waiting for backend... attempt $i/10"
+            sleep 3
+          done
+          
           docker image prune -f
           docker compose -f docker-compose.prod.yml ps
-          docker compose -f docker-compose.prod.yml logs --tail=30
-          curl -f http://localhost:8000/health || echo "Health check failed"
+          docker compose -f docker-compose.prod.yml logs backend --tail=50
           
           # Create admin account
+          echo ""
           echo "=== Creating Admin Account ==="
-          docker exec careconnect-backend python scripts/create_admin.py || echo "Admin creation failed"
+          if docker exec careconnect-backend python /app/scripts/create_admin.py; then
+            echo "✓ Admin account ready: admin@aub.com / Admin@123"
+          else
+            echo "✗ Admin creation failed - check logs above"
+            docker compose -f docker-compose.prod.yml logs backend --tail=100
+          fi
           
           df -h
           echo "=== Deployment Complete ==="
