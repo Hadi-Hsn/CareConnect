@@ -214,9 +214,11 @@ async def clear_existing_data():
         # Delete appointments (foreign key constraint)
         await session.execute(delete(Appointment))
         
-        # Delete patients (not admin)
+        # Delete patients (preserve admin and hadihacan@gmail.com)
         await session.execute(
-            delete(User).where(User.email != "admin@aub.com")
+            delete(User).where(
+                User.email.not_in(["admin@aub.com", "hadihacan@gmail.com"])
+            )
         )
         
         # Delete providers
@@ -226,7 +228,7 @@ async def clear_existing_data():
         await session.execute(delete(LabTest))
         
         await session.commit()
-        print("✓ Cleared existing demo data")
+        print("✓ Cleared existing demo data (preserved admin and hadihacan@gmail.com)")
 
 
 async def ensure_admin_user():
@@ -261,6 +263,19 @@ async def seed_patients():
     """Seed 30 patient accounts."""
     async with async_session_maker() as session:
         patients = []
+        
+        # Add specific user: Hadi Hasan
+        patients.append(
+            User(
+                email="hadihacan@gmail.com",
+                name="Hadi Hasan",
+                phone="+961 70 123456",
+                role=UserRole.PATIENT,
+                hashed_password=get_password_hash("patient123"),
+            )
+        )
+        
+        # Add demo patients
         for i, name in enumerate(PATIENT_NAMES):
             # Generate email from name
             email = name.lower().replace(" ", ".") + f"@patient.com"
@@ -280,7 +295,7 @@ async def seed_patients():
         
         session.add_all(patients)
         await session.commit()
-        print(f"✓ Seeded {len(patients)} patient accounts")
+        print(f"✓ Seeded {len(patients)} patient accounts (including hadihacan@gmail.com)")
         return patients
 
 
@@ -1097,11 +1112,17 @@ async def populate_database():
     print(f"Summary:")
     print(f"  - 1 Admin user (admin@aub.com / Admin@123)")
     print(f"  - {len(patients)} Patient accounts (password: patient123)")
+    print(f"    • Hadi Hasan (hadihacan@gmail.com)")
+    print(f"    • 30 demo patients")
     print(f"  - {len(providers)} Providers across multiple departments")
     print(f"  - 22 Lab tests")
     print(f"  - Patient test results with realistic values")
     print(f"  - Appointments distributed across past, present, and future")
     print(f"  - PDF profiles generated for all providers and indexed in RAG")
+    print()
+    print("🔑 Login credentials:")
+    print(f"  Admin: admin@aub.com / Admin@123")
+    print(f"  Patient (Hadi): hadihacan@gmail.com / patient123")
     print()
 
 
