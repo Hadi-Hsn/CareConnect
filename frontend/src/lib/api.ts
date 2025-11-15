@@ -261,6 +261,30 @@ class ApiClient {
     return data;
   }
 
+  // Cost Tracking
+  async getCostSummary(): Promise<any> {
+    const { data } = await this.client.get('/eval/cost/summary');
+    return data;
+  }
+
+  async downloadCostLog(): Promise<Blob> {
+    const { data } = await this.client.get('/eval/cost/download', {
+      responseType: 'blob'
+    });
+    return data;
+  }
+
+  // Evaluation
+  async getEvaluationReport(): Promise<any> {
+    const { data } = await this.client.get('/eval/report');
+    return data;
+  }
+
+  async runEvaluation(): Promise<any> {
+    const { data } = await this.client.post('/admin/run-evaluation');
+    return data;
+  }
+
   // Handover
   async requestHandover(
     messages: ChatMessage[],

@@ -1,5 +1,6 @@
 """Admin endpoints for managing doctors, appointments, and schedules."""
 import asyncio
+import json
 import sys
 from datetime import date, datetime, time
 from pathlib import Path
@@ -740,4 +741,67 @@ async def populate_database(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to populate database: {str(e)}"
+        )
+
+
+@router.post("/run-evaluation", status_code=status.HTTP_200_OK)
+async def run_evaluation(
+    admin: User = Depends(require_admin),
+) -> dict:
+    """
+    Run the automated evaluation test suite.
+    
+    **Admin only.** Executes 25+ test cases and returns comprehensive report.
+    """
+    try:
+        logger.info("evaluation_started", admin_id=admin.id)
+        
+        import subprocess
+        
+        script_path = Path(__file__).parent.parent.parent.parent / "tests" / "evaluation" / "run_eval.py"
+        
+        # Run the evaluation script
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            str(script_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            error_msg = stderr.decode() if stderr else "Unknown error"
+            logger.error("evaluation_failed", error=error_msg, admin_id=admin.id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Evaluation failed: {error_msg}"
+            )
+        
+        output = stdout.decode() if stdout else ""
+        
+        # Try to load the evaluation report
+        report_path = Path("/app/data/evaluation_report.json")
+        if report_path.exists():
+            with open(report_path, "r") as f:
+                report = json.load(f)
+        else:
+            report = {"error": "Report file not found"}
+        
+        logger.info("evaluation_completed", admin_id=admin.id)
+        
+        return {
+            "success": True,
+            "message": "Evaluation completed successfully",
+            "report": report,
+            "output": output
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("evaluation_error", error=str(e), admin_id=admin.id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to run evaluation: {str(e)}"
         )

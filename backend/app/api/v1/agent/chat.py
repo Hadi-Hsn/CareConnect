@@ -1,5 +1,6 @@
 """Agent chat endpoint."""
 import time
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +9,7 @@ from app.agents.router import AgentRouter
 from app.core.db import get_db
 from app.core.logging import get_logger
 from app.schemas.agent import ChatRequest, ChatResponse, FeedbackRequest, FeedbackResponse
+from app.services.cost_tracker import cost_tracker
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -53,6 +55,33 @@ async def chat(
                    message_content_length=len(message.content),
                    tool_calls_count=len(tool_calls),
                    latency_ms=elapsed_ms)
+
+        # Track cost
+        task_id = str(uuid.uuid4())
+        task_type = "chat"
+        
+        # Determine task type based on tools used
+        if tool_calls:
+            tool_names = [tc.name for tc in tool_calls]
+            if "book_appointment" in tool_names:
+                task_type = "booking"
+            elif "cancel_appointment" in tool_names:
+                task_type = "cancellation"
+            elif "modify_appointment" in tool_names:
+                task_type = "modification"
+            elif "rag_lookup" in tool_names:
+                task_type = "information"
+        
+        cost_tracker.log_completion(
+            task_id=task_id,
+            task_type=task_type,
+            input_tokens=usage.get("prompt_tokens", 0),
+            output_tokens=usage.get("completion_tokens", 0),
+            success=True,
+            latency_ms=elapsed_ms,
+            model="gpt-4o",
+            user_id=chat_request.user_id
+        )
 
         return ChatResponse(
             message=message,

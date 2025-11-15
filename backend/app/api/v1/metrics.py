@@ -2,11 +2,13 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.logging import get_logger
 from app.schemas.metrics import EvaluationReport, KPIResponse
+from app.services.cost_tracker import cost_tracker
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -51,4 +53,35 @@ async def get_kpis(
         total_conversations=156,
         period_start=period_start,
         period_end=period_end,
+    )
+
+
+@router.get("/cost/summary")
+async def get_cost_summary() -> dict:
+    """Get cost tracking summary statistics."""
+    try:
+        stats = cost_tracker.get_summary_stats()
+        return {
+            "status": "success",
+            "data": stats
+        }
+    except Exception as e:
+        logger.error("cost_summary_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Failed to retrieve cost summary")
+
+
+@router.get("/cost/download")
+async def download_cost_log():
+    """Download the complete cost log CSV file."""
+    from pathlib import Path
+    
+    cost_log_path = Path("/app/data/cost_log.csv")
+    
+    if not cost_log_path.exists():
+        raise HTTPException(status_code=404, detail="Cost log not found")
+    
+    return FileResponse(
+        path=str(cost_log_path),
+        filename="cost_log.csv",
+        media_type="text/csv"
     )
