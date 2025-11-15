@@ -6,16 +6,17 @@ from datetime import date, datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.logging import get_logger
 from app.core.security import require_admin
-from app.models import Appointment, Provider, User
+from app.models import Appointment, PatientTestResult, Provider, User
 from app.models.appointment import AppointmentStatus
 from app.models.provider import ProviderType
+from app.models.user import UserRole
 from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentResponse,
@@ -26,6 +27,9 @@ from app.schemas.provider import ProviderCreate, ProviderResponse, ProviderUpdat
 from app.schemas.rag import Document, IndexResponse
 from app.services.pdf_parser import PDFParser
 from app.services.rag_service import RAGService
+
+# Import PDF generator
+from scripts.generate_provider_pdfs import generate_provider_pdf
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -276,6 +280,54 @@ async def upload_doctor_profile(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process PDF: {str(e)}"
+        )
+
+
+@router.get("/doctors/{doctor_id}/download-profile")
+async def download_doctor_profile(
+    doctor_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> Response:
+    """
+    Download the generated PDF profile for a doctor.
+    
+    **Admin only.** Generates a professional 2-page PDF profile on-the-fly.
+    """
+    # Verify doctor exists
+    result = await db.execute(select(Provider).where(Provider.id == doctor_id))
+    doctor = result.scalar_one_or_none()
+
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+
+    try:
+        # Generate PDF
+        pdf_bytes = generate_provider_pdf(doctor)
+        
+        # Sanitize doctor name for filename
+        safe_name = doctor.name.replace(" ", "_").replace(".", "")
+        filename = f"{safe_name}_Profile.pdf"
+        
+        logger.info(
+            "doctor_profile_downloaded",
+            doctor_id=doctor_id,
+            admin_id=admin.id,
+        )
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+        
+    except Exception as e:
+        logger.error("doctor_profile_download_failed", doctor_id=doctor_id, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate PDF: {str(e)}"
         )
 
 
@@ -619,6 +671,157 @@ async def block_doctor_time(
     )
 
     return AppointmentResponse.model_validate(appointment)
+
+
+# ============================================================================
+# PATIENT MANAGEMENT
+# ============================================================================
+
+
+@router.get("/patients", response_model=list[dict])
+async def list_all_patients(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    search: str | None = Query(None, description="Search by name or email"),
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> list[dict]:
+    """
+    List all patients with optional search.
+    
+    **Admin only.**
+    """
+    query = select(User).where(User.role == UserRole.PATIENT)
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.where(
+            (User.name.ilike(search_term)) | (User.email.ilike(search_term))
+        )
+
+    query = query.offset(skip).limit(limit).order_by(User.name)
+
+    result = await db.execute(query)
+    patients = result.scalars().all()
+
+    # Get appointment counts for each patient
+    patient_list = []
+    now_lebanon = datetime.now(LEBANON_TZ)
+    
+    for patient in patients:
+        appt_result = await db.execute(
+            select(Appointment).where(Appointment.user_id == patient.id)
+        )
+        appointments = appt_result.scalars().all()
+        
+        # Count upcoming appointments (check time_start exists and compare with aware datetime)
+        upcoming_count = 0
+        for appt in appointments:
+            if appt.time_start:
+                # Make sure time_start is timezone-aware
+                appt_time = appt.time_start if appt.time_start.tzinfo else appt.time_start.replace(tzinfo=LEBANON_TZ)
+                if appt_time > now_lebanon:
+                    upcoming_count += 1
+        
+        # Get test result counts
+        test_result = await db.execute(
+            select(PatientTestResult).where(PatientTestResult.user_id == patient.id)
+        )
+        test_results = test_result.scalars().all()
+        
+        patient_list.append({
+            "id": patient.id,
+            "name": patient.name,
+            "email": patient.email,
+            "phone": patient.phone,
+            "created_at": patient.created_at,
+            "total_appointments": len(appointments),
+            "upcoming_appointments": upcoming_count,
+            "total_test_results": len(test_results),
+        })
+
+    return patient_list
+
+
+@router.get("/patients/{patient_id}")
+async def get_patient_details(
+    patient_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> dict:
+    """
+    Get detailed patient information including appointments and test results.
+    
+    **Admin only.**
+    """
+    # Get patient
+    result = await db.execute(
+        select(User).where(User.id == patient_id, User.role == UserRole.PATIENT)
+    )
+    patient = result.scalar_one_or_none()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Get appointments with provider details
+    appt_query = (
+        select(Appointment, Provider)
+        .join(Provider)
+        .where(Appointment.user_id == patient_id)
+        .order_by(Appointment.time_start.desc())
+    )
+    appt_result = await db.execute(appt_query)
+    
+    appointments = []
+    for appt, provider in appt_result.all():
+        appointments.append({
+            "id": appt.id,
+            "provider_name": provider.name,
+            "provider_department": provider.department,
+            "time_start": appt.time_start,
+            "time_end": appt.time_end,
+            "status": appt.status,
+            "reason": appt.reason,
+            "notes": appt.notes,
+            "confirmation_code": appt.confirmation_code,
+        })
+
+    # Get test results
+    from app.models.lab import LabTest
+    
+    test_query = (
+        select(PatientTestResult, LabTest, Provider)
+        .join(LabTest, PatientTestResult.lab_test_id == LabTest.id)
+        .outerjoin(Provider, PatientTestResult.ordered_by_provider_id == Provider.id)
+        .where(PatientTestResult.user_id == patient_id)
+        .order_by(PatientTestResult.test_date.desc())
+    )
+    test_result = await db.execute(test_query)
+    
+    test_results = []
+    for test, lab_test, provider in test_result.all():
+        test_results.append({
+            "id": test.id,
+            "test_name": lab_test.name,
+            "test_code": lab_test.code,
+            "test_date": test.test_date,
+            "result_value": test.result_value,
+            "result_unit": test.result_unit,
+            "reference_range": test.reference_range,
+            "status": test.status,
+            "notes": test.notes,
+            "ordered_by": provider.name if provider else None,
+        })
+
+    return {
+        "id": patient.id,
+        "name": patient.name,
+        "email": patient.email,
+        "phone": patient.phone,
+        "created_at": patient.created_at,
+        "appointments": appointments,
+        "test_results": test_results,
+    }
 
 
 # ============================================================================

@@ -41,6 +41,9 @@ class User(Base):
     appointments: Mapped[list["Appointment"]] = relationship(
         "Appointment", back_populates="user", cascade="all, delete-orphan"
     )
+    test_results: Mapped[list["PatientTestResult"]] = relationship(
+        "PatientTestResult", back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"

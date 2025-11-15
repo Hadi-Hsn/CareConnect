@@ -17,6 +17,7 @@ from app.models import (
     AppointmentChannel,
     AppointmentStatus,
     LabTest,
+    PatientTestResult,
     Provider,
     ProviderType,
     User,
@@ -24,6 +25,10 @@ from app.models import (
 )
 from app.schemas.rag import Document
 from app.services.rag_service import RAGService
+from app.services.pdf_parser import PDFParser
+
+# Import PDF generator
+from scripts.generate_provider_pdfs import generate_provider_pdf
 
 
 # Patient names for demo data
@@ -203,7 +208,10 @@ APPOINTMENT_REASONS = {
 async def clear_existing_data():
     """Clear existing demo data (except admin user)."""
     async with async_session_maker() as session:
-        # Delete appointments first (foreign key constraint)
+        # Delete test results first (foreign key constraint)
+        await session.execute(delete(PatientTestResult))
+        
+        # Delete appointments (foreign key constraint)
         await session.execute(delete(Appointment))
         
         # Delete patients (not admin)
@@ -833,6 +841,102 @@ async def seed_appointments(patients, providers):
         print(f"✓ Seeded {len(appointments)} appointments")
 
 
+async def seed_patient_test_results(patients, providers):
+    """Seed patient test results."""
+    async with async_session_maker() as session:
+        # Get all lab tests
+        result = await session.execute(select(LabTest))
+        lab_tests = list(result.scalars().all())
+        
+        test_results = []
+        now = datetime.now(timezone.utc)
+        
+        # Create test results for random patients
+        num_patients_with_tests = min(15, len(patients))  # 15 patients get test results
+        selected_patients = random.sample(patients, num_patients_with_tests)
+        
+        for patient in selected_patients:
+            # Each patient gets 1-4 test results
+            num_tests = random.randint(1, 4)
+            patient_tests = random.sample(lab_tests, min(num_tests, len(lab_tests)))
+            
+            for lab_test in patient_tests:
+                # Random provider from cardiology, internal medicine, or endocrinology
+                appropriate_providers = [
+                    p for p in providers 
+                    if p.department in ["Cardiology", "Internal Medicine", "Endocrinology", lab_test.department]
+                ]
+                ordered_by = random.choice(appropriate_providers) if appropriate_providers else random.choice(providers)
+                
+                # Test date between 90 days ago and 7 days ago
+                days_ago = random.randint(7, 90)
+                test_date = now - timedelta(days=days_ago)
+                
+                # Status
+                status = random.choice(["completed", "completed", "completed", "pending"])  # 75% completed
+                
+                # Generate realistic results based on test type
+                result_value = None
+                result_unit = None
+                reference_range = None
+                notes = None
+                
+                if status == "completed":
+                    if "CBC" in lab_test.name:
+                        result_value = f"WBC: {random.uniform(4.5, 11.0):.1f}, RBC: {random.uniform(4.2, 5.9):.1f}"
+                        result_unit = "x10^9/L"
+                        reference_range = "WBC: 4.5-11.0, RBC: 4.2-5.9"
+                        notes = "Values within normal limits"
+                    elif "Glucose" in lab_test.name or "A1C" in lab_test.name:
+                        if "A1C" in lab_test.name:
+                            result_value = f"{random.uniform(4.5, 7.5):.1f}"
+                            result_unit = "%"
+                            reference_range = "4.0-5.6%"
+                        else:
+                            result_value = f"{random.uniform(70, 140):.0f}"
+                            result_unit = "mg/dL"
+                            reference_range = "70-100 mg/dL"
+                        if float(result_value) > 120 if "Glucose" in lab_test.name else float(result_value) > 5.7:
+                            notes = "Elevated - recommend follow-up"
+                        else:
+                            notes = "Normal range"
+                    elif "Lipid" in lab_test.name:
+                        total_chol = random.uniform(150, 250)
+                        result_value = f"Total: {total_chol:.0f}, HDL: {random.uniform(40, 80):.0f}, LDL: {random.uniform(70, 160):.0f}"
+                        result_unit = "mg/dL"
+                        reference_range = "Total <200, HDL >40, LDL <130"
+                        if total_chol > 200:
+                            notes = "Borderline high - diet/lifestyle modifications recommended"
+                        else:
+                            notes = "Optimal levels"
+                    elif "Thyroid" in lab_test.name:
+                        result_value = f"TSH: {random.uniform(0.5, 4.5):.2f}"
+                        result_unit = "mIU/L"
+                        reference_range = "0.5-4.5 mIU/L"
+                        notes = "Normal thyroid function"
+                    else:
+                        result_value = "See detailed report"
+                        notes = "All values within normal limits"
+                
+                test_results.append(
+                    PatientTestResult(
+                        user_id=patient.id,
+                        lab_test_id=lab_test.id,
+                        ordered_by_provider_id=ordered_by.id,
+                        test_date=test_date,
+                        result_value=result_value,
+                        result_unit=result_unit,
+                        reference_range=reference_range,
+                        status=status,
+                        notes=notes,
+                    )
+                )
+        
+        session.add_all(test_results)
+        await session.commit()
+        print(f"✓ Seeded {len(test_results)} patient test results for {num_patients_with_tests} patients")
+
+
 async def seed_rag_documents(providers):
     """Seed facility and doctor documents for RAG."""
     documents = [
@@ -910,45 +1014,49 @@ async def seed_rag_documents(providers):
         ),
     ]
     
-    # Add doctor profiles
-    for provider in providers:
-        # Handle provider.type which can be either an enum or string
-        provider_type = provider.type.value if hasattr(provider.type, 'value') else provider.type
-        
-        content = f"""
-        {provider.name} - {provider.specialty}
-        Department: {provider.department}
-        
-        ABOUT:
-        {provider.bio}
-        
-        SPECIALTIES:
-        {provider.specialty}
-        
-        TYPE:
-        {provider_type}
-        
-        To book an appointment with {provider.name}, you can search for available slots in the {provider.department} department or directly by provider ID {provider.id}.
-        """
-        
-        documents.append(
-            Document(
-                title=f"{provider.name} - {provider.specialty}",
-                content=content.strip(),
-                metadata={
-                    "type": "doctor_profile",
-                    "department": provider.department,
-                    "specialty": provider.specialty,
-                    "provider_id": str(provider.id),
-                    "provider_name": provider.name,
-                },
+    # Generate and add doctor PDF profiles
+    print("Generating PDF profiles for providers...")
+    pdf_parser = PDFParser()
+    
+    for i, provider in enumerate(providers, 1):
+        try:
+            # Generate PDF
+            pdf_bytes = generate_provider_pdf(provider)
+            
+            # Extract text from PDF
+            pdf_text = pdf_parser.extract_text_from_bytes(pdf_bytes)
+            
+            # Create document with PDF content
+            provider_type = provider.type.value if hasattr(provider.type, 'value') else provider.type
+            
+            documents.append(
+                Document(
+                    title=f"Dr. {provider.name} - Complete Profile",
+                    content=pdf_text,
+                    metadata={
+                        "type": "doctor_profile_pdf",
+                        "department": provider.department,
+                        "specialty": provider.specialty or "",
+                        "provider_id": str(provider.id),
+                        "provider_name": provider.name,
+                        "provider_type": provider_type,
+                        "source": "generated_pdf",
+                    },
+                    doc_type="pdf",
+                )
             )
-        )
+            
+            print(f"  ✓ Generated PDF for {provider.name} ({i}/{len(providers)})")
+            
+        except Exception as e:
+            print(f"  ✗ Failed to generate PDF for {provider.name}: {str(e)}")
+            continue
     
     # Index all documents
     rag_service = RAGService()
     result = await rag_service.index_documents(documents, replace=True)
     print(f"✓ Indexed {result.indexed_count} documents ({result.total_chunks} chunks)")
+    print(f"  - {len(providers)} provider PDF profiles included")
 
 
 async def populate_database():
@@ -980,6 +1088,7 @@ async def populate_database():
         providers = list(result.scalars().all())
     
     await seed_appointments(patients, providers)
+    await seed_patient_test_results(patients, providers)
     await seed_rag_documents(providers)
     
     print()
@@ -990,7 +1099,9 @@ async def populate_database():
     print(f"  - {len(patients)} Patient accounts (password: patient123)")
     print(f"  - {len(providers)} Providers across multiple departments")
     print(f"  - 22 Lab tests")
+    print(f"  - Patient test results with realistic values")
     print(f"  - Appointments distributed across past, present, and future")
+    print(f"  - PDF profiles generated for all providers and indexed in RAG")
     print()
 
 
