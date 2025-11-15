@@ -247,3 +247,71 @@ class ChromaVectorStore(VectorStore):
             "collection_name": settings.chroma_collection_name,
             "backend": "chromadb",
         }
+
+    async def list_documents(self) -> list[dict]:
+        """List all indexed documents with metadata."""
+        count = self.collection.count()
+        
+        if count == 0:
+            return []
+
+        # Get all metadata
+        results = self.collection.get(limit=count, include=["metadatas"])
+        
+        if not results["metadatas"]:
+            return []
+
+        # Group chunks by document
+        docs_map: dict[str, dict] = {}
+        
+        for meta in results["metadatas"]:
+            doc_title = meta.get("doc_title", "Unknown")
+            
+            if doc_title not in docs_map:
+                docs_map[doc_title] = {
+                    "id": doc_title,
+                    "title": doc_title,
+                    "chunks": 0,
+                    "metadata": {
+                        k: v for k, v in meta.items() 
+                        if k not in ["chunk_id", "chunk_index", "doc_title"]
+                    }
+                }
+            
+            docs_map[doc_title]["chunks"] += 1
+
+        return list(docs_map.values())
+
+    async def delete_document(self, doc_id: str) -> None:
+        """Delete a specific document by ID (doc_title)."""
+        count = self.collection.count()
+        
+        if count == 0:
+            logger.warning("delete_document_on_empty_collection", doc_id=doc_id)
+            return
+
+        # Get all documents to find matching IDs
+        results = self.collection.get(limit=count, include=["metadatas"])
+        
+        if not results["ids"] or not results["metadatas"]:
+            return
+
+        # Find IDs where doc_title matches doc_id
+        ids_to_delete = []
+        for i, metadata in enumerate(results["metadatas"]):
+            if metadata.get("doc_title") == doc_id:
+                ids_to_delete.append(results["ids"][i])
+
+        if not ids_to_delete:
+            logger.warning("document_not_found", doc_id=doc_id)
+            return
+
+        # Delete the matching documents
+        self.collection.delete(ids=ids_to_delete)
+        
+        logger.info(
+            "document_deleted", 
+            doc_id=doc_id, 
+            chunks_deleted=len(ids_to_delete),
+            remaining_vectors=self.collection.count()
+        )

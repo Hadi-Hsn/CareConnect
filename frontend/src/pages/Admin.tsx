@@ -98,6 +98,19 @@ export default function AdminPage() {
     },
   });
 
+  const evaluationMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.runEvaluation();
+      return response;
+    },
+    onSuccess: (data) => {
+      alert(`Evaluation completed successfully!\n\nResults: ${JSON.stringify(data.report, null, 2)}`);
+    },
+    onError: (error: Error) => {
+      alert(`Evaluation failed: ${error.message}`);
+    },
+  });
+
   const handlePopulateClick = () => {
     setConfirmDialogOpen(true);
     setPopulateSuccess(false);
@@ -405,15 +418,13 @@ export default function AdminPage() {
                   </Typography>
                   <Button
                     variant="contained"
-                    startIcon={<AssessmentIcon />}
-                    sx={{ mt: 2 }}
-                    onClick={() => alert('Evaluation runner not yet connected. Run: docker exec careconnect-backend python tests/evaluation/run_eval.py')}
+                    startIcon={evaluationMutation.isPending ? <CircularProgress size={20} /> : <AssessmentIcon />}
+                    sx={{ mt: 2, bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' } }}
+                    onClick={() => evaluationMutation.mutate()}
+                    disabled={evaluationMutation.isPending}
                   >
-                    Run Evaluation Suite
+                    {evaluationMutation.isPending ? 'Running Evaluation...' : 'Run Evaluation Suite'}
                   </Button>
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Note: Run from backend: python tests/evaluation/run_eval.py
-                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
