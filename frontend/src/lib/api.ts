@@ -329,6 +329,32 @@ class ApiClient {
     return data;
   }
 
+  // Patients (Admin)
+  async getPatients(search?: string): Promise<any[]> {
+    const { data } = await this.client.get('/admin/patients', {
+      params: { search, limit: 100 },
+    });
+    return data;
+  }
+
+  async getPatientDetails(id: number): Promise<any> {
+    const { data } = await this.client.get(`/admin/patients/${id}`);
+    return data;
+  }
+
+  async updatePatient(id: number, updates: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  }): Promise<any> {
+    const { data } = await this.client.put(`/admin/patients/${id}`, updates);
+    return data;
+  }
+
+  async deletePatient(id: number): Promise<void> {
+    await this.client.delete(`/admin/patients/${id}`);
+  }
+
   // Voice
   async textToSpeech(text: string, voice?: string): Promise<Blob> {
     const { data } = await this.client.post(

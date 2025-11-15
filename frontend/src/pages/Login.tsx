@@ -11,7 +11,6 @@ import {
   Alert,
   useTheme,
   useMediaQuery,
-  Divider,
   Link,
 } from '@mui/material';
 import {
@@ -86,20 +85,6 @@ export default function LoginPage() {
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Registration failed. Please try again.';
       setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async (userEmail: string, userPassword: string) => {
-    setError('');
-    setLoading(true);
-    try {
-      await api.login(userEmail, userPassword);
-      // Force a page reload to update authentication state
-      window.location.href = '/chat';
-    } catch (err) {
-      setError('Demo login failed');
     } finally {
       setLoading(false);
     }
@@ -300,48 +285,7 @@ export default function LoginPage() {
                   </Box>
                 </form>
 
-                <Divider sx={{ my: 3 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Demo Accounts
-                  </Typography>
-                </Divider>
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <Button
-                    variant="outlined"
-                    size={isMobile ? 'small' : 'medium'}
-                    fullWidth
-                    onClick={() => handleDemoLogin('hadihacan@gmail.com', 'password123')}
-                    disabled={loading}
-                    sx={{ justifyContent: 'flex-start', px: 2 }}
-                  >
-                    <Box sx={{ textAlign: 'left', width: '100%' }}>
-                      <Typography variant="body2" fontWeight={600}>
-                        Patient Demo
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        hadihacan@gmail.com
-                      </Typography>
-                    </Box>
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size={isMobile ? 'small' : 'medium'}
-                    fullWidth
-                    onClick={() => handleDemoLogin('hadi.wmail@gmail.com', 'admin123')}
-                    disabled={loading}
-                    sx={{ justifyContent: 'flex-start', px: 2 }}
-                  >
-                    <Box sx={{ textAlign: 'left', width: '100%' }}>
-                      <Typography variant="body2" fontWeight={600}>
-                        Admin Demo
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        hadi.wmail@gmail.com
-                      </Typography>
-                    </Box>
-                  </Button>
-                </Box>
+              
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>

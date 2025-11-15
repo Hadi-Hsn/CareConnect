@@ -7,6 +7,7 @@ import LabsPage from './pages/Labs';
 import AdminPage from './pages/Admin';
 import IncidentsPage from './pages/Incidents';
 import ProvidersPage from './pages/Providers';
+import PatientsPage from './pages/Patients';
 import LoginPage from './pages/Login';
 
 function App() {
@@ -95,6 +96,18 @@ function App() {
               isAuthenticated ? (
                 <Layout>
                   <IncidentsPage />
+                </Layout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/patients"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <PatientsPage />
                 </Layout>
               ) : (
                 <Navigate to="/login" />

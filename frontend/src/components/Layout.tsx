@@ -28,6 +28,7 @@ import {
   Menu as MenuIcon,
   ReportProblem as IncidentIcon,
   MedicalServices as ProvidersIcon,
+  People as PatientsIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 
@@ -38,7 +39,8 @@ const allMenuItems = [
   { text: 'Appointments', icon: <EventIcon />, path: '/appointments', color: '#000000', roles: ['patient', 'admin', 'staff'] },
   { text: 'Lab Tests', icon: <ScienceIcon />, path: '/labs', color: '#808080', roles: ['patient', 'admin', 'staff'] },
   { text: 'Providers', icon: <ProvidersIcon />, path: '/providers', color: '#840132', roles: ['admin', 'staff'] },
-  { text: 'Incidents', icon: <IncidentIcon />, path: '/incidents', color: '#000000', roles: ['admin', 'staff'] },
+  { text: 'Patients', icon: <PatientsIcon />, path: '/patients', color: '#000000', roles: ['admin', 'staff'] },
+  { text: 'Incidents', icon: <IncidentIcon />, path: '/incidents', color: '#808080', roles: ['admin', 'staff'] },
   { text: 'Admin', icon: <AdminIcon />, path: '/admin', color: '#840132', roles: ['admin'] },
 ];
 

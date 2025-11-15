@@ -824,6 +824,90 @@ async def get_patient_details(
     }
 
 
+@router.put("/patients/{patient_id}")
+async def update_patient(
+    patient_id: int,
+    patient_data: dict,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> dict:
+    """
+    Update patient information.
+    
+    **Admin only.** Can update name, email, and phone.
+    """
+    # Get patient
+    result = await db.execute(
+        select(User).where(User.id == patient_id, User.role == UserRole.PATIENT)
+    )
+    patient = result.scalar_one_or_none()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Update fields
+    if "name" in patient_data and patient_data["name"]:
+        patient.name = patient_data["name"]
+    if "email" in patient_data and patient_data["email"]:
+        # Check if email is already in use by another user
+        email_check = await db.execute(
+            select(User).where(User.email == patient_data["email"], User.id != patient_id)
+        )
+        if email_check.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Email already in use")
+        patient.email = patient_data["email"]
+    if "phone" in patient_data:
+        patient.phone = patient_data["phone"] if patient_data["phone"] else None
+
+    await db.commit()
+    await db.refresh(patient)
+
+    logger.info(
+        "patient_updated",
+        patient_id=patient_id,
+        admin_id=admin.id,
+    )
+
+    return {
+        "id": patient.id,
+        "name": patient.name,
+        "email": patient.email,
+        "phone": patient.phone,
+        "created_at": patient.created_at,
+    }
+
+
+@router.delete("/patients/{patient_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_patient(
+    patient_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> None:
+    """
+    Delete a patient.
+    
+    **Admin only.** This will also delete all associated appointments and test results.
+    """
+    # Get patient
+    result = await db.execute(
+        select(User).where(User.id == patient_id, User.role == UserRole.PATIENT)
+    )
+    patient = result.scalar_one_or_none()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Delete patient (cascade will handle appointments and test results)
+    await db.delete(patient)
+    await db.commit()
+
+    logger.info(
+        "patient_deleted",
+        patient_id=patient_id,
+        admin_id=admin.id,
+    )
+
+
 # ============================================================================
 # STATISTICS & REPORTING
 # ============================================================================
