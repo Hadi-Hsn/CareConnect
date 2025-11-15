@@ -27,6 +27,11 @@ import {
   Avatar,
   Tabs,
   Tab,
+  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -34,6 +39,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 import { DEPARTMENTS } from '@/lib/constants';
@@ -49,6 +55,8 @@ export default function ProvidersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [generalDocFile, setGeneralDocFile] = useState<File | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -81,6 +89,13 @@ export default function ProvidersPage() {
       if (typeFilter) filters.provider_type = typeFilter;
       return api.getProviders(filters);
     },
+  });
+
+  // Fetch hospital documents
+  const { data: documents, isLoading: documentsLoading } = useQuery({
+    queryKey: ['hospital-documents'],
+    queryFn: () => api.listDocuments(),
+    enabled: tabValue === 1, // Only fetch when on documents tab
   });
 
   // Create mutation
@@ -121,6 +136,14 @@ export default function ProvidersPage() {
       queryClient.invalidateQueries({ queryKey: ['providers'] });
       setDeleteDialogOpen(false);
       setSelectedProvider(null);
+    },
+  });
+
+  // Delete document mutation
+  const deleteDocMutation = useMutation({
+    mutationFn: (docId: string) => api.deleteDocument(docId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hospital-documents'] });
     },
   });
 
@@ -413,56 +436,148 @@ export default function ProvidersPage() {
 
       {/* Tab Content - Hospital Documents */}
       {tabValue === 1 && (
-        <Card sx={{ mt: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Upload General Hospital Documents (PDF)
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Upload documents like general information, parking, facilities, policies, etc.
-              These will be used by the AI assistant to answer general hospital questions.
-            </Typography>
-            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Button
-                variant="outlined"
-                component="label"
-                sx={{ textTransform: 'none', maxWidth: 300 }}
-              >
-                {generalDocFile ? generalDocFile.name : 'Choose PDF File'}
-                <input
-                  type="file"
-                  accept=".pdf"
-                  hidden
-                  onChange={(e) => setGeneralDocFile(e.target.files ? e.target.files[0] : null)}
-                />
-              </Button>
-              {generalDocFile && (
-                <Typography variant="caption" color="text.secondary">
-                  Selected: {generalDocFile.name}
+        <Box>
+          {uploadSuccess && (
+            <Alert severity="success" sx={{ mb: 3 }} onClose={() => setUploadSuccess(false)}>
+              Document uploaded and indexed successfully!
+            </Alert>
+          )}
+          {uploadError && (
+            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setUploadError(null)}>
+              {uploadError}
+            </Alert>
+          )}
+
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Upload General Hospital Documents (PDF)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Upload documents like general information, parking, facilities, policies, etc.
+                These will be used by the AI assistant to answer general hospital questions.
+              </Typography>
+              <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  sx={{ textTransform: 'none', maxWidth: 300 }}
+                >
+                  {generalDocFile ? generalDocFile.name : 'Choose PDF File'}
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    hidden
+                    onChange={(e) => setGeneralDocFile(e.target.files ? e.target.files[0] : null)}
+                  />
+                </Button>
+                {generalDocFile && (
+                  <Typography variant="caption" color="text.secondary">
+                    Selected: {generalDocFile.name}
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  disabled={!generalDocFile}
+                  onClick={async () => {
+                    if (!generalDocFile) return;
+                    try {
+                      setUploadError(null);
+                      await api.uploadGeneralDocument(generalDocFile, 'general');
+                      queryClient.invalidateQueries({ queryKey: ['hospital-documents'] });
+                      setGeneralDocFile(null);
+                      setUploadSuccess(true);
+                    } catch (err: any) {
+                      console.error('general doc upload failed', err);
+                      setUploadError(err.message || 'Failed to upload document');
+                    }
+                  }}
+                  sx={{ bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' }, maxWidth: 200 }}
+                >
+                  Upload and Index
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Indexed Hospital Documents
+              </Typography>
+              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
+                Documents currently available to the AI assistant
+              </Typography>
+
+              {documentsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : documents && documents.length > 0 ? (
+                <List>
+                  {documents.map((doc: any, index: number) => (
+                    <ListItem
+                      key={index}
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        mb: 1,
+                      }}
+                    >
+                      <ListItemText
+                        primary={doc.title || doc.metadata?.source || `Document ${index + 1}`}
+                        secondary={
+                          <>
+                            {doc.metadata?.doc_type && (
+                              <Chip
+                                label={doc.metadata.doc_type}
+                                size="small"
+                                sx={{ mr: 1, mt: 0.5 }}
+                              />
+                            )}
+                            {doc.metadata?.department && (
+                              <Chip
+                                label={doc.metadata.department}
+                                size="small"
+                                sx={{ mr: 1, mt: 0.5 }}
+                              />
+                            )}
+                            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                              {doc.chunks || 0} chunks indexed
+                            </Typography>
+                          </>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          aria-label="delete"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                'Are you sure you want to delete this document? This action cannot be undone.'
+                              )
+                            ) {
+                              deleteDocMutation.mutate(doc.id || String(index));
+                            }
+                          }}
+                          disabled={deleteDocMutation.isPending}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No documents uploaded yet. Upload your first document above.
                 </Typography>
               )}
-              <Button
-                variant="contained"
-                disabled={!generalDocFile}
-                onClick={async () => {
-                  if (!generalDocFile) return;
-                  try {
-                    await api.uploadGeneralDocument(generalDocFile, 'general');
-                    queryClient.invalidateQueries({ queryKey: ['rag-stats'] });
-                    setGeneralDocFile(null);
-                    alert('Document uploaded and indexed successfully!');
-                  } catch (err) {
-                    console.error('general doc upload failed', err);
-                    alert('Failed to upload document');
-                  }
-                }}
-                sx={{ bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' }, maxWidth: 200 }}
-              >
-                Upload and Index
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Box>
       )}
 
       {/* Details Dialog */}
@@ -548,6 +663,32 @@ export default function ProvidersPage() {
                   <Typography variant="body2">
                     {new Date(selectedProvider.created_at).toLocaleString()}
                   </Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Button
+                    variant="contained"
+                    startIcon={<DownloadIcon />}
+                    onClick={async () => {
+                      try {
+                        const blob = await api.downloadProviderPDF(selectedProvider.id);
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${selectedProvider.name.replace(/\s+/g, '_')}_Profile.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                      } catch (err) {
+                        console.error('Failed to download PDF:', err);
+                        alert('Failed to download provider PDF');
+                      }
+                    }}
+                    sx={{ bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' } }}
+                  >
+                    Download Provider PDF
+                  </Button>
                 </Grid>
               </Grid>
             </DialogContent>

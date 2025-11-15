@@ -355,6 +355,24 @@ class ApiClient {
     await this.client.delete(`/admin/patients/${id}`);
   }
 
+  // Provider PDF Download
+  async downloadProviderPDF(id: number): Promise<Blob> {
+    const { data } = await this.client.get(`/admin/doctors/${id}/download-profile`, {
+      responseType: 'blob',
+    });
+    return data;
+  }
+
+  // Hospital Documents
+  async listDocuments(): Promise<any[]> {
+    const { data } = await this.client.get('/rag/documents');
+    return data;
+  }
+
+  async deleteDocument(docId: string): Promise<void> {
+    await this.client.delete(`/rag/documents/${docId}`);
+  }
+
   // Voice
   async textToSpeech(text: string, voice?: string): Promise<Blob> {
     const { data } = await this.client.post(

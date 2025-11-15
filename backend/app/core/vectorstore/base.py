@@ -47,3 +47,13 @@ class VectorStore(ABC):
     async def get_stats(self) -> dict[str, Any]:
         """Get statistics about the vector store."""
         pass
+
+    @abstractmethod
+    async def list_documents(self) -> list[dict]:
+        """List all indexed documents with metadata."""
+        pass
+
+    @abstractmethod
+    async def delete_document(self, doc_id: str) -> None:
+        """Delete a specific document by ID or metadata."""
+        pass

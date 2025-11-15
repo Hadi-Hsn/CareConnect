@@ -251,3 +251,72 @@ class FAISSVectorStore(VectorStore):
             "unique_documents": unique_docs,
             "index_path": str(self.index_path),
         }
+
+    async def list_documents(self) -> list[dict]:
+        """List all indexed documents with metadata."""
+        if not self.metadata:
+            return []
+
+        # Group chunks by document
+        docs_map: dict[str, dict] = {}
+        
+        for meta in self.metadata:
+            doc_title = meta.get("doc_title", "Unknown")
+            
+            if doc_title not in docs_map:
+                docs_map[doc_title] = {
+                    "id": doc_title,
+                    "title": doc_title,
+                    "chunks": 0,
+                    "metadata": {
+                        k: v for k, v in meta.items() 
+                        if k not in ["chunk_id", "chunk_index", "content", "doc_title"]
+                    }
+                }
+            
+            docs_map[doc_title]["chunks"] += 1
+
+        return list(docs_map.values())
+
+    async def delete_document(self, doc_id: str) -> None:
+        """Delete a specific document by ID (doc_title)."""
+        if self.index is None or not self.metadata:
+            return
+
+        # Find indices to keep (not matching doc_id)
+        indices_to_keep = []
+        metadata_to_keep = []
+        
+        for idx, meta in enumerate(self.metadata):
+            if meta.get("doc_title") != doc_id:
+                indices_to_keep.append(idx)
+                metadata_to_keep.append(meta)
+
+        if len(indices_to_keep) == len(self.metadata):
+            # No documents matched, nothing to delete
+            logger.warning("document_not_found", doc_id=doc_id)
+            return
+
+        # Reconstruct index with remaining vectors
+        if len(indices_to_keep) == 0:
+            # All vectors deleted
+            self._create_new_index()
+        else:
+            # Extract remaining vectors
+            remaining_vectors = []
+            for idx in indices_to_keep:
+                vector = self.index.reconstruct(idx)
+                remaining_vectors.append(vector)
+            
+            # Create new index and add remaining vectors
+            self._create_new_index()
+            vectors_array = np.array(remaining_vectors, dtype=np.float32)
+            self.index.add(vectors_array)
+
+        # Update metadata
+        self.metadata = metadata_to_keep
+        
+        # Save changes
+        self._save_index()
+        
+        logger.info("document_deleted", doc_id=doc_id, remaining_docs=len(set(m["doc_title"] for m in self.metadata)))

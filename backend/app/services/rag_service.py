@@ -78,3 +78,21 @@ class RAGService:
     async def get_stats(self) -> dict[str, Any]:
         """Get vector store statistics."""
         return await self.vector_store.get_stats()
+
+    async def list_documents(self) -> list[dict]:
+        """
+        List all indexed documents.
+        
+        Returns:
+            List of documents with their metadata
+        """
+        return await self.vector_store.list_documents()
+
+    async def delete_document(self, doc_id: str) -> None:
+        """
+        Delete a specific document from the vector store.
+        
+        Args:
+            doc_id: The document ID or metadata to identify the document
+        """
+        await self.vector_store.delete_document(doc_id)
