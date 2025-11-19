@@ -54,8 +54,34 @@ export default function LoginPage() {
       await api.login(email, password);
       // Force a page reload to update authentication state
       window.location.href = '/chat';
-    } catch (err) {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      
+      // Handle different types of errors
+      if (err.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        
+        // Handle array of validation errors (Pydantic format)
+        if (Array.isArray(detail)) {
+          const errorMessages = detail.map((error: any) => {
+            const field = error.loc?.[1] || error.loc?.[0] || 'field';
+            return `${field}: ${error.msg}`;
+          }).join(', ');
+          setError(errorMessages);
+        } else if (typeof detail === 'string') {
+          setError(detail);
+        } else {
+          setError('Invalid email or password');
+        }
+      } else if (err.response?.status === 401) {
+        setError('Invalid email or password');
+      } else if (err.response?.status === 429) {
+        setError('Too many login attempts. Please try again later.');
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Login failed. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -76,15 +102,57 @@ export default function LoginPage() {
       setError('Password must be at least 8 characters');
       return;
     }
+
+    // Validate phone number if provided
+    if (phone && phone.trim() !== '') {
+      const trimmedPhone = phone.trim();
+      if (trimmedPhone.length < 10) {
+        setError('Phone number must be at least 10 characters long');
+        return;
+      }
+      // Also check that it has at least 10 digits
+      const digitsOnly = trimmedPhone.replace(/\D/g, '');
+      if (digitsOnly.length < 10) {
+        setError('Phone number must contain at least 10 digits');
+        return;
+      }
+    }
     
     setLoading(true);
     try {
-      await api.register(email, name, password, confirmPassword, phone);
+      await api.register(email, name, password, confirmPassword, phone || '');
       // Force a page reload to update authentication state
       window.location.href = '/chat';
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Registration failed. Please try again.';
-      setError(errorMessage);
+      console.error('Registration error:', err);
+      
+      // Handle different types of errors
+      if (err.response?.data?.detail) {
+        // Backend validation error
+        const detail = err.response.data.detail;
+        
+        // Handle array of validation errors (Pydantic format)
+        if (Array.isArray(detail)) {
+          const errorMessages = detail.map((error: any) => {
+            const field = error.loc?.[1] || error.loc?.[0] || 'field';
+            return `${field}: ${error.msg}`;
+          }).join(', ');
+          setError(errorMessages);
+        } else if (typeof detail === 'string') {
+          // Simple string error message
+          setError(detail);
+        } else {
+          setError('Registration failed. Please check your inputs and try again.');
+        }
+      } else if (err.response?.status === 400) {
+        setError('Invalid registration data. Please check all fields.');
+      } else if (err.response?.status === 409) {
+        setError('An account with this email already exists.');
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('Registration failed. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }

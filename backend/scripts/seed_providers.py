@@ -633,7 +633,7 @@ async def seed_doctor_documents():
             {provider.specialty}
             
             TYPE:
-            {provider.type.value}
+            {provider.type}
             
             To book an appointment with {provider.name}, you can search for available slots in the {provider.department} department or directly by provider ID {provider.id}.
             """

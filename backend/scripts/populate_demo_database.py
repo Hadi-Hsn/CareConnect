@@ -1042,7 +1042,7 @@ async def seed_rag_documents(providers):
             pdf_text = pdf_parser.extract_text_from_bytes(pdf_bytes)
             
             # Create document with PDF content
-            provider_type = provider.type.value if hasattr(provider.type, 'value') else provider.type
+            provider_type = provider.type if hasattr(provider.type, 'value') else provider.type
             
             documents.append(
                 Document(

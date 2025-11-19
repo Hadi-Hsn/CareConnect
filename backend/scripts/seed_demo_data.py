@@ -24,24 +24,41 @@ from app.services.rag_service import RAGService
 async def seed_users():
     """Seed demo users."""
     async with async_session_maker() as session:
-        users = [
-            User(
-                email="hadihacan@gmail.com",
-                name="John Doe",
-                role=UserRole.PATIENT,
-                hashed_password=get_password_hash("password123"),
-            ),
-            User(
-                email="admin@aub.com",
-                name="Admin User",
-                role=UserRole.ADMIN,
-                hashed_password=get_password_hash("Admin@123"),
-            ),
-        ]
-
-        session.add_all(users)
-        await session.commit()
-        print(f"✓ Seeded {len(users)} users")
+        # Check if users already exist
+        result = await session.execute(
+            select(User).where(User.email.in_(["hadihacan@gmail.com", "admin@aub.com"]))
+        )
+        existing_users = result.scalars().all()
+        existing_emails = {user.email for user in existing_users}
+        
+        users_to_add = []
+        
+        if "hadihacan@gmail.com" not in existing_emails:
+            users_to_add.append(
+                User(
+                    email="hadihacan@gmail.com",
+                    name="John Doe",
+                    role=UserRole.PATIENT,
+                    hashed_password=get_password_hash("password123"),
+                )
+            )
+        
+        if "admin@aub.com" not in existing_emails:
+            users_to_add.append(
+                User(
+                    email="admin@aub.com",
+                    name="Admin User",
+                    role=UserRole.ADMIN,
+                    hashed_password=get_password_hash("Admin@123"),
+                )
+            )
+        
+        if users_to_add:
+            session.add_all(users_to_add)
+            await session.commit()
+            print(f"✓ Seeded {len(users_to_add)} users")
+        else:
+            print(f"✓ Users already exist, skipped seeding")
 
 
 async def seed_providers():
@@ -632,78 +649,120 @@ async def seed_providers():
 async def seed_lab_tests():
     """Seed demo lab tests."""
     async with async_session_maker() as session:
-        lab_tests = [
-            LabTest(
-                name="Complete Blood Count (CBC)",
-                code="LAB-CBC",
-                department="Hematology",
-                description="Measures different components of blood including red and white blood cells",
-                prep_instructions="No special preparation required",
-                estimated_duration_minutes=15,
-            ),
-            LabTest(
-                name="Lipid Panel",
-                code="LAB-LIPID",
-                department="Cardiology",
-                description="Measures cholesterol and triglyceride levels",
-                prep_instructions="Fasting required before test",
-                fasting_hours=12,
-                estimated_duration_minutes=15,
-            ),
-            LabTest(
-                name="Thyroid Function Test",
-                code="LAB-THYROID",
-                department="Endocrinology",
-                description="Measures thyroid hormone levels (TSH, T3, T4)",
-                prep_instructions="No special preparation required",
-                estimated_duration_minutes=15,
-            ),
-            LabTest(
-                name="Hemoglobin A1C",
-                code="LAB-A1C",
-                department="Endocrinology",
-                description="Measures average blood sugar levels over 3 months",
-                prep_instructions="No fasting required",
-                estimated_duration_minutes=15,
-            ),
-            LabTest(
-                name="Comprehensive Metabolic Panel",
-                code="LAB-CMP",
-                department="Nephrology",
-                description="Measures kidney function, blood sugar, and electrolytes",
-                prep_instructions="Fasting recommended",
-                fasting_hours=8,
-                estimated_duration_minutes=15,
-            ),
-            LabTest(
-                name="Liver Function Test",
-                code="LAB-LFT",
-                department="Gastroenterology",
-                description="Evaluates liver health and function",
-                prep_instructions="No special preparation required",
-                estimated_duration_minutes=15,
-            ),
-            LabTest(
-                name="Urinalysis",
-                code="LAB-UA",
-                department="Nephrology",
-                description="Analyzes urine for various health indicators",
-                prep_instructions="First morning urine sample preferred",
-                estimated_duration_minutes=10,
-            ),
-            LabTest(
-                name="Chest X-Ray",
-                code="RAD-CXR",
-                department="Radiology",
-                description="Imaging of chest, heart, and lungs",
-                prep_instructions="Remove jewelry and metal objects",
-                estimated_duration_minutes=30,
-            ),
-        ]
-
-        session.add_all(lab_tests)
-        await session.commit()
-        print(f"✓ Seeded {len(lab_tests)} lab tests")
+        # Check if lab tests already exist
+        test_codes = ["LAB-CBC", "LAB-LIPID", "LAB-THYROID", "LAB-A1C", "LAB-CMP", "LAB-LFT", "LAB-UA", "RAD-CXR"]
+        result = await session.execute(
+            select(LabTest).where(LabTest.code.in_(test_codes))
+        )
+        existing_tests = result.scalars().all()
+        existing_codes = {test.code for test in existing_tests}
+        
+        lab_tests_to_add = []
+        
+        if "LAB-CBC" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Complete Blood Count (CBC)",
+                    code="LAB-CBC",
+                    department="Hematology",
+                    description="Measures different components of blood including red and white blood cells",
+                    prep_instructions="No special preparation required",
+                    estimated_duration_minutes=15,
+                )
+            )
+        
+        if "LAB-LIPID" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Lipid Panel",
+                    code="LAB-LIPID",
+                    department="Cardiology",
+                    description="Measures cholesterol and triglyceride levels",
+                    prep_instructions="Fasting required before test",
+                    fasting_hours=12,
+                    estimated_duration_minutes=15,
+                )
+            )
+        
+        if "LAB-THYROID" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Thyroid Function Test",
+                    code="LAB-THYROID",
+                    department="Endocrinology",
+                    description="Measures thyroid hormone levels (TSH, T3, T4)",
+                    prep_instructions="No special preparation required",
+                    estimated_duration_minutes=15,
+                )
+            )
+        
+        if "LAB-A1C" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Hemoglobin A1C",
+                    code="LAB-A1C",
+                    department="Endocrinology",
+                    description="Measures average blood sugar levels over 3 months",
+                    prep_instructions="No fasting required",
+                    estimated_duration_minutes=15,
+                )
+            )
+        
+        if "LAB-CMP" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Comprehensive Metabolic Panel",
+                    code="LAB-CMP",
+                    department="Nephrology",
+                    description="Measures kidney function, blood sugar, and electrolytes",
+                    prep_instructions="Fasting recommended",
+                    fasting_hours=8,
+                    estimated_duration_minutes=15,
+                )
+            )
+        
+        if "LAB-LFT" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Liver Function Test",
+                    code="LAB-LFT",
+                    department="Gastroenterology",
+                    description="Evaluates liver health and function",
+                    prep_instructions="No special preparation required",
+                    estimated_duration_minutes=15,
+                )
+            )
+        
+        if "LAB-UA" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Urinalysis",
+                    code="LAB-UA",
+                    department="Nephrology",
+                    description="Analyzes urine for various health indicators",
+                    prep_instructions="First morning urine sample preferred",
+                    estimated_duration_minutes=10,
+                )
+            )
+        
+        if "RAD-CXR" not in existing_codes:
+            lab_tests_to_add.append(
+                LabTest(
+                    name="Chest X-Ray",
+                    code="RAD-CXR",
+                    department="Radiology",
+                    description="Imaging of chest, heart, and lungs",
+                    prep_instructions="Remove jewelry and metal objects",
+                    estimated_duration_minutes=30,
+                )
+            )
+        
+        if lab_tests_to_add:
+            session.add_all(lab_tests_to_add)
+            await session.commit()
+            print(f"✓ Seeded {len(lab_tests_to_add)} lab tests")
+        else:
+            print(f"✓ Lab tests already exist, skipped seeding")
 
 
 async def seed_documents():
@@ -869,6 +928,9 @@ async def seed_doctor_documents():
         # Create RAG documents for each doctor
         documents = []
         for provider in providers:
+            # Handle provider.type which may be enum or string
+            provider_type = provider.type.value if hasattr(provider.type, 'value') else str(provider.type)
+            
             # Build a comprehensive profile document
             content = f"""
             {provider.name} - {provider.specialty}
@@ -881,7 +943,7 @@ async def seed_doctor_documents():
             {provider.specialty}
             
             TYPE:
-            {provider.type.value}
+            {provider_type}
             
             To book an appointment with {provider.name}, you can search for available slots in the {provider.department} department or directly by provider ID {provider.id}.
             """

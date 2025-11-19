@@ -28,13 +28,68 @@ import {
   Phone as PhoneIcon,
   Mic as MicIcon,
   Chat as ChatIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 import type { ChatMessage, ToolResult } from '@/types/api';
 import VoiceChat from '@/components/VoiceChat';
 
+// Session management
+const CHAT_SESSION_KEY = 'careconnect_chat_session';
+const CHAT_MESSAGES_KEY = 'careconnect_chat_messages';
+
+interface ChatSession {
+  id: string;
+  startedAt: string;
+  lastActivity: string;
+}
+
+function getCurrentSession(): ChatSession {
+  const stored = localStorage.getItem(CHAT_SESSION_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      // Invalid session, create new one
+    }
+  }
+  return createNewSession();
+}
+
+function createNewSession(): ChatSession {
+  const session: ChatSession = {
+    id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    startedAt: new Date().toISOString(),
+    lastActivity: new Date().toISOString(),
+  };
+  localStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session));
+  return session;
+}
+
+function updateSessionActivity(session: ChatSession): void {
+  session.lastActivity = new Date().toISOString();
+  localStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session));
+}
+
+function loadMessagesFromStorage(): ChatMessage[] {
+  const stored = localStorage.getItem(CHAT_MESSAGES_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function saveMessagesToStorage(messages: ChatMessage[]): void {
+  localStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify(messages));
+}
+
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [session, setSession] = useState<ChatSession>(getCurrentSession);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessagesFromStorage());
   const [input, setInput] = useState('');
   const [toolResults, setToolResults] = useState<ToolResult[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
@@ -77,14 +132,22 @@ export default function ChatPage() {
     },
   });
 
+  useEffect(() => {
+    saveMessagesToStorage(messages);
+    if (messages.length > 0) {
+      updateSessionActivity(session);
+    }
+  }, [messages, session]);
+
   const handleSend = () => {
     if (!input.trim()) return;
 
     const userMessage: ChatMessage = { role: 'user', content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
 
-    chatMutation.mutate([...messages, userMessage]);
+    chatMutation.mutate(updatedMessages);
   };
 
   const handleHandoverClick = () => {
@@ -121,8 +184,9 @@ export default function ChatPage() {
   // Voice mode handlers
   const handleVoiceTranscription = (text: string) => {
     const userMessage: ChatMessage = { role: 'user', content: text };
-    setMessages((prev) => [...prev, userMessage]);
-    chatMutation.mutate([...messages, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    chatMutation.mutate(updatedMessages);
   };
 
   const handleSpeechToText = async (audioBlob: Blob): Promise<string> => {
@@ -131,6 +195,22 @@ export default function ChatPage() {
 
   const handleTextToSpeech = async (text: string): Promise<Blob> => {
     return await api.textToSpeech(text);
+  };
+
+  const handleNewSession = () => {
+    if (messages.length > 0) {
+      const confirmed = window.confirm(
+        'Starting a new session will clear your current conversation. Are you sure?'
+      );
+      if (!confirmed) return;
+    }
+    
+    const newSession = createNewSession();
+    setSession(newSession);
+    setMessages([]);
+    setToolResults([]);
+    setLastResponseText('');
+    localStorage.removeItem(CHAT_MESSAGES_KEY);
   };
 
   useEffect(() => {
@@ -149,6 +229,14 @@ export default function ChatPage() {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton
+                onClick={handleNewSession}
+                color="default"
+                title="Start new conversation"
+                sx={{ border: 1, borderColor: 'divider' }}
+              >
+                <RefreshIcon />
+              </IconButton>
               <IconButton
                 onClick={() => setVoiceMode(false)}
                 color={!voiceMode ? 'primary' : 'default'}
@@ -183,6 +271,16 @@ export default function ChatPage() {
           ) : (
             <>
               <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+                {messages.length === 0 && (
+                  <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
+                    <Typography variant="h6" gutterBottom>
+                      Welcome! How can I help you today?
+                    </Typography>
+                    <Typography variant="body2">
+                      Try asking: "Book an appointment with a cardiologist" or "When are my appointments?"
+                    </Typography>
+                  </Box>
+                )}
                 {messages.map((msg, idx) => (
                   <Box
                     key={idx}
@@ -291,7 +389,13 @@ export default function ChatPage() {
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
-              Context
+              Session Info
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Session ID: {session.id.split('_').pop()}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Messages: {messages.length}
             </Typography>
             {toolResults.length > 0 && (
               <Box sx={{ mt: 2 }}>

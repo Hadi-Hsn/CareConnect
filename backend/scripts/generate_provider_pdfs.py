@@ -88,7 +88,7 @@ def generate_provider_pdf(provider: Provider) -> bytes:
     )
     
     # Get provider type display name
-    provider_type = provider.type.value if hasattr(provider.type, 'value') else provider.type
+    provider_type = provider.type if hasattr(provider.type, 'value') else provider.type
     type_display = provider_type.replace('_', ' ').title()
     
     # ============================================================================

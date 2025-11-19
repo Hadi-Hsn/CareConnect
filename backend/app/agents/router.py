@@ -259,17 +259,105 @@ class AgentRouter:
                                 result_json = tool_result.result
                                 provider_id_to_use = None
                                 slot_id_to_use = None
+                                
+                                # Extract requested time from user message if present
+                                requested_time = None
+                                if last_user_message:
+                                    user_text = last_user_message.content.lower()
+                                    # Match patterns like "at 11", "at 11am", "at 11:30", "11 am", "11:30 am", "one at 10am"
+                                    time_patterns = [
+                                        r'at\s+(?:\w+\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap]m?)?\b',  # Handles "at 10", "at one 10", etc.
+                                        r'\b(\d{1,2})(?::(\d{2}))?\s*([ap]m)\b',  # Handles "10am", "10:30pm"
+                                    ]
+                                    for pattern in time_patterns:
+                                        match = re.search(pattern, user_text)
+                                        if match:
+                                            hour = int(match.group(1))
+                                            minute = int(match.group(2)) if match.group(2) else 0
+                                            am_pm = match.group(3) if match.group(3) else None
+                                            
+                                            # Convert to 24-hour format if AM/PM specified
+                                            if am_pm:
+                                                am_pm = am_pm.lower().replace('.', '')
+                                                if am_pm.startswith('p') and hour != 12:
+                                                    hour += 12
+                                                elif am_pm.startswith('a') and hour == 12:
+                                                    hour = 0
+                                            
+                                            requested_time = (hour, minute)
+                                            logger.info("parsed_requested_time", hour=hour, minute=minute, original_text=user_text)
+                                            break
+                                
                                 if result_json.get("providers"):
                                     first = result_json["providers"][0]
                                     provider_id_to_use = first.get("provider_id")
                                     slots = first.get("slots", [])
+                                    
                                     if slots:
-                                        slot_id_to_use = slots[0].get("slot_id")
+                                        # Find the best matching slot based on requested time
+                                        slot_to_use = None
+                                        
+                                        if requested_time:
+                                            # Find slot matching the requested time
+                                            for slot in slots:
+                                                slot_start = slot.get("start", "")
+                                                if slot_start:
+                                                    # Parse ISO format time
+                                                    slot_dt = datetime.fromisoformat(slot_start.replace('Z', '+00:00'))
+                                                    slot_hour = slot_dt.hour
+                                                    slot_minute = slot_dt.minute
+                                                    
+                                                    # Match if hour matches (allow some flexibility for minutes)
+                                                    if slot_hour == requested_time[0] and abs(slot_minute - requested_time[1]) <= 15:
+                                                        slot_to_use = slot
+                                                        logger.info("matched_time_slot", requested=requested_time, slot_time=(slot_hour, slot_minute))
+                                                        break
+                                            
+                                            if not slot_to_use:
+                                                logger.warning("requested_time_not_available", requested_time=requested_time)
+                                                # Don't auto-book if specific time isn't available
+                                                booking_intent = False
+                                        else:
+                                            # No specific time requested, use first available slot
+                                            slot_to_use = slots[0]
+                                        
+                                        if slot_to_use:
+                                            slot_id_to_use = slot_to_use.get("slot_id")
+                                            
                                 elif result_json.get("slots") and result_json.get("provider_id"):
                                     provider_id_to_use = result_json.get("provider_id")
                                     slots = result_json.get("slots", [])
+                                    
                                     if slots:
-                                        slot_id_to_use = slots[0].get("slot_id")
+                                        # Find the best matching slot based on requested time
+                                        slot_to_use = None
+                                        
+                                        if requested_time:
+                                            # Find slot matching the requested time
+                                            for slot in slots:
+                                                slot_start = slot.get("start", "")
+                                                if slot_start:
+                                                    # Parse ISO format time
+                                                    slot_dt = datetime.fromisoformat(slot_start.replace('Z', '+00:00'))
+                                                    slot_hour = slot_dt.hour
+                                                    slot_minute = slot_dt.minute
+                                                    
+                                                    # Match if hour matches (allow some flexibility for minutes)
+                                                    if slot_hour == requested_time[0] and abs(slot_minute - requested_time[1]) <= 15:
+                                                        slot_to_use = slot
+                                                        logger.info("matched_time_slot", requested=requested_time, slot_time=(slot_hour, slot_minute))
+                                                        break
+                                            
+                                            if not slot_to_use:
+                                                logger.warning("requested_time_not_available", requested_time=requested_time)
+                                                # Don't auto-book if specific time isn't available
+                                                booking_intent = False
+                                        else:
+                                            # No specific time requested, use first available slot
+                                            slot_to_use = slots[0]
+                                        
+                                        if slot_to_use:
+                                            slot_id_to_use = slot_to_use.get("slot_id")
 
                                 if booking_intent and provider_id_to_use and slot_id_to_use:
                                     # Perform booking automatically
@@ -284,32 +372,37 @@ class AgentRouter:
                                     )
                                     all_tool_results.append(book_result)
 
-                                    # We executed the booking programmatically. Construct a
-                                    # final confirmation message and return immediately so
-                                    # we don't send synthetic 'tool' messages that violate
-                                    # the API message sequencing rules.
-                                    provider_name = None
-                                    # book_result is a ToolResult pydantic model; access the
-                                    # underlying result dict via .result
-                                    booked_time = book_result.result.get("time_start") or ""
-                                    # Try to get a friendly provider name from search result
-                                    if isinstance(result_json, dict):
-                                        if result_json.get("providers"):
-                                            provider_name = result_json["providers"][0].get("provider_name")
-                                        elif result_json.get("provider_name"):
-                                            provider_name = result_json.get("provider_name")
+                                    # Check if booking failed (e.g., slot already taken)
+                                    if book_result.result.get("error"):
+                                        logger.warning("auto_booking_failed", error=book_result.result.get("error"))
+                                        # Don't return early - let the model handle the error and present alternatives
+                                    else:
+                                        # We executed the booking programmatically. Construct a
+                                        # final confirmation message and return immediately so
+                                        # we don't send synthetic 'tool' messages that violate
+                                        # the API message sequencing rules.
+                                        provider_name = None
+                                        # book_result is a ToolResult pydantic model; access the
+                                        # underlying result dict via .result
+                                        booked_time = book_result.result.get("time_start") or ""
+                                        # Try to get a friendly provider name from search result
+                                        if isinstance(result_json, dict):
+                                            if result_json.get("providers"):
+                                                provider_name = result_json["providers"][0].get("provider_name")
+                                            elif result_json.get("provider_name"):
+                                                provider_name = result_json.get("provider_name")
 
-                                    if not provider_name:
-                                        provider_name = "the selected provider"
+                                        if not provider_name:
+                                            provider_name = "the selected provider"
 
-                                    confirmation = book_result.result.get("confirmation_code", "")
-                                    final_content = (
-                                        f"I've booked your appointment for {booked_time} with {provider_name}. "
-                                        f"Confirmation code: {confirmation}. An email confirmation has been sent to you."
-                                    )
+                                        confirmation = book_result.result.get("confirmation_code", "")
+                                        final_content = (
+                                            f"I've booked your appointment for {booked_time} with {provider_name}. "
+                                            f"Confirmation code: {confirmation}. An email confirmation has been sent to you."
+                                        )
 
-                                    final_message = ChatMessage(role="assistant", content=final_content)
-                                    return final_message, all_tool_calls, all_tool_results, total_usage
+                                        final_message = ChatMessage(role="assistant", content=final_content)
+                                        return final_message, all_tool_calls, all_tool_results, total_usage
                         except Exception:
                             # Never crash the loop due to heuristic booking; log and continue
                             logger.exception("auto_booking_failed")
@@ -364,7 +457,9 @@ class AgentRouter:
     ) -> ToolResult:
         """Execute a tool function."""
         try:
-            if tool_name == "search_timeslots":
+            if tool_name == "get_user_appointments":
+                result = await self._get_user_appointments(user_id=user_id, **arguments)
+            elif tool_name == "search_timeslots":
                 result = await self._search_timeslots(**arguments)
             elif tool_name == "book_appointment":
                 # Remove user_id from arguments if present (we'll use the authenticated user_id)
@@ -570,4 +665,80 @@ class AgentRouter:
                 }
                 for chunk in retrieval.chunks
             ],
+        }
+
+    async def _get_user_appointments(
+        self, user_id: int | None = None, status: str = "upcoming", limit: int = 10
+    ) -> dict[str, Any]:
+        """Get user's appointments."""
+        if not user_id:
+            return {"error": "user_id is required to retrieve appointments"}
+
+        from datetime import datetime
+        from sqlalchemy import desc, or_
+
+        # Get current time in Lebanon timezone
+        lebanon_now = datetime.now(LEBANON_TZ)
+
+        # Build base query
+        query = (
+            select(Appointment, Provider)
+            .join(Provider, Appointment.provider_id == Provider.id)
+            .where(Appointment.user_id == user_id)
+        )
+
+        # Filter by status
+        if status == "upcoming":
+            query = query.where(
+                Appointment.time_start >= lebanon_now,
+                Appointment.status.in_(["scheduled", "confirmed"])
+            ).order_by(Appointment.time_start)
+        elif status == "past":
+            query = query.where(
+                or_(
+                    Appointment.time_start < lebanon_now,
+                    Appointment.status.in_(["completed", "cancelled"])
+                )
+            ).order_by(desc(Appointment.time_start))
+        else:  # all
+            query = query.order_by(desc(Appointment.time_start))
+
+        # Apply limit
+        query = query.limit(limit)
+
+        # Execute query
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        if not rows:
+            return {
+                "appointments": [],
+                "count": 0,
+                "message": f"No {status} appointments found" if status != "all" else "No appointments found"
+            }
+
+        # Format appointments
+        appointments = []
+        for appointment, provider in rows:
+            # Convert to Lebanon timezone for display
+            lebanon_time = appointment.time_start.astimezone(LEBANON_TZ)
+            
+            appointments.append({
+                "appointment_id": appointment.id,
+                "confirmation_code": appointment.confirmation_code,
+                "provider_name": provider.name,
+                "provider_id": provider.id,
+                "department": provider.department,
+                "specialty": provider.specialty,
+                "date": lebanon_time.strftime("%Y-%m-%d"),
+                "time": lebanon_time.strftime("%I:%M %p"),
+                "datetime_display": lebanon_time.strftime("%B %d, %Y at %I:%M %p"),
+                "status": appointment.status,
+                "reason": appointment.reason,
+            })
+
+        return {
+            "appointments": appointments,
+            "count": len(appointments),
+            "status_filter": status,
         }

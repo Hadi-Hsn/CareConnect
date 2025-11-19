@@ -165,6 +165,35 @@ class MockSchedulingClient(SchedulingClient):
 
             # Create appointment
             async with await self._get_session() as session:
+                # Check if this slot is already booked
+                start_of_day = datetime.combine(target_date, time.min, tzinfo=LEBANON_TZ)
+                end_of_day = datetime.combine(target_date, time.max, tzinfo=LEBANON_TZ)
+                
+                result = await session.execute(
+                    select(Appointment).where(
+                        Appointment.provider_id == provider_id,
+                        Appointment.time_start == selected_slot.start,
+                        Appointment.time_end == selected_slot.end,
+                        Appointment.status.in_(
+                            [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]
+                        ),
+                    )
+                )
+                existing_appointment = result.scalar_one_or_none()
+                
+                if existing_appointment:
+                    logger.warning(
+                        "slot_already_booked",
+                        provider_id=provider_id,
+                        slot_id=slot_id,
+                        existing_appointment_id=existing_appointment.id,
+                    )
+                    return {
+                        "error": f"This time slot is no longer available. Please choose another time.",
+                        "slot_id": slot_id,
+                        "time_start": selected_slot.start.isoformat(),
+                    }
+
                 confirmation_code = secrets.token_hex(8).upper()
 
                 appointment = Appointment(

@@ -78,13 +78,13 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "cancel_appointment",
-            "description": "Cancel an existing appointment",
+            "description": "Cancel an existing appointment. If the user provides a confirmation code instead of an appointment ID, you must first call get_user_appointments to find the appointment with that confirmation code, then use its appointment_id to cancel.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "appointment_id": {
                         "type": "integer",
-                        "description": "The ID of the appointment to cancel",
+                        "description": "The ID of the appointment to cancel. This is NOT the confirmation code - it's the numeric appointment ID from get_user_appointments.",
                     },
                 },
                 "required": ["appointment_id"],
@@ -122,6 +122,28 @@ TOOLS: list[dict[str, Any]] = [
                     },
                 },
                 "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_user_appointments",
+            "description": "Retrieve the authenticated user's appointments. Returns upcoming and recent past appointments with details including provider, time, location, and status.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["upcoming", "past", "all"],
+                        "description": "Filter appointments by status: 'upcoming' for future appointments, 'past' for completed/cancelled appointments, 'all' for both. Defaults to 'upcoming'.",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of appointments to return. Defaults to 10.",
+                    },
+                },
+                "required": [],
             },
         },
     },
