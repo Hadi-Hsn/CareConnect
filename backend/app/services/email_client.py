@@ -79,13 +79,40 @@ class SendGridEmailClient:
             return False
 
 
+class MockEmailClient:
+    """Mock email client for testing without SendGrid."""
+
+    async def send_email(
+        self, to_email: str, subject: str, html_content: str, text_content: str | None = None
+    ) -> bool:
+        """Mock send email - logs instead of actually sending."""
+        logger.info(
+            "mock_email_sent",
+            to=to_email,
+            subject=subject,
+            provider="mock",
+            html_length=len(html_content),
+            text_length=len(text_content) if text_content else 0
+        )
+        # Log the text content so you can see what would have been sent
+        logger.info("email_content", to=to_email, content=text_content[:500] if text_content else "")
+        return True
+
+
 class EmailService:
-    """Email service using SendGrid."""
+    """Email service using SendGrid or mock for testing."""
 
     def __init__(self) -> None:
         """Initialize email service."""
-        self.client = SendGridEmailClient()
-        logger.info("email_service_initialized", provider="sendgrid")
+        settings = get_settings()
+        
+        # Use mock client if SendGrid API key is not configured
+        if not settings.sendgrid_api_key or settings.sendgrid_api_key == "":
+            self.client = MockEmailClient()
+            logger.info("email_service_initialized", provider="mock", note="SendGrid API key not configured")
+        else:
+            self.client = SendGridEmailClient()
+            logger.info("email_service_initialized", provider="sendgrid")
 
     async def send_confirmation(self, user_email: str, details: dict[str, Any]) -> bool:
         """Send appointment confirmation email."""

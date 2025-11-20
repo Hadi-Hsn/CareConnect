@@ -1,30 +1,63 @@
-"""Tool definitions for OpenAI function calling."""
+"""
+Production-Ready Tool Definitions for OpenAI GPT-4+ Function Calling
+Follows strict JSON Schema validation and OpenAI best practices
+"""
 from typing import Any
 
 # Tool schemas following OpenAI function calling format
+# Each tool has:
+# 1. Clear, unambiguous description
+# 2. Strict parameter typing
+# 3. Required field enforcement
+# 4. Examples in descriptions
+# 5. No business logic (schemas only)
+
 TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
             "name": "search_timeslots",
-            "description": "Find available appointment timeslots for a specific provider or department on a given date",
+            "description": (
+                "Search for available appointment time slots on a specific date. "
+                "Returns list of providers with their available time slots. "
+                "Each slot includes: slot_id, start time, end time. "
+                "Use when user mentions a date or asks about availability. "
+                "REQUIRED: date in YYYY-MM-DD format (calculate from relative dates). "
+                "OPTIONAL: Specify EITHER provider_id OR department, NOT both."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "date": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "description": (
+                            "Date to search for availability in YYYY-MM-DD format. "
+                            "You MUST convert relative dates: 'tomorrow', 'next Monday', 'Thursday' -> YYYY-MM-DD. "
+                            "Example: If today is 2025-11-20 and user says 'tomorrow', use '2025-11-21'."
+                        ),
+                    },
                     "provider_id": {
                         "type": "integer",
-                        "description": "The ID of the specific provider (doctor, specialist, etc.)",
+                        "description": (
+                            "Specific provider ID to search. "
+                            "Use when user requests a specific doctor by name. "
+                            "Get provider_id from previous search results or get_user_appointments. "
+                            "MUTUALLY EXCLUSIVE with 'department' parameter."
+                        ),
                     },
                     "department": {
                         "type": "string",
-                        "description": "The department name (e.g., 'Cardiology', 'Radiology', 'Primary Care')",
-                    },
-                    "date": {
-                        "type": "string",
-                        "description": "The date to check availability for, in YYYY-MM-DD format. You must calculate this from relative dates like 'Thursday', 'tomorrow', 'next week', etc. based on the current date.",
+                        "description": (
+                            "Department name to search: 'Cardiology', 'Radiology', 'Orthopedics', etc. "
+                            "Use when user mentions a specialty or department. "
+                            "Returns all providers in that department with availability. "
+                            "MUTUALLY EXCLUSIVE with 'provider_id' parameter."
+                        ),
                     },
                 },
                 "required": ["date"],
+                "additionalProperties": False,
             },
         },
     },
@@ -32,24 +65,47 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "book_appointment",
-            "description": "Book an appointment for the authenticated user with a specific provider at a specific timeslot. Only call this after the user has confirmed they want to book. DO NOT include user_id - it is automatically provided from authentication.",
+            "description": (
+                "Book a new medical appointment for the authenticated user. "
+                "Reserves a specific time slot with a specific provider. "
+                "Returns: appointment_id, confirmation_code, datetime, status. "
+                "CRITICAL: Only call AFTER user confirms they want to book. "
+                "NEVER call if user is asking about modifying/canceling existing appointment. "
+                "User authentication is automatic - DO NOT ask for user_id."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "provider_id": {
                         "type": "integer",
-                        "description": "The ID of the provider for the appointment",
+                        "description": (
+                            "ID of the provider (doctor/specialist) for this appointment. "
+                            "MUST match a provider_id from search_timeslots results. "
+                            "NEVER guess or use arbitrary values."
+                        ),
                     },
                     "slot_id": {
                         "type": "string",
-                        "description": "The ID of the timeslot to book (from search_timeslots results)",
+                        "pattern": "^slot_\\d{4}-\\d{2}-\\d{2}_\\d+$",
+                        "description": (
+                            "ID of the time slot to book. "
+                            "Format: 'slot_YYYY-MM-DD_N' (e.g., 'slot_2025-11-21_3'). "
+                            "MUST be from search_timeslots results for the selected provider. "
+                            "NEVER construct manually."
+                        ),
                     },
                     "reason": {
                         "type": "string",
-                        "description": "Optional reason for the appointment",
+                        "maxLength": 500,
+                        "description": (
+                            "Optional reason for the appointment. "
+                            "Examples: 'Annual checkup', 'Follow-up visit', 'New patient consultation'. "
+                            "Include if user provides it."
+                        ),
                     },
                 },
                 "required": ["provider_id", "slot_id"],
+                "additionalProperties": False,
             },
         },
     },
@@ -57,20 +113,39 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "modify_appointment",
-            "description": "Modify an existing appointment to a new timeslot",
+            "description": (
+                "Change an existing appointment to a new time slot. "
+                "Reschedules the appointment while keeping the same provider and reason. "
+                "REQUIRED: appointment_id (integer) and new_slot_id. "
+                "CRITICAL: If user provides confirmation_code, call get_user_appointments FIRST, "
+                "find the appointment, then use its appointment_id. "
+                "Use when user says: 'move', 'change', 'reschedule', 'switch', 'modify'."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "appointment_id": {
                         "type": "integer",
-                        "description": "The ID of the appointment to modify",
+                        "description": (
+                            "Numeric ID of the appointment to modify. "
+                            "This is NOT the confirmation code (which is alphanumeric). "
+                            "Get from get_user_appointments results. "
+                            "Field name in results: 'appointment_id'."
+                        ),
                     },
                     "new_slot_id": {
                         "type": "string",
-                        "description": "The ID of the new timeslot",
+                        "pattern": "^slot_\\d{4}-\\d{2}-\\d{2}_\\d+$",
+                        "description": (
+                            "ID of the new time slot. "
+                            "Format: 'slot_YYYY-MM-DD_N'. "
+                            "MUST be from search_timeslots results. "
+                            "Call search_timeslots with the new desired date first."
+                        ),
                     },
                 },
                 "required": ["appointment_id", "new_slot_id"],
+                "additionalProperties": False,
             },
         },
     },
@@ -78,16 +153,29 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "cancel_appointment",
-            "description": "Cancel an existing appointment. If the user provides a confirmation code instead of an appointment ID, you must first call get_user_appointments to find the appointment with that confirmation code, then use its appointment_id to cancel.",
+            "description": (
+                "Cancel an existing appointment permanently. "
+                "REQUIRED: appointment_id (integer). "
+                "CRITICAL: If user provides confirmation_code instead of appointment_id, "
+                "call get_user_appointments FIRST, find the matching appointment, "
+                "then call cancel_appointment with its appointment_id. "
+                "Always confirm cancellation details with user before calling."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "appointment_id": {
                         "type": "integer",
-                        "description": "The ID of the appointment to cancel. This is NOT the confirmation code - it's the numeric appointment ID from get_user_appointments.",
+                        "description": (
+                            "Numeric ID of the appointment to cancel. "
+                            "This is NOT the confirmation code. "
+                            "Get from get_user_appointments results. "
+                            "Field name: 'appointment_id'."
+                        ),
                     },
                 },
                 "required": ["appointment_id"],
+                "additionalProperties": False,
             },
         },
     },
@@ -95,16 +183,25 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "send_email_confirmation",
-            "description": "Send an email confirmation for an appointment",
+            "description": (
+                "Send email confirmation for an appointment to the user. "
+                "Automatically sends after successful booking, so ONLY call manually "
+                "if user explicitly requests a resend. "
+                "REQUIRED: appointment_id (get from booking result or get_user_appointments)."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "appointment_id": {
                         "type": "integer",
-                        "description": "The ID of the appointment to send confirmation for",
+                        "description": (
+                            "Numeric ID of the appointment to send confirmation for. "
+                            "Get from book_appointment result or get_user_appointments."
+                        ),
                     },
                 },
                 "required": ["appointment_id"],
+                "additionalProperties": False,
             },
         },
     },
@@ -112,16 +209,31 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "rag_lookup",
-            "description": "Look up facility information including directions, parking, department hours, lab test preparations, and FAQs. Use this for any question about the facility.",
+            "description": (
+                "Look up facility information using retrieval-augmented generation (RAG). "
+                "Returns relevant information from facility documents including: "
+                "directions, parking, department hours, lab test preparations, FAQs, policies. "
+                "Use when user asks about: 'where to park', 'how to get there', "
+                "'lab test instructions', 'department hours', 'facility information'. "
+                "DO NOT use for medical advice or diagnosis."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The question or topic to look up information about",
+                        "minLength": 3,
+                        "maxLength": 500,
+                        "description": (
+                            "The question or topic to search for. "
+                            "Be specific and include key terms. "
+                            "Examples: 'parking for visitors', 'radiology department hours', "
+                            "'preparation for cholesterol test', 'how to get to main entrance'."
+                        ),
                     },
                 },
                 "required": ["query"],
+                "additionalProperties": False,
             },
         },
     },
@@ -129,21 +241,38 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "get_user_appointments",
-            "description": "Retrieve the authenticated user's appointments. Returns upcoming and recent past appointments with details including provider, time, location, and status.",
+            "description": (
+                "Retrieve the authenticated user's medical appointments. "
+                "Returns a list with appointment details including: appointment_id, confirmation_code, "
+                "provider name, department, date, time, status, and reason. "
+                "Use this when user asks about their schedule, upcoming visits, or past appointments. "
+                "CRITICAL: Always call this FIRST when user wants to cancel/modify by confirmation code."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "status": {
                         "type": "string",
                         "enum": ["upcoming", "past", "all"],
-                        "description": "Filter appointments by status: 'upcoming' for future appointments, 'past' for completed/cancelled appointments, 'all' for both. Defaults to 'upcoming'.",
+                        "description": (
+                            "Filter appointments by status. "
+                            "'upcoming' = future scheduled/confirmed appointments (default). "
+                            "'past' = completed or cancelled appointments. "
+                            "'all' = both upcoming and past."
+                        ),
                     },
                     "limit": {
                         "type": "integer",
-                        "description": "Maximum number of appointments to return. Defaults to 10.",
+                        "minimum": 1,
+                        "maximum": 50,
+                        "description": (
+                            "Maximum number of appointments to return. "
+                            "Defaults to 10. Useful for 'show me all my appointments'."
+                        ),
                     },
                 },
                 "required": [],
+                "additionalProperties": False,
             },
         },
     },
@@ -151,8 +280,67 @@ TOOLS: list[dict[str, Any]] = [
 
 
 def get_tool_by_name(name: str) -> dict[str, Any] | None:
-    """Get tool definition by name."""
+    """
+    Get tool definition by name.
+    
+    Args:
+        name: Tool function name
+        
+    Returns:
+        Tool definition dict or None if not found
+    """
     for tool in TOOLS:
         if tool["function"]["name"] == name:
             return tool
     return None
+
+
+def validate_tool_arguments(tool_name: str, arguments: dict[str, Any]) -> tuple[bool, str | None]:
+    """
+    Validate tool arguments against schema.
+    
+    Args:
+        tool_name: Name of the tool
+        arguments: Arguments dict to validate
+        
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    tool = get_tool_by_name(tool_name)
+    if not tool:
+        return False, f"Unknown tool: {tool_name}"
+    
+    schema = tool["function"]["parameters"]
+    required = schema.get("required", [])
+    properties = schema.get("properties", {})
+    
+    # Check required fields
+    for field in required:
+        if field not in arguments:
+            return False, f"Missing required field: {field}"
+    
+    # Check for unexpected fields
+    if schema.get("additionalProperties") is False:
+        for field in arguments:
+            if field not in properties:
+                return False, f"Unexpected field: {field}"
+    
+    # Type checking (basic)
+    for field, value in arguments.items():
+        if field not in properties:
+            continue
+            
+        expected_type = properties[field].get("type")
+        if expected_type == "string" and not isinstance(value, str):
+            return False, f"Field '{field}' must be string, got {type(value).__name__}"
+        elif expected_type == "integer" and not isinstance(value, int):
+            return False, f"Field '{field}' must be integer, got {type(value).__name__}"
+        
+        # Pattern validation for strings
+        if expected_type == "string" and "pattern" in properties[field]:
+            import re
+            pattern = properties[field]["pattern"]
+            if not re.match(pattern, value):
+                return False, f"Field '{field}' does not match required pattern: {pattern}"
+    
+    return True, None
