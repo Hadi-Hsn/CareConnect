@@ -649,120 +649,228 @@ async def seed_providers():
 async def seed_lab_tests():
     """Seed demo lab tests."""
     async with async_session_maker() as session:
-        # Check if lab tests already exist
-        test_codes = ["LAB-CBC", "LAB-LIPID", "LAB-THYROID", "LAB-A1C", "LAB-CMP", "LAB-LFT", "LAB-UA", "RAD-CXR"]
+        desired_tests = {
+            "LAB-CBC": dict(
+                name="Complete Blood Count (CBC)",
+                department="Hematology",
+                description="Measures different components of blood including red and white blood cells",
+                prep_instructions="No special preparation required",
+                fasting_hours=None,
+                estimated_duration_minutes=15,
+            ),
+            "LAB-LIPID": dict(
+                name="Lipid Panel",
+                department="Cardiology",
+                description="Measures cholesterol and triglyceride levels",
+                prep_instructions="Fasting required before test",
+                fasting_hours=12,
+                estimated_duration_minutes=15,
+            ),
+            "LAB-THYROID": dict(
+                name="Thyroid Function Test",
+                department="Endocrinology",
+                description="Measures thyroid hormone levels (TSH, T3, T4)",
+                prep_instructions="No special preparation required",
+                fasting_hours=None,
+                estimated_duration_minutes=15,
+            ),
+            "LAB-A1C": dict(
+                name="Hemoglobin A1C",
+                department="Endocrinology",
+                description="Measures average blood sugar levels over 3 months",
+                prep_instructions="No fasting required",
+                fasting_hours=None,
+                estimated_duration_minutes=15,
+            ),
+            "LAB-CMP": dict(
+                name="Comprehensive Metabolic Panel",
+                department="Nephrology",
+                description="Measures kidney function, blood sugar, and electrolytes",
+                prep_instructions="Fasting recommended",
+                fasting_hours=8,
+                estimated_duration_minutes=15,
+            ),
+            "LAB-LFT": dict(
+                name="Liver Function Test",
+                department="Gastroenterology",
+                description="Evaluates liver health and function",
+                prep_instructions="No special preparation required",
+                fasting_hours=None,
+                estimated_duration_minutes=15,
+            ),
+            "LAB-UA": dict(
+                name="Urinalysis",
+                department="Nephrology",
+                description="Analyzes urine for various health indicators",
+                prep_instructions="First morning urine sample preferred",
+                fasting_hours=None,
+                estimated_duration_minutes=10,
+            ),
+            "RAD-XR": dict(
+                name="X-Ray",
+                department="Radiology",
+                description="Imaging of requested body part",
+                prep_instructions="Remove jewelry and metal objects. Notify the radiologist if you have any previous surgery that involves metal implants",
+                fasting_hours=None,
+                estimated_duration_minutes=30,
+            )
+        }
+
         result = await session.execute(
-            select(LabTest).where(LabTest.code.in_(test_codes))
+            select(LabTest).where(LabTest.code.in_(desired_tests.keys()))
         )
-        existing_tests = result.scalars().all()
-        existing_codes = {test.code for test in existing_tests}
-        
-        lab_tests_to_add = []
-        
-        if "LAB-CBC" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Complete Blood Count (CBC)",
-                    code="LAB-CBC",
-                    department="Hematology",
-                    description="Measures different components of blood including red and white blood cells",
-                    prep_instructions="No special preparation required",
-                    estimated_duration_minutes=15,
-                )
+        existing_tests = {test.code: test for test in result.scalars()}
+
+        updates = 0
+        for code, lab_test in existing_tests.items():
+            data = desired_tests[code]
+            
+            changed = False
+            for field in ("name", "department", "description",
+                        "prep_instructions", "fasting_hours",
+                        "estimated_duration_minutes"):
+                new_value = data[field]
+                if getattr(lab_test, field) != new_value:
+                    setattr(lab_test, field, new_value)
+                    changed = True
+
+            if changed:
+                updates += 1
+
+        new_tests = []
+        for code, data in desired_tests.items():
+            if code in existing_tests:
+                continue
+            new_tests.append(
+                LabTest(code=code, **data)
             )
-        
-        if "LAB-LIPID" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Lipid Panel",
-                    code="LAB-LIPID",
-                    department="Cardiology",
-                    description="Measures cholesterol and triglyceride levels",
-                    prep_instructions="Fasting required before test",
-                    fasting_hours=12,
-                    estimated_duration_minutes=15,
-                )
-            )
-        
-        if "LAB-THYROID" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Thyroid Function Test",
-                    code="LAB-THYROID",
-                    department="Endocrinology",
-                    description="Measures thyroid hormone levels (TSH, T3, T4)",
-                    prep_instructions="No special preparation required",
-                    estimated_duration_minutes=15,
-                )
-            )
-        
-        if "LAB-A1C" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Hemoglobin A1C",
-                    code="LAB-A1C",
-                    department="Endocrinology",
-                    description="Measures average blood sugar levels over 3 months",
-                    prep_instructions="No fasting required",
-                    estimated_duration_minutes=15,
-                )
-            )
-        
-        if "LAB-CMP" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Comprehensive Metabolic Panel",
-                    code="LAB-CMP",
-                    department="Nephrology",
-                    description="Measures kidney function, blood sugar, and electrolytes",
-                    prep_instructions="Fasting recommended",
-                    fasting_hours=8,
-                    estimated_duration_minutes=15,
-                )
-            )
-        
-        if "LAB-LFT" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Liver Function Test",
-                    code="LAB-LFT",
-                    department="Gastroenterology",
-                    description="Evaluates liver health and function",
-                    prep_instructions="No special preparation required",
-                    estimated_duration_minutes=15,
-                )
-            )
-        
-        if "LAB-UA" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Urinalysis",
-                    code="LAB-UA",
-                    department="Nephrology",
-                    description="Analyzes urine for various health indicators",
-                    prep_instructions="First morning urine sample preferred",
-                    estimated_duration_minutes=10,
-                )
-            )
-        
-        if "RAD-CXR" not in existing_codes:
-            lab_tests_to_add.append(
-                LabTest(
-                    name="Chest X-Ray",
-                    code="RAD-CXR",
-                    department="Radiology",
-                    description="Imaging of chest, heart, and lungs",
-                    prep_instructions="Remove jewelry and metal objects",
-                    estimated_duration_minutes=30,
-                )
-            )
-        
-        if lab_tests_to_add:
-            session.add_all(lab_tests_to_add)
+
+        if updates:
+            print(f"✓ Updated {updates} existing lab tests")
+        if new_tests:
+            session.add_all(new_tests)
+            print(f"✓ Added {len(new_tests)} new lab tests")
+
+        if updates or new_tests:
             await session.commit()
-            print(f"✓ Seeded {len(lab_tests_to_add)} lab tests")
         else:
-            print(f"✓ Lab tests already exist, skipped seeding")
+            print("✓ Lab tests already up to date, skipped seeding")
+
+    # async with async_session_maker() as session:
+    #     # Check if lab tests already exist
+    #     test_codes = ["LAB-CBC", "LAB-LIPID", "LAB-THYROID", "LAB-A1C", "LAB-CMP", "LAB-LFT", "LAB-UA", "RAD-XR"]
+    #     result = await session.execute(
+    #         select(LabTest).where(LabTest.code.in_(test_codes))
+    #     )
+    #     existing_tests = result.scalars().all()
+    #     existing_codes = {test.code for test in existing_tests}
+        
+    #     lab_tests_to_add = []
+        
+    #     if "LAB-CBC" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="Complete Blood Count (CBC)",
+    #                 code="LAB-CBC",
+    #                 department="Hematology",
+    #                 description="Measures different components of blood including red and white blood cells",
+    #                 prep_instructions="No special preparation required",
+    #                 estimated_duration_minutes=15,
+    #             )
+    #         )
+        
+    #     if "LAB-LIPID" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="Lipid Panel",
+    #                 code="LAB-LIPID",
+    #                 department="Cardiology",
+    #                 description="Measures cholesterol and triglyceride levels",
+    #                 prep_instructions="Fasting required before test",
+    #                 fasting_hours=12,
+    #                 estimated_duration_minutes=15,
+    #             )
+    #         )
+        
+    #     if "LAB-THYROID" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="Thyroid Function Test",
+    #                 code="LAB-THYROID",
+    #                 department="Endocrinology",
+    #                 description="Measures thyroid hormone levels (TSH, T3, T4)",
+    #                 prep_instructions="No special preparation required",
+    #                 estimated_duration_minutes=15,
+    #             )
+    #         )
+        
+    #     if "LAB-A1C" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="Hemoglobin A1C",
+    #                 code="LAB-A1C",
+    #                 department="Endocrinology",
+    #                 description="Measures average blood sugar levels over 3 months",
+    #                 prep_instructions="No fasting required",
+    #                 estimated_duration_minutes=15,
+    #             )
+    #         )
+        
+    #     if "LAB-CMP" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="Comprehensive Metabolic Panel",
+    #                 code="LAB-CMP",
+    #                 department="Nephrology",
+    #                 description="Measures kidney function, blood sugar, and electrolytes",
+    #                 prep_instructions="Fasting recommended",
+    #                 fasting_hours=8,
+    #                 estimated_duration_minutes=15,
+    #             )
+    #         )
+        
+    #     if "LAB-LFT" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="Liver Function Test",
+    #                 code="LAB-LFT",
+    #                 department="Gastroenterology",
+    #                 description="Evaluates liver health and function",
+    #                 prep_instructions="No special preparation required",
+    #                 estimated_duration_minutes=15,
+    #             )
+    #         )
+        
+    #     if "LAB-UA" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="Urinalysis",
+    #                 code="LAB-UA",
+    #                 department="Nephrology",
+    #                 description="Analyzes urine for various health indicators",
+    #                 prep_instructions="First morning urine sample preferred",
+    #                 estimated_duration_minutes=10,
+    #             )
+    #         )
+        
+    #     if "RAD-XR" not in existing_codes:
+    #         lab_tests_to_add.append(
+    #             LabTest(
+    #                 name="CX-Ray",
+    #                 code="RAD-XR",
+    #                 department="Radiology",
+    #                 description="Imaging of requested body part",
+    #                 prep_instructions="Remove jewelry and metal objects. Notify the radiologist if you have any previous surgery that involves metal implants",
+    #                 estimated_duration_minutes=30,
+    #             )
+    #         )
+        
+    #     if lab_tests_to_add:
+    #         session.add_all(lab_tests_to_add)
+    #         await session.commit()
+    #         print(f"✓ Seeded {len(lab_tests_to_add)} lab tests")
+    #     else:
+    #         print(f"✓ Lab tests already exist, skipped seeding")
 
 
 async def seed_documents():
