@@ -10,7 +10,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN rm -f package-lock.json && \
+    npm install --legacy-peer-deps
 
 # Copy application code
 COPY . .
