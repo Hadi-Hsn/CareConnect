@@ -22,13 +22,17 @@ class ChromaVectorStore(VectorStore):
         self.client_openai = AsyncOpenAI(api_key=settings.openai_api_key)
         self.dimension = settings.openai_embedding_dimensions
         
-        # Connect to ChromaDB server using simple HttpClient
-        # For chromadb 0.4.24, avoid tenant/database params
+        # Connect to ChromaDB server
         try:
+            # Use HttpClient for remote ChromaDB server
+            # This works with ChromaDB 0.4.x and 0.5.x
             self.client = chromadb.HttpClient(
                 host=settings.chroma_host,
-                port=settings.chroma_port,
+                port=int(settings.chroma_port),
             )
+            
+            # Test connection
+            self.client.heartbeat()
             
             # Get or create collection
             self.collection = self.client.get_or_create_collection(
@@ -45,13 +49,23 @@ class ChromaVectorStore(VectorStore):
             )
         except Exception as e:
             logger.error("chromadb_initialization_failed", error=str(e), error_type=type(e).__name__)
-            # Create a fallback - use in-memory client for development
-            logger.warning("using_ephemeral_chromadb_client")
-            self.client = chromadb.EphemeralClient()
-            self.collection = self.client.get_or_create_collection(
-                name=settings.chroma_collection_name,
-                metadata={"hnsw:space": "cosine"},
-            )
+            
+            # Try alternative: PersistentClient (if running locally)
+            try:
+                logger.warning("trying_ephemeral_client_fallback")
+                self.client = chromadb.EphemeralClient()
+                self.collection = self.client.get_or_create_collection(
+                    name=settings.chroma_collection_name,
+                    metadata={"hnsw:space": "cosine"},
+                )
+                logger.warning("using_ephemeral_chromadb_client", message="Connected to in-memory ChromaDB. Data will not persist!")
+            except Exception as fallback_error:
+                logger.error("chromadb_connection_required", message="Cannot connect to ChromaDB. Please ensure ChromaDB is running.")
+                raise RuntimeError(
+                    f"Failed to connect to ChromaDB at {settings.chroma_host}:{settings.chroma_port}. "
+                    f"Error: {str(e)}. Fallback also failed: {str(fallback_error)}. "
+                    f"Please ensure ChromaDB container is running with 'docker-compose ps chromadb'"
+                ) from e
 
     def _chunk_text(self, text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
         """

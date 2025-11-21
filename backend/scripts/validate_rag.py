@@ -43,18 +43,27 @@ def validate_directories():
     """Validate required directories exist."""
     print("\n🔍 Validating directories...")
     
-    directories = [
-        Path("/data/faiss_index"),
-        Path("/data/doctor_pdfs"),
-    ]
-    
+    settings = get_settings()
     issues = []
-    for directory in directories:
-        if not directory.exists():
-            issues.append(f"❌ Directory missing: {directory}")
+    
+    # Check based on vector store type
+    if settings.vector_store_type == "chromadb":
+        print(f"   ✓ Using ChromaDB (no local directory needed)")
+    elif settings.vector_store_type == "faiss":
+        faiss_dir = Path(settings.vector_store_path)
+        if not faiss_dir.exists():
+            issues.append(f"❌ Directory missing: {faiss_dir}")
         else:
-            file_count = len(list(directory.glob("*")))
-            print(f"   ✓ {directory} ({file_count} files)")
+            file_count = len(list(faiss_dir.glob("*")))
+            print(f"   ✓ {faiss_dir} ({file_count} files)")
+    
+    # PDF directory is optional - documents can be indexed in memory
+    pdf_dir = Path("/data/doctor_pdfs")
+    if pdf_dir.exists():
+        file_count = len(list(pdf_dir.glob("*")))
+        print(f"   ✓ {pdf_dir} ({file_count} files)")
+    else:
+        print(f"   ℹ {pdf_dir} not found (PDFs indexed in memory)")
     
     return issues
 
@@ -90,17 +99,22 @@ def validate_pdf_files():
     pdf_dir = Path("/data/doctor_pdfs")
     
     if not pdf_dir.exists():
-        return ["⚠ PDF directory doesn't exist yet"]
+        print(f"   ℹ PDF directory doesn't exist (PDFs generated in-memory)")
+        return []  # Not an error - just info
     
     pdf_files = list(pdf_dir.glob("*.pdf"))
     
     if not pdf_files:
-        return ["⚠ No PDF files found"]
+        print(f"   ℹ No PDF files on disk (PDFs generated in-memory)")
+        return []  # Not an error - just info
     
     print(f"   ✓ Found {len(pdf_files)} PDF files:")
-    for pdf_file in pdf_files:
+    for pdf_file in pdf_files[:5]:  # Show first 5
         size_kb = pdf_file.stat().st_size / 1024
         print(f"     - {pdf_file.name} ({size_kb:.1f} KB)")
+    
+    if len(pdf_files) > 5:
+        print(f"     ... and {len(pdf_files) - 5} more files")
     
     return []
 

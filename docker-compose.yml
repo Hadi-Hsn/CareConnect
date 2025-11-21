@@ -3,7 +3,7 @@ version: '3.9'
 services:
   # ChromaDB vector database for RAG embeddings
   chromadb:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.4.24
     container_name: careconnect-chromadb
     ports:
       - "8001:8000"

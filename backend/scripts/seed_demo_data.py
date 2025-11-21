@@ -968,6 +968,44 @@ async def seed_doctor_documents():
         print(f"✓ Indexed {result.indexed_count} doctor profiles ({result.total_chunks} chunks)")
 
 
+async def seed_lab_test_documents():
+    """Seed lab test preparation documents for RAG."""
+    from scripts.populate_lab_tests import LAB_TESTS, generate_lab_test_pdf
+    from app.services.pdf_parser import PDFParser
+    
+    print("Generating lab test preparation documents...")
+    
+    rag_service = RAGService()
+    pdf_parser = PDFParser()
+    
+    # Create documents from lab test PDFs
+    documents = []
+    
+    for test_name, test_info in LAB_TESTS.items():
+        # Generate PDF
+        pdf_bytes = generate_lab_test_pdf(test_name, test_info)
+        
+        # Extract text from PDF
+        pdf_text = pdf_parser.extract_text_from_bytes(pdf_bytes)
+        
+        # Create Document object
+        documents.append(
+            Document(
+                title=test_name,
+                content=pdf_text,
+                metadata={
+                    "type": "lab_test_prep",
+                    "category": test_info["category"],
+                    "test_name": test_name,
+                },
+            )
+        )
+    
+    # Index all lab test documents
+    result = await rag_service.index_documents(documents, replace=False)
+    print(f"✓ Indexed {len(LAB_TESTS)} lab test documents ({result.total_chunks} chunks)")
+
+
 async def main():
     """Run all seed functions."""
     print("🌱 Starting database seeding...")
@@ -983,6 +1021,7 @@ async def main():
     await seed_lab_tests()
     await seed_documents()
     await seed_doctor_documents()
+    await seed_lab_test_documents()  # Add lab test documents
 
     print()
     print("✅ Database seeding completed successfully!")

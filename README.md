@@ -1,120 +1,223 @@
-# CareConnect - AI Healthcare Assistant# CareConnect - Your Smart Health Assistant
+# CareConnect - AI Healthcare Assistant
 
+**A production-grade AI-powered healthcare logistics assistant built with React, FastAPI, and OpenAI.**
 
+CareConnect is a full-stack application that uses OpenAI's function calling (Responses API) and RAG (Retrieval-Augmented Generation) to help patients book appointments, find providers, and get facility information through natural conversation.
 
-## Quick Start**A production-grade AI-powered healthcare logistics assistant built with React, FastAPI, and OpenAI.**
+---
 
+## 🚀 Quick Start (5 Minutes)
 
+### Prerequisites
 
-### 1. SetupCareConnect is a full-stack application that uses OpenAI's function calling (Responses API) and RAG (Retrieval-Augmented Generation) to help patients book appointments, find providers, and get facility information through natural conversation.
+Before you begin, ensure you have:
+- ✅ **Docker Desktop** installed and running ([Download here](https://www.docker.com/products/docker-desktop))
+- ✅ **OpenAI API Key** ([Get one here](https://platform.openai.com/api-keys))
+- ✅ **Git** (optional, for cloning)
 
-
-
-```bash## 🚀 Quick Start
-
-# Copy environment file
-
-cp .env.example .env```bash
-
-# Clone and setup
-
-# Edit .env and add your OpenAI API keycd CareConnect
-
-OPENAI_API_KEY=sk-your-key-here
-
-JWT_SECRET=your-random-secret-key# Copy environment file
-
-```cp .env.example .env
-
-
-
-### 2. Run# Add your OpenAI API key to .env
-
-# OPENAI_API_KEY=sk-your-key-here
-
-```bash# JWT_SECRET=your-random-secret-here
-
-docker-compose up -d
-
-```# Start with Docker
-
-docker-compose up -d
-
-### 3. Access```
-
-
-
-- **Frontend**: http://localhost:5173**What happens on first start:**
-
-- **API Docs**: http://localhost:8000/docs1. 🗄️ **ChromaDB** starts (vector database for RAG)
-
-- **Health Check**: http://localhost:8000/healthz2. � **Backend** starts (FastAPI + SQLite database)
-
-3. 🎨 **Frontend** starts (React UI)
-
-### 4. Seed Demo Data (Optional)4. Database migrations run automatically
-
-5. Ready to use!
+### Step 1: Get the Code
 
 ```bash
+# Option A: Clone the repository
+git clone <repository-url>
+cd CareConnect
 
-docker exec careconnect-backend python scripts/seed_demo_data.pyVisit:
-
-```- Frontend: http://localhost:5173
-
-- Backend API: http://localhost:8000
-
-Demo users:- API Docs: http://localhost:8000/docs
-
-- Patient: `hadihacan@gmail.com` / `password123`- Metrics: http://localhost:8000/metrics
-
-- Admin: `admin@aub.com` / `Admin@123`
-
-**Demo credentials** (create via UI or see scripts/):
-
-## Stack- Patient: `hadihacan@gmail.com` / `password123`
-
-- Admin: `hadi.wmail@gmail.com` / `admin123`
-
-- **Frontend**: React + TypeScript + Material UI
-
-- **Backend**: FastAPI + Python 3.11**Admin Features:**
-
-- **Database**: SQLite (no credentials needed)- Full CRUD operations for doctors/providers
-
-- **Vector DB**: ChromaDB (for RAG)- Comprehensive appointment management
-
-- **AI**: OpenAI GPT-4 + Embeddings- Schedule management and time blocking
-
-- PDF upload and RAG integration for doctor profiles
-
-## Stop- System statistics and reporting
-
-
-
-```bash### Resetting Data
-
-docker-compose down
-
-```To reset and re-populate all data:
-
-
-
-## Reset Everything```bash
-
-# Stop and remove everything
-
-```bashdocker-compose down -v
-
-docker-compose down -v
-
-docker-compose up -d# Restart fresh
-
-```docker-compose up -d
-
+# Option B: If you already have the code, navigate to the folder
+cd CareConnect
 ```
 
-That's it! 🚀
+### Step 2: Create Environment File
+
+Create a `.env` file in the root directory:
+
+```bash
+# On Windows (PowerShell)
+Copy-Item .env.example .env
+
+# On macOS/Linux
+cp .env.example .env
+```
+
+Or manually create a file named `.env` in the `CareConnect` folder.
+
+### Step 3: Add Your OpenAI API Key
+
+Open the `.env` file and add your credentials:
+
+```env
+# Required: Your OpenAI API Key
+OPENAI_API_KEY=sk-proj-your-actual-key-here
+
+# Required: Secret for JWT tokens (any random string)
+JWT_SECRET=your-random-secret-key-change-this-in-production
+
+# Optional: Email settings (for appointment confirmations)
+SENDGRID_API_KEY=your-sendgrid-key-here
+SENDGRID_FROM_EMAIL=noreply@careconnect.com
+
+# Optional: Environment
+ENVIRONMENT=development
+```
+
+**⚠️ Important:** Replace `sk-proj-your-actual-key-here` with your actual OpenAI API key!
+
+### Step 4: Start the Application
+
+```bash
+# Start all services with Docker Compose
+docker-compose up -d
+```
+
+**What happens during startup:**
+1. 🗄️ **ChromaDB** starts (vector database for RAG)
+2. 🐘 **PostgreSQL** starts (main database)
+3. 🔧 **Backend** starts (FastAPI server)
+4. 🎨 **Frontend** starts (React UI)
+5. ⚙️ **Database migrations** run automatically
+6. 🌱 **Demo data is seeded** (optional, see Step 5)
+
+**Wait ~30 seconds** for all services to start. Check status:
+
+```bash
+# Check if all containers are running
+docker-compose ps
+
+# Should show all services as "Up" or "healthy"
+```
+
+### Step 5: Seed Demo Data (Recommended)
+
+Populate the database with sample doctors, appointments, and lab test information:
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py
+```
+
+**This will create:**
+- ✅ 90+ doctors across 25+ medical departments
+- ✅ 2 demo users (patient and admin accounts)
+- ✅ Lab test preparation documents (CBC, X-Ray, etc.)
+- ✅ Facility information (parking, hours, directions)
+- ✅ RAG vector store with searchable documents
+
+**Output should show:**
+```
+🌱 Starting database seeding...
+✓ Database initialized
+✓ Seeded 2 users
+✓ Seeded 90 providers across all departments
+✓ Seeded 8 lab tests
+✓ Indexed 5 facility documents (XX chunks)
+✓ Indexed 90 doctor profiles (XXX chunks)
+✓ Indexed 12 lab test documents (XX chunks)
+✅ Database seeding completed successfully!
+```
+
+### Step 6: Access the Application
+
+Open your browser and visit:
+
+- **🎨 Frontend UI:** http://localhost:5173
+- **📚 API Documentation:** http://localhost:8000/docs
+- **❤️ Health Check:** http://localhost:8000/healthz
+- **📊 Metrics:** http://localhost:8000/metrics
+
+### Step 7: Login
+
+Use the demo credentials:
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Patient** | hadihacan@gmail.com | password123 |
+| **Admin** | admin@aub.com | Admin@123 |
+
+---
+
+## ✅ Verify Everything Works
+
+### Test the Chat Assistant
+
+1. Go to http://localhost:5173
+2. Login as patient (`hadihacan@gmail.com` / `password123`)
+3. Click on **Chat** in the sidebar
+4. Try these example queries:
+   - "I need to book an appointment with a cardiologist"
+   - "What are the requirements for a CBC blood test?"
+   - "Show me my appointments"
+   - "Where is the parking?"
+
+### Test the Admin Panel
+
+1. Logout and login as admin (`admin@aub.com` / `Admin@123`)
+2. Go to **Admin** → **Doctors** to manage providers
+3. Go to **Admin** → **Appointments** to manage bookings
+4. Go to **Admin** → **Statistics** to view metrics
+
+---
+
+## 🛑 Stop the Application
+
+```bash
+# Stop all services (keeps data)
+docker-compose down
+
+# Stop and remove all data (complete reset)
+docker-compose down -v
+```
+
+---
+
+## 🔄 Common Operations
+
+### Restart Services
+
+```bash
+# Restart all services
+docker-compose restart
+
+# Restart only the backend
+docker-compose restart backend
+
+# Restart only the frontend
+docker-compose restart frontend
+```
+
+### View Logs
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# View backend logs only
+docker-compose logs -f backend
+
+# View last 100 lines
+docker-compose logs --tail=100 backend
+```
+
+### Reset and Start Fresh
+
+```bash
+# Stop everything and remove data
+docker-compose down -v
+
+# Rebuild and start
+docker-compose up -d --build
+
+# Re-seed the database
+docker-compose exec backend python scripts/seed_demo_data.py
+```
+
+### Update OpenAI API Key
+
+1. Edit `.env` file
+2. Update `OPENAI_API_KEY=sk-your-new-key`
+3. Restart backend:
+   ```bash
+   docker-compose restart backend
+   ```
+
+---
 
 ## 🏗️ Architecture
 
@@ -225,47 +328,120 @@ Tracked via `/api/v1/eval/kpis`:
 
 ## 📦 Development Commands
 
+### Backend Development
+
 ```bash
-# Start all services (includes setup on first run)
-docker-compose up --build
+# Access backend container shell
+docker-compose exec backend bash
 
-# Re-run setup only (reset data)
-docker-compose up setup
-
-# Apply database migrations manually
+# Run database migrations
 docker-compose exec backend alembic upgrade head
 
-# Run backend tests
-cd backend && pytest -v --cov=app
+# Create a new migration
+docker-compose exec backend alembic revision --autogenerate -m "description"
 
-# Run frontend tests
-cd frontend && npm run test:e2e
+# Run tests
+docker-compose exec backend pytest -v
+
+# Check code formatting
+docker-compose exec backend black . --check
+docker-compose exec backend isort . --check-only
 
 # Format code
-cd backend && black . && isort .
-cd frontend && npm run format
+docker-compose exec backend black .
+docker-compose exec backend isort .
 
-# Lint code
-cd backend && flake8 app && mypy app
-cd frontend && npm run lint
-
-# Clean up containers
-docker-compose down -v
+# Type checking
+docker-compose exec backend mypy app
 ```
+
+### Frontend Development
+
+```bash
+# Access frontend container shell
+docker-compose exec frontend sh
+
+# Install new dependency
+docker-compose exec frontend npm install <package-name>
+
+# Run linter
+docker-compose exec frontend npm run lint
+
+# Format code
+docker-compose exec frontend npm run format
+
+# Build for production
+docker-compose exec frontend npm run build
+```
+
+### Database Operations
+
+```bash
+# Access PostgreSQL database
+docker-compose exec db psql -U careconnect -d careconnect
+
+# Backup database
+docker-compose exec db pg_dump -U careconnect careconnect > backup.sql
+
+# Restore database
+cat backup.sql | docker-compose exec -T db psql -U careconnect -d careconnect
+```
+
+### ChromaDB (Vector Store)
+
+```bash
+# View ChromaDB logs
+docker-compose logs -f chromadb
+
+# Reset vector store (removes all indexed documents)
+docker-compose exec backend python -c "from app.services.rag_service import RAGService; import asyncio; asyncio.run(RAGService().clear())"
+
+# Re-index documents
+docker-compose exec backend python scripts/seed_demo_data.py
+```
+
+---
 
 ## 🧪 Testing
 
-### Backend (pytest)
+### Manual Testing with the API
+
+Visit http://localhost:8000/docs to access the interactive API documentation (Swagger UI).
+
+**Example: Test the chat endpoint**
+1. Go to `POST /api/v1/agent/chat`
+2. Click "Try it out"
+3. Use this request body:
+   ```json
+   {
+     "messages": [
+       {
+         "role": "user",
+         "content": "I need to book an appointment with a cardiologist next week"
+       }
+     ],
+     "user_id": 1
+   }
+   ```
+4. Click "Execute"
+
+### Automated Tests
+
 ```bash
-cd backend
-pytest -v --cov=app
+# Run backend unit tests
+docker-compose exec backend pytest tests/ -v
+
+# Run with coverage
+docker-compose exec backend pytest tests/ --cov=app --cov-report=html
+
+# Run specific test file
+docker-compose exec backend pytest tests/test_agent.py -v
+
+# Run evaluation suite
+docker-compose exec backend python tests/evaluation/run_eval.py
 ```
 
-### Frontend (Playwright)
-```bash
-cd frontend
-npm run test:e2e
-```
+---
 
 ## 📚 API Documentation
 
@@ -327,4 +503,40 @@ The architecture uses interfaces to enable swapping:
 
 ---
 
+## 🤝 Contributing
+
+### Code Style
+
+- **Backend:** Follow PEP 8, use Black and isort for formatting
+- **Frontend:** Follow Airbnb style guide, use Prettier
+- **Commits:** Use conventional commits (feat:, fix:, docs:, etc.)
+
+### Pull Request Process
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests and linters
+5. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 🆘 Support
+
+- **Issues:** [GitHub Issues](https://github.com/your-repo/issues)
+- **Email:** support@careconnect.com
+- **Documentation:** Check the `/docs` folder
+
+---
+
 **Built with ❤️ for healthcare accessibility**
+
+**Stack:** React 18 • FastAPI • OpenAI GPT-4 • ChromaDB • PostgreSQL • Docker
