@@ -710,7 +710,15 @@ async def seed_lab_tests():
                 name="X-Ray",
                 department="Radiology",
                 description="Imaging of requested body part",
-                prep_instructions="Remove jewelry and metal objects. Notify the radiologist if you have any previous surgery that involves metal implants",
+                prep_instructions="Remove jewelry and metal objects",
+                fasting_hours=None,
+                estimated_duration_minutes=30,
+            ),
+            "RAD-MRI": dict(
+                name="MRI Scan",
+                department="Radiology",
+                description="Detailed imaging using magnetic resonance",
+                prep_instructions="Remove all metal objects; inform staff of implants",
                 fasting_hours=None,
                 estimated_duration_minutes=30,
             )
