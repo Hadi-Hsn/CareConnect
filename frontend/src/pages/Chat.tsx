@@ -119,7 +119,10 @@ export default function ChatPage() {
     onSuccess: (data) => {
       setMessages((prev) => [...prev, data.message]);
       setToolResults(data.tool_results);
-      setLastResponseText(data.message.content);
+      // Update last response text for voice mode TTS
+      if (voiceMode) {
+        setLastResponseText(data.message.content);
+      }
     },
   });
 
@@ -197,6 +200,11 @@ export default function ChatPage() {
     return await api.textToSpeech(text);
   };
 
+  // Reset lastResponseText after it's been used for TTS
+  const handleVoiceResponseComplete = () => {
+    setLastResponseText('');
+  };
+
   const handleNewSession = () => {
     if (messages.length > 0) {
       const confirmed = window.confirm(
@@ -216,6 +224,13 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Scroll to bottom when switching modes
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [voiceMode]);
 
   return (
     <Grid container spacing={3} sx={{ height: 'calc(100vh - 100px)' }}>
@@ -260,128 +275,143 @@ export default function ChatPage() {
             </Box>
           </Box>
 
-          {voiceMode ? (
-            <VoiceChat
-              onTranscription={handleVoiceTranscription}
-              onSpeechToText={handleSpeechToText}
-              onTextToSpeech={handleTextToSpeech}
-              responseText={lastResponseText}
-              isProcessing={chatMutation.isPending}
-            />
-          ) : (
-            <>
-              <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-                {messages.length === 0 && (
-                  <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
-                    <Typography variant="h6" gutterBottom>
-                      Welcome! How can I help you today?
-                    </Typography>
-                    <Typography variant="body2">
-                      Try asking: "Book an appointment with a cardiologist" or "When are my appointments?"
-                    </Typography>
-                  </Box>
-                )}
-                {messages.map((msg, idx) => (
-                  <Box
-                    key={idx}
-                    sx={{
-                      mb: 2,
-                      display: 'flex',
-                      justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                    }}
-                  >
-                    <Paper
-                      elevation={1}
-                      sx={{
-                        p: 2,
-                        maxWidth: '70%',
-                        bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
-                        color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                        '& p': { margin: '0.5em 0' },
-                        '& p:first-of-type': { marginTop: 0 },
-                        '& p:last-of-type': { marginBottom: 0 },
-                        '& ul, & ol': { 
-                          marginTop: '0.5em', 
-                          marginBottom: '0.5em',
-                          paddingLeft: '1.5em'
-                        },
-                        '& li': { marginBottom: '0.25em' },
-                        '& strong': { fontWeight: 700 },
-                        '& em': { fontStyle: 'italic' },
-                        '& code': {
-                          backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          fontFamily: 'monospace',
-                          fontSize: '0.9em'
-                        },
-                        '& pre': {
-                          backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
-                          padding: '1em',
-                          borderRadius: '4px',
-                          overflow: 'auto',
-                          '& code': {
-                            backgroundColor: 'transparent',
-                            padding: 0
-                          }
-                        },
-                        '& h1, & h2, & h3, & h4, & h5, & h6': {
-                          marginTop: '0.5em',
-                          marginBottom: '0.5em',
-                          fontWeight: 600
-                        },
-                        '& blockquote': {
-                          borderLeft: '3px solid',
-                          borderColor: msg.role === 'user' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)',
-                          paddingLeft: '1em',
-                          marginLeft: 0,
-                          fontStyle: 'italic'
-                        }
+          {/* Voice Mode Interface (compact at top) */}
+          {voiceMode && (
+            <Box 
+              sx={{ 
+                borderBottom: 1, 
+                borderColor: 'divider',
+                bgcolor: 'background.default',
+              }}
+            >
+              <VoiceChat
+                onTranscription={handleVoiceTranscription}
+                onSpeechToText={handleSpeechToText}
+                onTextToSpeech={handleTextToSpeech}
+                responseText={lastResponseText}
+                isProcessing={chatMutation.isPending}
+                onResponseComplete={handleVoiceResponseComplete}
+              />
+            </Box>
+          )}
+
+          {/* Chat History - Always Visible */}
+          <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+            {messages.length === 0 && (
+              <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
+                <Typography variant="h6" gutterBottom>
+                  Welcome! How can I help you today?
+                </Typography>
+                <Typography variant="body2">
+                  {voiceMode 
+                    ? "Click the microphone button above to start speaking" 
+                    : "Try asking: \"Book an appointment with a cardiologist\" or \"When are my appointments?\""}
+                </Typography>
+              </Box>
+            )}
+            {messages.map((msg, idx) => (
+              <Box
+                key={idx}
+                sx={{
+                  mb: 2,
+                  display: 'flex',
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: 2,
+                    maxWidth: '70%',
+                    bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
+                    color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                    '& p': { margin: '0.5em 0' },
+                    '& p:first-of-type': { marginTop: 0 },
+                    '& p:last-of-type': { marginBottom: 0 },
+                    '& ul, & ol': { 
+                      marginTop: '0.5em', 
+                      marginBottom: '0.5em',
+                      paddingLeft: '1.5em'
+                    },
+                    '& li': { marginBottom: '0.25em' },
+                    '& strong': { fontWeight: 700 },
+                    '& em': { fontStyle: 'italic' },
+                    '& code': {
+                      backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                      padding: '2px 6px',
+                      borderRadius: '3px',
+                      fontFamily: 'monospace',
+                      fontSize: '0.9em'
+                    },
+                    '& pre': {
+                      backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                      padding: '1em',
+                      borderRadius: '4px',
+                      overflow: 'auto',
+                      '& code': {
+                        backgroundColor: 'transparent',
+                        padding: 0
+                      }
+                    },
+                    '& h1, & h2, & h3, & h4, & h5, & h6': {
+                      marginTop: '0.5em',
+                      marginBottom: '0.5em',
+                      fontWeight: 600
+                    },
+                    '& blockquote': {
+                      borderLeft: '3px solid',
+                      borderColor: msg.role === 'user' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)',
+                      paddingLeft: '1em',
+                      marginLeft: 0,
+                      fontStyle: 'italic'
+                    }
+                  }}
+                >
+                  {msg.role === 'user' ? (
+                    <Typography variant="body1">{msg.content}</Typography>
+                  ) : (
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <Typography variant="body1" component="p">{children}</Typography>,
+                        strong: ({ children }) => <strong>{children}</strong>,
+                        em: ({ children }) => <em>{children}</em>,
+                        li: ({ children }) => <li><Typography variant="body2" component="span">{children}</Typography></li>,
                       }}
                     >
-                      {msg.role === 'user' ? (
-                        <Typography variant="body1">{msg.content}</Typography>
-                      ) : (
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            p: ({ children }) => <Typography variant="body1" component="p">{children}</Typography>,
-                            strong: ({ children }) => <strong>{children}</strong>,
-                            em: ({ children }) => <em>{children}</em>,
-                            li: ({ children }) => <li><Typography variant="body2" component="span">{children}</Typography></li>,
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      )}
-                    </Paper>
-                  </Box>
-                ))}
-                {chatMutation.isPending && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                    <CircularProgress size={24} />
-                  </Box>
-                )}
-                <div ref={messagesEndRef} />
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
+                </Paper>
               </Box>
-              <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
-                <TextField
-                  fullWidth
-                  placeholder="Type your message..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  disabled={chatMutation.isPending}
-                />
-                <IconButton
-                  color="primary"
-                  onClick={handleSend}
-                  disabled={chatMutation.isPending || !input.trim()}
-                >
-                  <SendIcon />
-                </IconButton>
+            ))}
+            {chatMutation.isPending && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                <CircularProgress size={24} />
               </Box>
-            </>
+            )}
+            <div ref={messagesEndRef} />
+          </Box>
+
+          {/* Text Input - Only show in text mode */}
+          {!voiceMode && (
+            <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
+              <TextField
+                fullWidth
+                placeholder="Type your message..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                disabled={chatMutation.isPending}
+              />
+              <IconButton
+                color="primary"
+                onClick={handleSend}
+                disabled={chatMutation.isPending || !input.trim()}
+              >
+                <SendIcon />
+              </IconButton>
+            </Box>
           )}
         </Paper>
       </Grid>

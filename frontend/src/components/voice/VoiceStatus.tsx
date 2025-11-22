@@ -9,47 +9,39 @@ interface VoiceStatusProps {
   voiceState: VoiceState;
   audioLevel: number;
   stateColor: string;
-  autoMode: boolean;
 }
 
 export default function VoiceStatus({
   voiceState,
   audioLevel,
   stateColor,
-  autoMode,
 }: VoiceStatusProps) {
   const getStateText = () => {
     switch (voiceState) {
       case 'listening':
-        return autoMode ? 'Listening... (speak naturally)' : 'Recording...';
+        return 'Listening... (speak naturally)';
       case 'processing':
         return 'Processing your request...';
       case 'speaking':
         return 'CareConnect is speaking...';
       default:
-        return autoMode
-          ? '☎️ Tap to start phone call mode'
-          : 'Tap to speak';
+        return '☎️ Tap to start conversation';
     }
   };
 
   return (
     <Box
       sx={{
-        textAlign: 'center',
-        px: 2,
+        textAlign: 'left',
       }}
     >
       <Typography
-        variant="h5"
+        variant="body1"
         sx={{
           color: stateColor,
-          fontWeight: 700,
-          textAlign: 'center',
-          fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
-          mb: 1,
-          textShadow: `0 2px 8px ${alpha(stateColor, 0.3)}`,
-          letterSpacing: '0.5px',
+          fontWeight: 600,
+          fontSize: { xs: '0.875rem', sm: '1rem' },
+          textShadow: `0 1px 3px ${alpha(stateColor, 0.2)}`,
         }}
       >
         {getStateText()}
@@ -58,19 +50,18 @@ export default function VoiceStatus({
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'center',
             gap: 0.5,
-            mt: 2,
+            mt: 1,
           }}
         >
           {[...Array(5)].map((_, i) => (
             <Box
               key={i}
               sx={{
-                width: { xs: 4, sm: 5 },
-                height: { xs: 20, sm: 24 },
+                width: 3,
+                height: 16,
                 bgcolor: stateColor,
-                borderRadius: 2,
+                borderRadius: 1,
                 animation: `wave 1s ease-in-out infinite ${i * 0.1}s`,
                 opacity: 0.7 + audioLevel * 0.3,
                 '@keyframes wave': {

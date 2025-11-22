@@ -12,7 +12,7 @@ import type {
 export function useAudioPlayback(
   options: AudioPlaybackOptions
 ): AudioPlaybackState & AudioPlaybackControls {
-  const { onTextToSpeech, onStateChange, autoRestartRecording, autoMode } = options;
+  const { onTextToSpeech, onStateChange, autoRestartRecording, autoMode, onResponseComplete } = options;
 
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -50,6 +50,11 @@ export function useAudioPlayback(
         audio.onended = () => {
           cleanup();
           onStateChange('idle');
+
+          // Notify parent that response is complete
+          if (onResponseComplete) {
+            onResponseComplete();
+          }
 
           // Auto-restart listening in auto mode after a brief pause
           if (autoMode && autoRestartRecording) {

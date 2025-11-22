@@ -10,6 +10,7 @@ export interface VoiceChatProps {
   onTextToSpeech: (text: string) => Promise<Blob>;
   responseText?: string;
   isProcessing?: boolean;
+  onResponseComplete?: () => void;
 }
 
 export interface VoiceRecordingOptions {
@@ -36,6 +37,7 @@ export interface AudioPlaybackOptions {
   onStateChange: (state: VoiceState) => void;
   autoRestartRecording?: () => void;
   autoMode: boolean;
+  onResponseComplete?: () => void;
 }
 
 export interface AudioPlaybackState {

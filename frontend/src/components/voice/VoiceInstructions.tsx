@@ -7,7 +7,6 @@ import type { VoiceState } from './types';
 
 interface VoiceInstructionsProps {
   voiceState: VoiceState;
-  autoMode: boolean;
 }
 
 const exampleQueries = [
@@ -18,7 +17,6 @@ const exampleQueries = [
 
 export default function VoiceInstructions({
   voiceState,
-  autoMode,
 }: VoiceInstructionsProps) {
   const theme = useTheme();
 
@@ -27,63 +25,49 @@ export default function VoiceInstructions({
   return (
     <Box
       sx={{
-        textAlign: 'center',
-        maxWidth: { xs: 340, sm: 500, md: 600 },
-        px: { xs: 2, sm: 3 },
+        textAlign: 'left',
       }}
     >
       <Typography
-        variant="body1"
+        variant="body2"
         sx={{
           color: theme.palette.text.secondary,
-          fontSize: { xs: '0.9375rem', sm: '1rem' },
-          mb: 3,
-          lineHeight: 1.7,
-          fontWeight: 500,
+          fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+          mb: 1.5,
+          lineHeight: 1.5,
         }}
       >
-        {autoMode
-          ? "☎️ Just like a phone call! Tap to start, speak naturally, and I'll respond when you pause. Hands-free and effortless."
-          : "🎤 Tap the microphone to start speaking. Tap the stop button when you're done."}
+        ☎️ Just like a phone call! Speak naturally and I'll respond when you pause.
       </Typography>
       <Box
         sx={{
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: 1.5,
-          justifyContent: 'center',
-          mb: 2,
+          flexDirection: 'column',
+          gap: 0.75,
         }}
       >
+        <Typography
+          variant="caption"
+          sx={{
+            color: theme.palette.text.secondary,
+            fontSize: '0.75rem',
+            fontWeight: 500,
+          }}
+        >
+          Try asking:
+        </Typography>
         {exampleQueries.map((item, idx) => (
-          <Box
+          <Typography
             key={idx}
+            variant="caption"
             sx={{
-              px: 2,
-              py: 1.5,
-              borderRadius: 3,
-              bgcolor: 'rgba(132, 1, 50, 0.05)',
-              border: '1px solid rgba(132, 1, 50, 0.1)',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer',
-              '&:hover': {
-                bgcolor: 'rgba(132, 1, 50, 0.1)',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 12px rgba(132, 1, 50, 0.15)',
-              },
+              color: theme.palette.text.primary,
+              fontSize: '0.75rem',
+              pl: 1,
             }}
           >
-            <Typography
-              variant="caption"
-              sx={{
-                color: theme.palette.text.primary,
-                fontSize: { xs: '0.8125rem', sm: '0.875rem' },
-                fontWeight: 500,
-              }}
-            >
-              {item.icon} {item.text}
-            </Typography>
-          </Box>
+            {item.icon} {item.text}
+          </Typography>
         ))}
       </Box>
     </Box>

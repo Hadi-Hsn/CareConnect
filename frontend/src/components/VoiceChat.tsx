@@ -8,7 +8,6 @@ import { Box } from '@mui/material';
 import type { VoiceChatProps, VoiceState } from './voice/types';
 import { useVoiceRecording } from './voice/useVoiceRecording';
 import { useAudioPlayback } from './voice/useAudioPlayback';
-import VoiceControls from './voice/VoiceControls';
 import AudioVisualizer from './voice/AudioVisualizer';
 import VoiceButton from './voice/VoiceButton';
 import VoiceStatus from './voice/VoiceStatus';
@@ -21,9 +20,10 @@ export default function VoiceChat({
   onTextToSpeech,
   responseText,
   isProcessing = false,
+  onResponseComplete,
 }: VoiceChatProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
-  const [autoMode, setAutoMode] = useState(true);
+  const autoMode = true; // Always use phone call mode
 
   // Voice recording hook with improved VAD
   const recording = useVoiceRecording({
@@ -39,6 +39,7 @@ export default function VoiceChat({
     onStateChange: setVoiceState,
     autoRestartRecording: recording.startRecording,
     autoMode,
+    onResponseComplete,
   });
 
   // Auto-play response when received
@@ -78,31 +79,47 @@ export default function VoiceChat({
     <Box
       sx={{
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: { xs: 3, sm: 4, md: 5 },
-        padding: { xs: 2, sm: 4, md: 6 },
-        position: 'relative',
-        background:
-          'radial-gradient(circle at center, rgba(132, 1, 50, 0.03) 0%, transparent 70%)',
+        justifyContent: 'space-between',
+        gap: { xs: 2, sm: 3 },
+        padding: { xs: 2, sm: 2.5 },
+        background: 'linear-gradient(135deg, rgba(132, 1, 50, 0.04) 0%, rgba(132, 1, 50, 0.01) 100%)',
+        borderRadius: 0,
+        minHeight: { xs: '120px', sm: '140px' },
       }}
     >
-      {/* Auto mode toggle */}
-      <VoiceControls
-        autoMode={autoMode}
-        onAutoModeChange={setAutoMode}
-        voiceState={voiceState}
-      />
+      {/* Left Section: Status and Instructions */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1.5,
+          flex: 1,
+          minWidth: 0, // Allow text to truncate
+        }}
+      >
+        {/* Status text */}
+        <VoiceStatus
+          voiceState={voiceState}
+          audioLevel={recording.audioLevel}
+          stateColor={stateColor}
+        />
 
-      {/* Main voice interaction area */}
+        {/* Transcription display - compact */}
+        {recording.transcription && (
+          <TranscriptionDisplay transcription={recording.transcription} />
+        )}
+      </Box>
+
+      {/* Center Section: Main Voice Button with Visualizer */}
       <Box
         sx={{
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          flexShrink: 0,
         }}
       >
         {/* Audio visualizations */}
@@ -123,19 +140,18 @@ export default function VoiceChat({
         />
       </Box>
 
-      {/* Status text */}
-      <VoiceStatus
-        voiceState={voiceState}
-        audioLevel={recording.audioLevel}
-        stateColor={stateColor}
-        autoMode={autoMode}
-      />
-
-      {/* Transcription display */}
-      <TranscriptionDisplay transcription={recording.transcription} />
-
-      {/* Instructions */}
-      <VoiceInstructions voiceState={voiceState} autoMode={autoMode} />
+      {/* Right Section: Instructions */}
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          flexDirection: 'column',
+          gap: 1,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <VoiceInstructions voiceState={voiceState} />
+      </Box>
     </Box>
   );
 }

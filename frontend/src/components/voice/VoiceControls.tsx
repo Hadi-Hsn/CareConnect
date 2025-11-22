@@ -21,13 +21,6 @@ export default function VoiceControls({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: 2,
-        p: { xs: 1.5, sm: 2 },
-        borderRadius: 4,
-        bgcolor: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(10px)',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-        border: '1px solid rgba(132, 1, 50, 0.1)',
       }}
     >
       <FormControlLabel
@@ -36,6 +29,7 @@ export default function VoiceControls({
             checked={autoMode}
             onChange={(e) => onAutoModeChange(e.target.checked)}
             disabled={voiceState !== 'idle'}
+            size="small"
             sx={{
               '& .MuiSwitch-switchBase.Mui-checked': {
                 color: '#840132',
@@ -55,10 +49,10 @@ export default function VoiceControls({
             sx={{
               color: 'text.primary',
               fontWeight: 500,
-              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+              fontSize: { xs: '0.8125rem', sm: '0.875rem' },
             }}
           >
-            🎯 Phone call mode (auto-detect silence)
+            ☎️ Phone call mode
           </Typography>
         }
       />
