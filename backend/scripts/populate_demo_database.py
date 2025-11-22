@@ -262,23 +262,44 @@ async def ensure_admin_user():
 async def seed_patients():
     """Seed 30 patient accounts."""
     async with async_session_maker() as session:
+        # Check if hadihacan@gmail.com already exists
+        result = await session.execute(
+            select(User).where(User.email == "hadihacan@gmail.com")
+        )
+        existing_hadi = result.scalar_one_or_none()
+        
         patients = []
         
-        # Add specific user: Hadi Hasan
-        patients.append(
-            User(
-                email="hadihacan@gmail.com",
-                name="Hadi Hasan",
-                phone="+961 70 123456",
-                role=UserRole.PATIENT,
-                hashed_password=get_password_hash("patient123"),
+        # Only add Hadi if he doesn't exist
+        if not existing_hadi:
+            patients.append(
+                User(
+                    email="hadihacan@gmail.com",
+                    name="Hadi Hasan",
+                    phone="+961 70 123456",
+                    role=UserRole.PATIENT,
+                    hashed_password=get_password_hash("patient123"),
+                )
             )
-        )
         
-        # Add demo patients
+        # Add demo patients (check for duplicates)
+        existing_emails = set()
+        if existing_hadi:
+            existing_emails.add("hadihacan@gmail.com")
+        
+        # Get existing patient emails
+        result = await session.execute(
+            select(User.email).where(User.role == UserRole.PATIENT)
+        )
+        existing_emails.update(result.scalars().all())
+        
         for i, name in enumerate(PATIENT_NAMES):
             # Generate email from name
             email = name.lower().replace(" ", ".") + f"@patient.com"
+            
+            # Skip if already exists
+            if email in existing_emails:
+                continue
             
             # Generate phone number
             phone = f"+961 {random.randint(70, 79)} {random.randint(100000, 999999)}"
@@ -293,10 +314,18 @@ async def seed_patients():
                 )
             )
         
-        session.add_all(patients)
-        await session.commit()
-        print(f"✓ Seeded {len(patients)} patient accounts (including hadihacan@gmail.com)")
-        return patients
+        if patients:
+            session.add_all(patients)
+            await session.commit()
+            print(f"✓ Seeded {len(patients)} patient accounts (including hadihacan@gmail.com if new)")
+        else:
+            print("✓ All patient accounts already exist, skipped seeding")
+        
+        # Return all patients (existing + new)
+        result = await session.execute(
+            select(User).where(User.role == UserRole.PATIENT)
+        )
+        return result.scalars().all()
 
 
 async def seed_providers():
@@ -712,11 +741,11 @@ async def seed_lab_tests():
             
             # Radiology Imaging
             LabTest(
-                name="Chest X-Ray",
-                code="RAD-CXR-017",
+                name="X-Ray",
+                code="RAD-XR-017",
                 department="Radiology",
-                description="Imaging of chest, heart, and lungs",
-                prep_instructions="Remove jewelry and metal objects",
+                description="Imaging of requested body part",
+                prep_instructions="Remove jewelry and metal objects. Notify the radiologist if you have any previous surgery that involves metal implants",
                 estimated_duration_minutes=30,
             ),
             LabTest(
