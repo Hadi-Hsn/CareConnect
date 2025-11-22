@@ -108,8 +108,8 @@ export default function Layout({ children }: LayoutProps) {
           src="/images/aub-logo.png"
           alt="AUB Logo"
           sx={{
-            width: 40,
-            height: 40,
+            width: { xs: '100px', sm: '150px' },
+            height: { xs: '37px', sm: '50px' },
             filter: 'brightness(0) invert(1)',
           }}
         />
@@ -274,8 +274,8 @@ export default function Layout({ children }: LayoutProps) {
               src="/images/aub-logo.png"
               alt="AUB Logo"
               sx={{
-                width: { xs: 28, sm: 32 },
-                height: { xs: 28, sm: 32 },
+                width: { xs: '100px', sm: '150px' },
+                height: { xs: '37px', sm: '50px' },
                 filter: 'brightness(0) invert(1)',
                 display: { xs: 'none', sm: 'block' },
               }}

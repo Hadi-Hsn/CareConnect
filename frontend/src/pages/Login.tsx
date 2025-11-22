@@ -204,8 +204,8 @@ export default function LoginPage() {
               src="/images/aub-logo.png"
               alt="AUB Logo"
               sx={{
-                width: { xs: 56, sm: 72 },
-                height: { xs: 56, sm: 72 },
+                width: { xs: '100px', sm: '150px' },
+                height: { xs: '37px', sm: '50px' },
                 filter: 'brightness(0) invert(1) drop-shadow(0 4px 12px rgba(255, 255, 255, 0.3))',
               }}
             />
