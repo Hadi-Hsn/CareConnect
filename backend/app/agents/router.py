@@ -691,38 +691,43 @@ class AgentRouter:
 
     async def _send_email_confirmation(self, appointment_id: int) -> dict[str, Any]:
         """Send email confirmation for an appointment."""
-        # Get appointment details
-        result = await self.db.execute(
-            select(Appointment, User, Provider)
-            .join(User, Appointment.user_id == User.id)
-            .join(Provider, Appointment.provider_id == Provider.id)
-            .where(Appointment.id == appointment_id)
-        )
-        row = result.first()
+        # Import here to avoid circular dependency
+        from app.core.db import async_session_maker
+        
+        # Use a fresh session to ensure we get the latest data
+        # This prevents stale reads when the appointment was created in a different session
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(Appointment, User, Provider)
+                .join(User, Appointment.user_id == User.id)
+                .join(Provider, Appointment.provider_id == Provider.id)
+                .where(Appointment.id == appointment_id)
+            )
+            row = result.first()
 
-        if not row:
-            return {"error": "Appointment not found"}
+            if not row:
+                return {"error": "Appointment not found"}
 
-        appointment, user, provider = row
+            appointment, user, provider = row
 
-        # Convert to Lebanon timezone for display
-        lebanon_time = appointment.time_start.astimezone(LEBANON_TZ)
+            # Convert to Lebanon timezone for display
+            lebanon_time = appointment.time_start.astimezone(LEBANON_TZ)
 
-        details = {
-            "confirmation_code": appointment.confirmation_code,
-            "provider_name": provider.name,
-            "department": provider.department,
-            "datetime": lebanon_time.strftime("%B %d, %Y at %I:%M %p"),
-            "reason": appointment.reason,
-        }
+            details = {
+                "confirmation_code": appointment.confirmation_code,
+                "provider_name": provider.name,
+                "department": provider.department,
+                "datetime": lebanon_time.strftime("%B %d, %Y at %I:%M %p"),
+                "reason": appointment.reason,
+            }
 
-        success = await self.email_service.send_confirmation(user.email, details)
+            success = await self.email_service.send_confirmation(user.email, details)
 
-        return {
-            "email_sent": success,
-            "recipient": user.email,
-            "confirmation_code": appointment.confirmation_code,
-        }
+            return {
+                "email_sent": success,
+                "recipient": user.email,
+                "confirmation_code": appointment.confirmation_code,
+            }
 
     async def _rag_lookup(self, query: str) -> dict[str, Any]:
         """Look up information using RAG."""
