@@ -291,7 +291,7 @@ def generate_lab_test_pdf(test_name: str, test_info: dict) -> bytes:
 
 async def populate_lab_tests():
     """Generate PDFs and populate vector store with lab test information."""
-    from app.core.db import async_session_maker
+    from app.schemas.rag import Document
     from app.services.pdf_parser import PDFParser
     from app.services.rag_service import RAGService
     
@@ -300,21 +300,34 @@ async def populate_lab_tests():
     rag_service = RAGService()
     pdf_parser = PDFParser()
     
+    # Create documents from lab test PDFs
+    documents = []
+    
     for test_name, test_info in LAB_TESTS.items():
         print(f"Processing: {test_name}")
         
         # Generate PDF
         pdf_bytes = generate_lab_test_pdf(test_name, test_info)
         
-        # Parse PDF
-        chunks = pdf_parser.parse_pdf(pdf_bytes, doc_title=test_name)
+        # Extract text from PDF
+        pdf_text = pdf_parser.extract_text_from_bytes(pdf_bytes)
         
-        # Ingest into RAG
-        await rag_service.ingest_chunks(chunks)
-        
-        print(f"  ✓ Added {len(chunks)} chunks to vector store")
+        # Create Document object
+        documents.append(
+            Document(
+                title=test_name,
+                content=pdf_text,
+                metadata={
+                    "type": "lab_test_prep",
+                    "category": test_info["category"],
+                    "test_name": test_name,
+                },
+            )
+        )
     
-    print(f"\n✓ Successfully populated {len(LAB_TESTS)} lab test documents")
+    # Index all lab test documents
+    result = await rag_service.index_documents(documents, replace=False)
+    print(f"✓ Indexed {len(LAB_TESTS)} lab test documents ({result.total_chunks} chunks)")
 
 
 if __name__ == "__main__":
