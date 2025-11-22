@@ -49,14 +49,16 @@ class ApiClient {
     name: string,
     password: string,
     confirmPassword: string,
-    phone?: string
+    phone: string,
+    countryCode: string = '+961'
   ): Promise<TokenResponse> {
     const { data } = await this.client.post<TokenResponse>('/auth/register', {
       email,
       name,
       password,
       confirm_password: confirmPassword,
-      phone: phone || null,
+      phone: phone,
+      country_code: countryCode,
       role: 'patient',
     });
     localStorage.setItem('access_token', data.access_token);

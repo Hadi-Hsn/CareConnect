@@ -12,6 +12,11 @@ import {
   useTheme,
   useMediaQuery,
   Link,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Grid,
 } from '@mui/material';
 import {
   Login as LoginIcon,
@@ -34,6 +39,25 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+// Common country codes with names
+const COUNTRY_CODES = [
+  { code: '+1', name: 'USA/Canada' },
+  { code: '+44', name: 'United Kingdom' },
+  { code: '+961', name: 'Lebanon' },
+  { code: '+971', name: 'UAE' },
+  { code: '+966', name: 'Saudi Arabia' },
+  { code: '+20', name: 'Egypt' },
+  { code: '+962', name: 'Jordan' },
+  { code: '+91', name: 'India' },
+  { code: '+86', name: 'China' },
+  { code: '+33', name: 'France' },
+  { code: '+49', name: 'Germany' },
+  { code: '+39', name: 'Italy' },
+  { code: '+34', name: 'Spain' },
+  { code: '+81', name: 'Japan' },
+  { code: '+82', name: 'South Korea' },
+];
+
 export default function LoginPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -43,6 +67,7 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('+961');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -103,24 +128,29 @@ export default function LoginPage() {
       return;
     }
 
-    // Validate phone number if provided
-    if (phone && phone.trim() !== '') {
-      const trimmedPhone = phone.trim();
-      if (trimmedPhone.length < 10) {
-        setError('Phone number must be at least 10 characters long');
-        return;
-      }
-      // Also check that it has at least 10 digits
-      const digitsOnly = trimmedPhone.replace(/\D/g, '');
-      if (digitsOnly.length < 10) {
-        setError('Phone number must contain at least 10 digits');
-        return;
-      }
+    // Validate phone number is provided
+    if (!phone || phone.trim() === '') {
+      setError('Phone number is required');
+      return;
+    }
+
+    // Validate phone number length
+    const trimmedPhone = phone.trim();
+    if (trimmedPhone.length < 7) {
+      setError('Phone number must be at least 7 digits long');
+      return;
+    }
+    
+    // Check that it has at least 7 digits
+    const digitsOnly = trimmedPhone.replace(/\D/g, '');
+    if (digitsOnly.length < 7) {
+      setError('Phone number must contain at least 7 digits');
+      return;
     }
     
     setLoading(true);
     try {
-      await api.register(email, name, password, confirmPassword, phone || '');
+      await api.register(email, name, password, confirmPassword, phone, countryCode);
       // Force a page reload to update authentication state
       window.location.href = '/chat';
     } catch (err: any) {
@@ -147,7 +177,7 @@ export default function LoginPage() {
       } else if (err.response?.status === 400) {
         setError('Invalid registration data. Please check all fields.');
       } else if (err.response?.status === 409) {
-        setError('An account with this email already exists.');
+        setError('An account with this email or phone number already exists.');
       } else if (err.message) {
         setError(err.message);
       } else {
@@ -253,7 +283,7 @@ export default function LoginPage() {
               },
             }}
           >
-            Your Smart Health Assistant
+            Your Smart Health Assistant 💬 Now on WhatsApp!
           </Typography>
 
           {/* Main Card */}
@@ -352,8 +382,6 @@ export default function LoginPage() {
                     </Link>
                   </Box>
                 </form>
-
-              
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>
@@ -381,19 +409,49 @@ export default function LoginPage() {
                     autoComplete="email"
                     size={isMobile ? 'small' : 'medium'}
                   />
-                  <TextField
-                    margin="normal"
-                    fullWidth
-                    label="Phone Number"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={loading}
-                    autoComplete="tel"
-                    placeholder="+961 1 234 5678"
-                    helperText="Optional - for appointment reminders"
-                    size={isMobile ? 'small' : 'medium'}
-                  />
+                  
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Phone Number (Required for WhatsApp) *
+                    </Typography>
+                    <Grid container spacing={1}>
+                      <Grid item xs={4}>
+                        <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+                          <InputLabel>Code</InputLabel>
+                          <Select
+                            value={countryCode}
+                            label="Code"
+                            onChange={(e) => setCountryCode(e.target.value)}
+                            disabled={loading}
+                          >
+                            {COUNTRY_CODES.map((country) => (
+                              <MenuItem key={country.code} value={country.code}>
+                                {country.code}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={8}>
+                        <TextField
+                          required
+                          fullWidth
+                          label="Phone Number"
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          disabled={loading}
+                          autoComplete="tel"
+                          placeholder="1234567"
+                          size={isMobile ? 'small' : 'medium'}
+                        />
+                      </Grid>
+                    </Grid>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      📱 You'll be able to chat with our AI assistant on WhatsApp!
+                    </Typography>
+                  </Box>
+
                   <TextField
                     margin="normal"
                     required

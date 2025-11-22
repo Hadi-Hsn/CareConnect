@@ -38,6 +38,8 @@ async def seed_users():
                 User(
                     email="hadihacan@gmail.com",
                     name="John Doe",
+                    phone="12345678",
+                    country_code="+961",
                     role=UserRole.PATIENT,
                     hashed_password=get_password_hash("password123"),
                 )
@@ -48,6 +50,8 @@ async def seed_users():
                 User(
                     email="admin@aub.com",
                     name="Admin User",
+                    phone="99999999",
+                    country_code="+961",
                     role=UserRole.ADMIN,
                     hashed_password=get_password_hash("Admin@123"),
                 )

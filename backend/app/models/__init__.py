@@ -7,6 +7,7 @@ from app.models.patient_test_result import PatientTestResult
 from app.models.provider import Provider, ProviderType
 from app.models.provider_availability import DayOfWeek, ProviderAvailability
 from app.models.user import User, UserRole
+from app.models.whatsapp_conversation import WhatsAppMessage
 
 __all__ = [
     "User",
@@ -25,4 +26,5 @@ __all__ = [
     "HandoverIncident",
     "IncidentStatus",
     "IncidentPriority",
+    "WhatsAppMessage",
 ]

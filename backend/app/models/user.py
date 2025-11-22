@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -20,13 +20,18 @@ class User(Base):
     """User model."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint('phone', 'country_code', name='uix_phone_country'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    phone: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    country_code: Mapped[str] = mapped_column(String(10), nullable=False, default="+961")
     role: Mapped[UserRole] = mapped_column(String(50), default=UserRole.PATIENT, nullable=False)
     hashed_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    whatsapp_verified: Mapped[bool] = mapped_column(default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
@@ -44,6 +49,14 @@ class User(Base):
     test_results: Mapped[list["PatientTestResult"]] = relationship(
         "PatientTestResult", back_populates="user", cascade="all, delete-orphan"
     )
+    whatsapp_messages: Mapped[list["WhatsAppMessage"]] = relationship(
+        "WhatsAppMessage", back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email={self.email}, role={self.role})>"
+    
+    @property
+    def full_phone_number(self) -> str:
+        """Get full international phone number."""
+        return f"{self.country_code}{self.phone}"

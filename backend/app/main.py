@@ -12,7 +12,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.api.v1 import admin, appointments, auth, email, files, handover, health, labs, metrics, providers, rag, voice
+from app.api.v1 import admin, appointments, auth, email, files, handover, health, labs, metrics, providers, rag, voice, whatsapp
 from app.api.v1.agent import chat as agent_chat
 from app.core.config import get_settings
 from app.core.db import close_db, init_db
@@ -112,6 +112,7 @@ app.include_router(appointments.router, prefix="/api/v1/appointments", tags=["Ap
 app.include_router(labs.router, prefix="/api/v1/labs", tags=["Labs"])
 app.include_router(email.router, prefix="/api/v1/email", tags=["Email"])
 app.include_router(metrics.router, prefix="/api/v1/eval", tags=["Evaluation"])
+app.include_router(whatsapp.router, prefix="/api/v1/whatsapp", tags=["WhatsApp"])
 
 # Prometheus metrics endpoint
 if settings.enable_prometheus:

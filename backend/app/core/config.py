@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     email_from: str = "hadihacan@gmail.com"
     email_from_name: str = "CareConnect"
 
+    # WhatsApp (Twilio)
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_whatsapp_number: str = ""  # Format: +14155238886 (Twilio Sandbox number)
+
     # Auth
     jwt_secret: str = secrets.token_urlsafe(32)
     jwt_issuer: str = "careconnect"
