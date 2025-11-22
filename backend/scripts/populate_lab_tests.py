@@ -118,20 +118,19 @@ LAB_TESTS = {
         "duration": "5 minutes",
         "results_time": "1-2 days",
     },
-    "Chest X-Ray": {
+    "X-Ray": {
         "category": "Imaging",
         "preparation": [
             "No fasting required",
-            "Remove jewelry, eyeglasses, and metal objects",
+            "Remove jewelry and metal objects",
+            "Notify the radiologist if you have any previous surgery that involves metal implants",
             "Wear comfortable clothing without metal fasteners",
-            "Inform technician if you might be pregnant",
-            "No special preparation needed",
         ],
         "what_it_tests": [
-            "Lung conditions (pneumonia, tumors)",
-            "Heart size and shape",
-            "Broken ribs or other bone problems",
-            "Fluid in lungs or around heart",
+            "Imaging of requested body part",
+            "Bone fractures",
+            "Joint conditions",
+            "Soft tissue abnormalities",
         ],
         "duration": "10-15 minutes",
         "results_time": "1-2 days",
