@@ -68,7 +68,7 @@ Or trigger via Admin Portal:
 - Hemoglobin A1C
 - Comprehensive Metabolic Panel
 - Liver Function Test
-- Chest X-Ray
+- X-Ray
 - MRI Scan
 - CT Scan
 - And more...

@@ -712,11 +712,11 @@ async def seed_lab_tests():
             
             # Radiology Imaging
             LabTest(
-                name="Chest X-Ray",
-                code="RAD-CXR-017",
+                name="X-Ray",
+                code="RAD-XR-017",
                 department="Radiology",
-                description="Imaging of chest, heart, and lungs",
-                prep_instructions="Remove jewelry and metal objects",
+                description="Imaging of requested body part",
+                prep_instructions="Remove jewelry and metal objects. Notify the radiologist if you have any previous surgery that involves metal implants",
                 estimated_duration_minutes=30,
             ),
             LabTest(
