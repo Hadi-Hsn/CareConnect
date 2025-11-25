@@ -107,8 +107,8 @@ class AgentRouter:
             response_content = await self._handle_general_conversation(user_message, intent)
             return ChatMessage(role="assistant", content=response_content), [], [], total_usage
 
-        # Handle clarification needed
-        if intent.requires_clarification:
+        # Handle clarification needed - but ONLY if there are actual clarification questions
+        if intent.requires_clarification and intent.clarification_questions:
             clarification = "\n".join(intent.clarification_questions)
             return ChatMessage(role="assistant", content=clarification), [], [], total_usage
 
@@ -128,10 +128,14 @@ class AgentRouter:
 
         # Check if we have all required information
         if not parameters.has_all_required_info:
-            missing_info = ", ".join(parameters.missing_fields)
+            # Handle None values for missing_fields
+            missing_fields = parameters.missing_fields or []
+            ambiguities = parameters.ambiguities or []
+            
+            missing_info = ", ".join(missing_fields) if missing_fields else "some information"
             response = f"I need some more information to help you: {missing_info}"
-            if parameters.ambiguities:
-                response += f"\n\nAlso, I need clarification on: {', '.join(parameters.ambiguities)}"
+            if ambiguities:
+                response += f"\n\nAlso, I need clarification on: {', '.join(ambiguities)}"
             return ChatMessage(role="assistant", content=response), [], [], total_usage
 
         # === LAYER 3: CREATE EXECUTION PLAN ===

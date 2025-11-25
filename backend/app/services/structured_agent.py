@@ -57,30 +57,50 @@ class StructuredAgentService:
         
         system_prompt = f"""You are an intent parser for a medical appointment booking system.
 
-Current date: {current_date}
+Current date: {current_date} (November 25, 2025)
 Current time: {current_time}
 User ID: {user_id or "Not authenticated"}
 
 Your task is to extract the user's intent and entities from their message.
 
 Intent Categories:
-- book_appointment: User wants to book a new appointment
+- book_appointment: User wants to book a new appointment OR search for available appointment slots
 - modify_appointment: User wants to change an existing appointment
 - cancel_appointment: User wants to cancel an appointment
-- query_appointments: User wants to see their appointments
-- query_information: User asking for information (directions, hours, departments, etc.)
+- query_appointments: User wants to see their booked appointments
+- query_information: User asking for facility information (directions, hours, departments, etc.)
 - emergency: Medical emergency requiring immediate attention
 - general_conversation: Greetings, thanks, or other non-actionable messages
 
 Extract entities like:
-- Dates (convert relative dates like "tomorrow" to YYYY-MM-DD format)
-- Times (extract hour and minute)
-- Provider names (doctor names)
-- Department names
-- Appointment IDs or confirmation codes
-- Reasons for appointment
+- Dates: Convert relative dates to YYYY-MM-DD format based on current date {current_date}
+  - "tomorrow" = 2025-11-26
+  - "26th" or "26" = 2025-11-26
+  - "27th" or "27" = 2025-11-27
+  - "next week" = any day in early December 2025
+- Times: Extract hour and minute (e.g., "10am" = 10:00, "3pm" = 15:00)
+- Provider names: doctor names (e.g., "Dr. Smith", "Lisa Chen")
+- Department names: "cardiologist" or "cardiology" = Cardiology department
+- Appointment codes or IDs
+- Reason for visit
 
-Set requires_clarification=true if the intent is ambiguous or critical info is missing.
+CRITICAL CLARIFICATION RULES:
+- Set requires_clarification=FALSE if the user provides enough info to take an action
+- If user asks to "see available appointments" or "show me slots" or "give me a list", set requires_clarification=FALSE
+  → We can search for available slots and show them to the user
+- If user provides a department (e.g., "cardiologist", "cardiology"), that's enough to search - set requires_clarification=FALSE
+- If user provides dates (e.g., "26th", "tomorrow"), that's clear - set requires_clarification=FALSE
+- Missing specific time or provider name is OK - we can show all available slots
+- Only set requires_clarification=TRUE if:
+  → The message is truly unintelligible or ambiguous
+  → You genuinely don't understand what action they want
+  → The action requires critical missing information (e.g., cancelling without any appointment identifier)
+
+Examples:
+- "Book with cardiologist" → requires_clarification=FALSE (we can search cardiology slots)
+- "Show me available appointments on 26th" → requires_clarification=FALSE (we can search slots for that date)
+- "I want to see slots for cardiology tomorrow" → requires_clarification=FALSE (we have department and date)
+- "Cancel appointment" with NO context → requires_clarification=TRUE (need to know which appointment)
 """
 
         messages = [{"role": "system", "content": system_prompt}]
@@ -115,7 +135,6 @@ Set requires_clarification=true if the intent is ambiguous or critical info is m
             return ParsedIntent(
                 action="general_conversation",
                 confidence=0.0,
-                extracted_entities={},
                 requires_clarification=True,
                 clarification_questions=["I'm having trouble understanding. Could you please rephrase your request?"],
                 user_message_summary="Unable to parse message",
@@ -153,16 +172,38 @@ User Intent: {intent.action}
 User Message Summary: {intent.user_message_summary}
 Extracted Entities: {json.dumps(intent.extracted_entities)}
 
+IMPORTANT - Understanding User Intent:
+- If user asks to "see available appointments", "give me a list", "show me options" → They want to SEARCH for slots, not book yet
+- If user says "tomorrow or 27th" or provides multiple dates → They want to see options for BOTH dates
+- If user says "book me for tomorrow at 2pm" → They want to BOOK a specific slot
+
 Validation Rules:
-1. For BOOKING: Need date, and either (provider_id/provider_name) OR department
-2. For MODIFICATION: Need appointment_id OR confirmation_code, AND new date/time
-3. For CANCELLATION: Need appointment_id OR confirmation_code
-4. For QUERY: Optional query_filter (upcoming/past/all)
+1. For SEARCHING/BROWSING slots (user wants to see options):
+   - Need: department OR provider_name
+   - Date is OPTIONAL - if provided, use it; if multiple dates mentioned, pick the first one
+   - Set action="book" (we'll search first, then book later)
+   - Set has_all_required_info=TRUE if we have department/provider
+   
+2. For BOOKING a specific slot (user commits to a time):
+   - Need: date, time (hour/minute), and either (provider_id/provider_name) OR department
+   - Set has_all_required_info=TRUE only if ALL booking details are present
+   
+3. For MODIFICATION: 
+   - Need: appointment_id OR confirmation_code, AND new date/time
+   
+4. For CANCELLATION: 
+   - Need: appointment_id OR confirmation_code
+   
+5. For QUERY: 
+   - Optional query_filter (upcoming/past/all)
 
-Set has_all_required_info=true ONLY if all required fields are present and unambiguous.
-List any missing_fields or ambiguities.
+KEY POINT: When user says "show me appointments on 26th" or "give me options for tomorrow or 27th":
+- Extract the FIRST date mentioned (e.g., "26th" or "tomorrow" = 2025-11-26)
+- DO NOT mark multiple dates as an ambiguity
+- Set has_all_required_info=TRUE if we have department
+- The system will search and show results to the user
 
-Convert times to 24h format (time_hour: 0-23, time_minute: 0-59).
+Convert times to 24h format (time_hour: 0-23, time_minute: 0-59) only when user specifies a time.
 """
 
         messages = [{"role": "system", "content": system_prompt}]
@@ -295,6 +336,12 @@ Available tools:
         params: BookingParameters
     ) -> BookingParameters:
         """Validate parameters against database constraints."""
+        
+        # Initialize list fields if they are None
+        if params.ambiguities is None:
+            params.ambiguities = []
+        if params.missing_fields is None:
+            params.missing_fields = []
         
         try:
             # Validate provider if specified
