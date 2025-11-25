@@ -7,6 +7,7 @@ Create Date: 2025-11-23
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.engine.reflection import Inspector
 
 
 # revision identifiers, used by Alembic.
@@ -18,11 +19,17 @@ depends_on = None
 
 def upgrade():
     """Add WhatsApp support columns to users table."""
-    # Add country_code column with default value
-    op.add_column('users', sa.Column('country_code', sa.String(10), nullable=False, server_default='+961'))
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    columns = [col['name'] for col in inspector.get_columns('users')]
     
-    # Add whatsapp_verified column
-    op.add_column('users', sa.Column('whatsapp_verified', sa.Boolean(), nullable=False, server_default='0'))
+    # Add country_code column with default value (only if it doesn't exist)
+    if 'country_code' not in columns:
+        op.add_column('users', sa.Column('country_code', sa.String(10), nullable=False, server_default='+961'))
+    
+    # Add whatsapp_verified column (only if it doesn't exist)
+    if 'whatsapp_verified' not in columns:
+        op.add_column('users', sa.Column('whatsapp_verified', sa.Boolean(), nullable=False, server_default='0'))
     
     # Make phone column NOT NULL (if it exists, alter it; otherwise users must have phone already)
     # First, set any NULL phones to empty string to avoid constraint violation
@@ -32,44 +39,58 @@ def upgrade():
     with op.batch_alter_table('users') as batch_op:
         batch_op.alter_column('phone', nullable=False, existing_type=sa.String(50))
     
-    # Add unique constraint on phone + country_code combination
-    op.create_unique_constraint('uix_phone_country', 'users', ['phone', 'country_code'])
+    # Add unique constraint on phone + country_code combination (only if it doesn't exist)
+    constraints = [constraint['name'] for constraint in inspector.get_unique_constraints('users')]
+    if 'uix_phone_country' not in constraints:
+        op.create_unique_constraint('uix_phone_country', 'users', ['phone', 'country_code'])
     
-    # Create whatsapp_messages table for conversation history
-    op.create_table(
-        'whatsapp_messages',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('phone_number', sa.String(50), nullable=False),
-        sa.Column('role', sa.String(20), nullable=False),
-        sa.Column('content', sa.Text(), nullable=False),
-        sa.Column('message_sid', sa.String(100), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('ix_whatsapp_messages_id', 'whatsapp_messages', ['id'])
-    op.create_index('ix_whatsapp_messages_user_id', 'whatsapp_messages', ['user_id'])
-    op.create_index('ix_whatsapp_messages_phone_number', 'whatsapp_messages', ['phone_number'])
-    op.create_index('ix_whatsapp_messages_created_at', 'whatsapp_messages', ['created_at'])
+    # Create whatsapp_messages table for conversation history (only if it doesn't exist)
+    tables = inspector.get_table_names()
+    if 'whatsapp_messages' not in tables:
+        op.create_table(
+            'whatsapp_messages',
+            sa.Column('id', sa.Integer(), nullable=False),
+            sa.Column('user_id', sa.Integer(), nullable=False),
+            sa.Column('phone_number', sa.String(50), nullable=False),
+            sa.Column('role', sa.String(20), nullable=False),
+            sa.Column('content', sa.Text(), nullable=False),
+            sa.Column('message_sid', sa.String(100), nullable=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+            sa.PrimaryKeyConstraint('id')
+        )
+        op.create_index('ix_whatsapp_messages_id', 'whatsapp_messages', ['id'])
+        op.create_index('ix_whatsapp_messages_user_id', 'whatsapp_messages', ['user_id'])
+        op.create_index('ix_whatsapp_messages_phone_number', 'whatsapp_messages', ['phone_number'])
+        op.create_index('ix_whatsapp_messages_created_at', 'whatsapp_messages', ['created_at'])
 
 
 def downgrade():
     """Remove WhatsApp support columns."""
-    # Drop whatsapp_messages table
-    op.drop_index('ix_whatsapp_messages_created_at', table_name='whatsapp_messages')
-    op.drop_index('ix_whatsapp_messages_phone_number', table_name='whatsapp_messages')
-    op.drop_index('ix_whatsapp_messages_user_id', table_name='whatsapp_messages')
-    op.drop_index('ix_whatsapp_messages_id', table_name='whatsapp_messages')
-    op.drop_table('whatsapp_messages')
+    conn = op.get_bind()
+    inspector = Inspector.from_engine(conn)
+    tables = inspector.get_table_names()
     
-    # Drop unique constraint
-    op.drop_constraint('uix_phone_country', 'users', type_='unique')
+    # Drop whatsapp_messages table (only if it exists)
+    if 'whatsapp_messages' in tables:
+        op.drop_index('ix_whatsapp_messages_created_at', table_name='whatsapp_messages')
+        op.drop_index('ix_whatsapp_messages_phone_number', table_name='whatsapp_messages')
+        op.drop_index('ix_whatsapp_messages_user_id', table_name='whatsapp_messages')
+        op.drop_index('ix_whatsapp_messages_id', table_name='whatsapp_messages')
+        op.drop_table('whatsapp_messages')
+    
+    # Drop unique constraint (only if it exists)
+    constraints = [constraint['name'] for constraint in inspector.get_unique_constraints('users')]
+    if 'uix_phone_country' in constraints:
+        op.drop_constraint('uix_phone_country', 'users', type_='unique')
     
     # Make phone nullable again
     with op.batch_alter_table('users') as batch_op:
         batch_op.alter_column('phone', nullable=True, existing_type=sa.String(50))
     
-    # Drop columns
-    op.drop_column('users', 'whatsapp_verified')
-    op.drop_column('users', 'country_code')
+    # Drop columns (only if they exist)
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    if 'whatsapp_verified' in columns:
+        op.drop_column('users', 'whatsapp_verified')
+    if 'country_code' in columns:
+        op.drop_column('users', 'country_code')

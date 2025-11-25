@@ -1,9 +1,8 @@
-"""Agent router with OpenAI Responses API integration."""
+"""Agent router with structured output architecture."""
 import asyncio
 import json
 import re
 import time
-import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import Any
@@ -12,17 +11,16 @@ from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.prompts import SYSTEM_PROMPT, VOICE_MODE_INSTRUCTION
-from app.agents.tools import TOOLS
+from app.agents.prompts import VOICE_MODE_INSTRUCTION
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models import Appointment, Provider, User
 from app.schemas.agent import ChatMessage, ToolCall, ToolResult
 from app.services.email_client import EmailService
-from app.services.intent_classifier import IntentClassifier, Intent
 from app.services.mock_scheduling_client import MockSchedulingClient
 from app.services.rag_service import RAGService
 from app.services.scheduling_client import SchedulingClient
+from app.services.structured_agent import StructuredAgentService
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -32,31 +30,28 @@ LEBANON_TZ = ZoneInfo("Asia/Beirut")
 
 
 class AgentRouter:
-    """Agent router using OpenAI function calling."""
+    """Agent router using structured output architecture."""
 
     def __init__(self, db: AsyncSession, voice_mode: bool = False) -> None:
         """Initialize agent router."""
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.db = db
-        self.voice_mode = voice_mode  # Enable phone-call style responses
+        self.voice_mode = voice_mode
         self.rag_service = RAGService()
         self.email_service = EmailService()
-        self.intent_classifier = IntentClassifier()
+        self.structured_agent = StructuredAgentService(db)
 
         # Use mock scheduling client for development
         if settings.mock_scheduling:
             self.scheduling_client: SchedulingClient = MockSchedulingClient()
         else:
-            # Placeholder for real scheduling client
             self.scheduling_client = MockSchedulingClient()
-
-        self.max_iterations = 10  # Prevent infinite loops
 
     async def chat_turn(
         self, messages: list[ChatMessage], user_id: int | None = None
     ) -> tuple[ChatMessage, list[ToolCall], list[ToolResult], dict[str, int]]:
         """
-        Process a chat turn with tool execution loop.
+        Process a chat turn using structured output architecture.
 
         Args:
             messages: Conversation history
@@ -66,465 +61,316 @@ class AgentRouter:
             Tuple of (final_message, tool_calls, tool_results, usage)
         """
         start_time = time.perf_counter()
-
-        # Get current date and time for Lebanon timezone
-        lebanon_now = datetime.now(LEBANON_TZ)
-        current_date = lebanon_now.strftime("%Y-%m-%d")
-        current_time = lebanon_now.strftime("%I:%M %p")  # e.g., "08:10 PM"
-        
-        # Build system prompt with voice mode instruction if enabled
-        system_prompt = SYSTEM_PROMPT.format(
-            current_date=current_date,
-            current_time=current_time,
-            user_id=user_id if user_id else "Not authenticated"
-        )
-        
-        if self.voice_mode:
-            system_prompt = VOICE_MODE_INSTRUCTION + "\n\n" + system_prompt
-
-        # Build messages for OpenAI
-        openai_messages = [{"role": "system", "content": system_prompt}]
-        openai_messages.extend([{"role": m.role, "content": m.content} for m in messages])
-
-        # Optional: Pre-retrieve context for information queries
-        last_user_message = next((m for m in reversed(messages) if m.role == "user"), None)
-        if last_user_message:
-            intent = self.intent_classifier.classify(last_user_message.content)
-            if intent.value == "information":
-                # Pre-fetch RAG context
-                try:
-                    retrieval = await self.rag_service.retrieve(last_user_message.content, top_k=3)
-                    if retrieval.chunks:
-                        context = "\n\n".join(
-                            f"[{chunk.doc_title}]: {chunk.content}" for chunk in retrieval.chunks
-                        )
-                        openai_messages.append(
-                            {
-                                "role": "system",
-                                "content": f"Retrieved context:\n{context}",
-                            }
-                        )
-                        logger.info("pre_retrieval_added", num_chunks=len(retrieval.chunks))
-                except Exception as e:
-                    logger.warning("pre_retrieval_failed", error=str(e))
-
-        # Prepare usage accumulator so deterministic short-circuits can return
-        # a well-formed usage object without referencing uninitialized locals.
         total_usage: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
-        # Deterministic short-circuits for safety-critical intents so responses
-        # exactly match evaluation expectations (no model ambiguity):
-        if last_user_message:
-            detected_intent = self.intent_classifier.classify(last_user_message.content)
+        # Get last user message
+        last_user_message = next((m for m in reversed(messages) if m.role == "user"), None)
+        if not last_user_message:
+            return ChatMessage(role="assistant", content="How can I help you?"), [], [], total_usage
 
-            # Emergency: return exact required emergency instruction immediately
-            if detected_intent == Intent.EMERGENCY:
-                final = ChatMessage(
-                    role="assistant",
-                    content="This sounds like a medical emergency. Please call 911 or go to the nearest emergency room immediately.",
-                )
-                return final, [], [], total_usage
+        user_message = last_user_message.content
 
-            # Medical advice requests - deterministic refusal matching validator
-            text = last_user_message.content.lower()
-            if re.search(r"\b(what (medicine|medication)|what should i take|which medicine|take for my)\b", text):
-                final = ChatMessage(
-                    role="assistant",
-                    content="I cannot provide medical advice. Please consult with a healthcare provider for medical concerns.",
-                )
-                return final, [], [], total_usage
+        # === LAYER 1: PARSE INTENT ===
+        logger.info("layer_1_parsing_intent", message_preview=user_message[:50])
+        
+        conversation_history = [{"role": m.role, "content": m.content} for m in messages[:-1]]
+        intent = await self.structured_agent.parse_intent(
+            user_message=user_message,
+            conversation_history=conversation_history,
+            user_id=user_id
+        )
 
-            # Diagnosis requests - deterministic refusal
-            if re.search(r"\b(do i have|do i have .*|could i have|am i (sick|infected))\b", text):
-                final = ChatMessage(
-                    role="assistant",
-                    content="I cannot diagnose medical conditions. Please schedule an appointment with a healthcare provider who can properly evaluate your symptoms.",
-                )
-                return final, [], [], total_usage
+        # Handle emergency intent immediately
+        if intent.action == "emergency":
+            return ChatMessage(
+                role="assistant",
+                content="This sounds like a medical emergency. Please call 911 or go to the nearest emergency room immediately.",
+            ), [], [], total_usage
 
+        # Handle medical advice refusal
+        text_lower = user_message.lower()
+        if re.search(r"\b(what (medicine|medication)|what should i take|which medicine|take for my)\b", text_lower):
+            return ChatMessage(
+                role="assistant",
+                content="I cannot provide medical advice. Please consult with a healthcare provider for medical concerns.",
+            ), [], [], total_usage
+
+        # Handle diagnosis requests
+        if re.search(r"\b(do i have|could i have|am i (sick|infected))\b", text_lower):
+            return ChatMessage(
+                role="assistant",
+                content="I cannot diagnose medical conditions. Please schedule an appointment with a healthcare provider who can properly evaluate your symptoms.",
+            ), [], [], total_usage
+
+        # Handle general conversation
+        if intent.action == "general_conversation":
+            response_content = await self._handle_general_conversation(user_message, intent)
+            return ChatMessage(role="assistant", content=response_content), [], [], total_usage
+
+        # Handle clarification needed
+        if intent.requires_clarification:
+            clarification = "\n".join(intent.clarification_questions)
+            return ChatMessage(role="assistant", content=clarification), [], [], total_usage
+
+        # Handle information queries with RAG
+        if intent.action == "query_information":
+            return await self._handle_information_query(user_message, intent)
+
+        # === LAYER 2: EXTRACT PARAMETERS ===
+        logger.info("layer_2_extracting_parameters", action=intent.action)
+        
+        parameters = await self.structured_agent.extract_parameters(
+            intent=intent,
+            user_message=user_message,
+            conversation_history=conversation_history,
+            user_id=user_id
+        )
+
+        # Check if we have all required information
+        if not parameters.has_all_required_info:
+            missing_info = ", ".join(parameters.missing_fields)
+            response = f"I need some more information to help you: {missing_info}"
+            if parameters.ambiguities:
+                response += f"\n\nAlso, I need clarification on: {', '.join(parameters.ambiguities)}"
+            return ChatMessage(role="assistant", content=response), [], [], total_usage
+
+        # === LAYER 3: CREATE EXECUTION PLAN ===
+        logger.info("layer_3_creating_execution_plan", action=parameters.action)
+        
+        execution_plan = await self.structured_agent.create_execution_plan(
+            parameters=parameters,
+            user_message=user_message,
+            user_id=user_id
+        )
+
+        # Check if execution is blocked
+        if not execution_plan.can_execute:
+            blocking_reasons = "\n".join(execution_plan.blocking_issues)
+            return ChatMessage(
+                role="assistant",
+                content=f"I can't complete this request:\n{blocking_reasons}"
+            ), [], [], total_usage
+
+        # Check if user confirmation is required
+        if execution_plan.requires_user_confirmation:
+            confirmation = execution_plan.confirmation_message or execution_plan.action_description
+            warnings = ""
+            if execution_plan.warning_messages:
+                warnings = "\n\n⚠️ " + "\n⚠️ ".join(execution_plan.warning_messages)
+            return ChatMessage(
+                role="assistant",
+                content=f"{confirmation}{warnings}\n\nWould you like me to proceed?"
+            ), [], [], total_usage
+
+        # === EXECUTE THE PLAN ===
+        logger.info("executing_plan", tools=execution_plan.tools_to_call)
+        
         all_tool_calls: list[ToolCall] = []
         all_tool_results: list[ToolResult] = []
 
-        # Tool execution loop
-        iteration = 0
-        while iteration < self.max_iterations:
-            iteration += 1
-
-            try:
-                # Retry with exponential backoff for rate-limit errors
-                max_retries = 3
-                retry_delay = 1.0
-                last_error = None
+        try:
+            for i, tool_name in enumerate(execution_plan.tools_to_call):
+                tool_args = execution_plan.tool_arguments[i] if i < len(execution_plan.tool_arguments) else {}
                 
-                for retry_attempt in range(max_retries):
-                    try:
-                        response = await self.client.chat.completions.create(
-                            model=settings.openai_model,
-                            messages=openai_messages,
-                            tools=TOOLS,
-                            tool_choice="auto",
-                            temperature=settings.openai_temperature,
-                            max_tokens=settings.openai_max_tokens,
-                        )
-                        break  # Success - exit retry loop
-                    except Exception as e:
-                        last_error = e
-                        # Check if it's a rate limit error (429)
-                        error_str = str(e).lower()
-                        is_rate_limit = "rate limit" in error_str or "429" in error_str
-                        
-                        if is_rate_limit and retry_attempt < max_retries - 1:
-                            # Extract suggested wait time if available
-                            wait_match = re.search(r"try again in (\d+\.?\d*)s", str(e))
-                            if wait_match:
-                                retry_delay = float(wait_match.group(1))
-                            else:
-                                retry_delay *= 2  # Exponential backoff
-                            
-                            logger.warning(
-                                "rate_limit_retry",
-                                attempt=retry_attempt + 1,
-                                max_retries=max_retries,
-                                retry_delay=retry_delay,
-                            )
-                            
-                            await asyncio.sleep(retry_delay)
-                        else:
-                            # Not a rate limit or final retry - raise
-                            raise
-                else:
-                    # All retries exhausted
-                    raise last_error
+                # Add user_id to tool arguments if needed
+                if tool_name in ["book_appointment", "get_user_appointments"] and user_id:
+                    tool_args["user_id"] = user_id
 
-                # Track usage
-                if response.usage:
-                    total_usage["prompt_tokens"] += response.usage.prompt_tokens
-                    total_usage["completion_tokens"] += response.usage.completion_tokens
-                    total_usage["total_tokens"] += response.usage.total_tokens
+                logger.info("executing_tool", tool=tool_name, args=tool_args)
+                
+                tool_result = await self._execute_tool(tool_name, tool_args, user_id)
+                
+                tool_call_id = f"call_{i}_{tool_name}"
+                all_tool_calls.append(ToolCall(id=tool_call_id, name=tool_name, arguments=tool_args))
+                all_tool_results.append(tool_result)
 
-                message = response.choices[0].message
-
-                # Check if there are tool calls
-                if message.tool_calls:
-                    logger.info("tool_calls_requested", count=len(message.tool_calls))
-
-                    # Add assistant message to history
-                    openai_messages.append(message.model_dump(exclude_unset=True))
-
-                    # Execute each tool call
-                    for tool_call in message.tool_calls:
-                        tool_name = tool_call.function.name
-                        tool_args = json.loads(tool_call.function.arguments)
-
-                        logger.info("executing_tool", tool=tool_name, args=tool_args)
-
-                        # Execute tool
-                        tool_result = await self._execute_tool(tool_name, tool_args, user_id)
-
-                        # Record tool call and result
-                        all_tool_calls.append(
-                            ToolCall(
-                                id=tool_call.id,
-                                name=tool_name,
-                                arguments=tool_args,
-                            )
-                        )
-                        all_tool_results.append(tool_result)
-
-                        # Add tool result to conversation
-                        openai_messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tool_call.id,
-                                "name": tool_name,
-                                "content": json.dumps(tool_result.result),
-                            }
-                        )
-
-                        # Heuristic auto-booking: if the model requested a search_timeslots
-                        # and we have booking intent + available slots, automatically
-                        # perform the booking with the first provider/slot to match
-                        # the SYSTEM_PROMPT auto-booking policy and ensure deterministic
-                        # automation for tests.
-                        try:
-                            if tool_name == "search_timeslots":
-                                # Detect booking intent (simple heuristic)
-                                booking_intent = False
-                                modification_intent = False
-                                
-                                if last_user_message:
-                                    user_text_lower = last_user_message.content.lower()
-                                    
-                                    # Check for modification keywords
-                                    modification_keywords = ["move", "change", "reschedule", "switch", "modify", "make it"]
-                                    if any(keyword in user_text_lower for keyword in modification_keywords):
-                                        modification_intent = True
-                                        logger.info("modification_intent_detected", text=user_text_lower)
-                                    
-                                    # Check for booking intent only if not modification
-                                    if not modification_intent:
-                                        if self.intent_classifier.classify(last_user_message.content) == Intent.BOOKING:
-                                            booking_intent = True
-                                        if "book" in user_text_lower:
-                                            booking_intent = True
-
-                                # If modification intent detected, disable auto-booking
-                                # Let the AI handle it by calling modify_appointment with proper context
-                                if modification_intent:
-                                    logger.info("skipping_auto_booking_for_modification")
-                                    continue
-
-                                # Inspect search results for providers/slots
-                                result_json = tool_result.result
-                                provider_id_to_use = None
-                                slot_id_to_use = None
-                                
-                                # Extract requested time from user message if present
-                                requested_time = None
-                                if last_user_message:
-                                    user_text = last_user_message.content.lower()
-                                    # Match patterns like "at 11", "at 11am", "at 11:30", "11 am", "11:30 am", "one at 10am", "make it at 10"
-                                    time_patterns = [
-                                        r'(?:at|to)\s+(?:\w+\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap]m?)?\b',  # Handles "at 10", "to 10", "make it at 10"
-                                        r'\b(\d{1,2})(?::(\d{2}))?\s*([ap]m)\b',  # Handles "10am", "10:30pm"
-                                    ]
-                                    for pattern in time_patterns:
-                                        match = re.search(pattern, user_text)
-                                        if match:
-                                            hour = int(match.group(1))
-                                            minute = int(match.group(2)) if match.group(2) else 0
-                                            am_pm = match.group(3) if match.group(3) else None
-                                            
-                                            # Convert to 24-hour format if AM/PM specified
-                                            if am_pm:
-                                                am_pm = am_pm.lower().replace('.', '')
-                                                if am_pm.startswith('p') and hour != 12:
-                                                    hour += 12
-                                                elif am_pm.startswith('a') and hour == 12:
-                                                    hour = 0
-                                            
-                                            requested_time = (hour, minute)
-                                            logger.info("parsed_requested_time", hour=hour, minute=minute, original_text=user_text)
-                                            break
-                                
-                                # Check if user specified a doctor name
-                                requested_provider_name = None
-                                if last_user_message:
-                                    user_text = last_user_message.content.lower()
-                                    # Match patterns like "with dr brian", "with dr. smith", "doctor ahmed"
-                                    provider_patterns = [
-                                        r'(?:with|book)\s+(?:dr\.?\s+|doctor\s+)(\w+)',
-                                        r'appointment\s+(?:with\s+)?(?:dr\.?\s+|doctor\s+)(\w+)',
-                                    ]
-                                    for pattern in provider_patterns:
-                                        match = re.search(pattern, user_text)
-                                        if match:
-                                            requested_provider_name = match.group(1)
-                                            logger.info("parsed_provider_name", name=requested_provider_name, original_text=user_text)
-                                            break
-                                
-                                # Handle results with multiple providers
-                                if result_json.get("providers"):
-                                    providers_list = result_json["providers"]
-                                    
-                                    # If user specified a provider name, try to match it
-                                    if requested_provider_name:
-                                        matched_provider = None
-                                        for provider in providers_list:
-                                            provider_name_lower = provider.get("provider_name", "").lower()
-                                            # Match if the requested name appears in the provider name
-                                            if requested_provider_name in provider_name_lower:
-                                                matched_provider = provider
-                                                logger.info("matched_provider_by_name", requested=requested_provider_name, matched=provider_name_lower)
-                                                break
-                                        
-                                        if matched_provider:
-                                            provider_id_to_use = matched_provider.get("provider_id")
-                                            slots = matched_provider.get("slots", [])
-                                        else:
-                                            # Provider name specified but not found - disable auto-booking
-                                            logger.warning("provider_name_not_matched", requested=requested_provider_name)
-                                            booking_intent = False
-                                    else:
-                                        # Multiple providers and no specific name requested
-                                        # DISABLE auto-booking - let AI present options
-                                        if len(providers_list) > 1:
-                                            logger.info("multiple_providers_no_selection", count=len(providers_list))
-                                            booking_intent = False
-                                        else:
-                                            # Only one provider available - OK to auto-book
-                                            provider_id_to_use = providers_list[0].get("provider_id")
-                                            slots = providers_list[0].get("slots", [])
-                                    
-                                    # Find matching time slot if provider selected
-                                    if booking_intent and provider_id_to_use:
-                                        if not slots:
-                                            slots = next((p.get("slots", []) for p in providers_list if p.get("provider_id") == provider_id_to_use), [])
-                                        
-                                        if slots:
-                                            slot_to_use = None
-                                            
-                                            if requested_time:
-                                                # Find slot matching the requested time
-                                                for slot in slots:
-                                                    slot_start = slot.get("start", "")
-                                                    if slot_start:
-                                                        # Parse ISO format time and convert to Lebanon timezone
-                                                        slot_dt = datetime.fromisoformat(slot_start.replace('Z', '+00:00'))
-                                                        # Convert to Lebanon time for comparison
-                                                        slot_dt_lebanon = slot_dt.astimezone(LEBANON_TZ)
-                                                        slot_hour = slot_dt_lebanon.hour
-                                                        slot_minute = slot_dt_lebanon.minute
-                                                        
-                                                        # Match if hour matches (allow some flexibility for minutes)
-                                                        if slot_hour == requested_time[0] and abs(slot_minute - requested_time[1]) <= 15:
-                                                            slot_to_use = slot
-                                                            logger.info("matched_time_slot", requested=requested_time, slot_time=(slot_hour, slot_minute))
-                                                            break
-                                                
-                                                if not slot_to_use:
-                                                    logger.warning("requested_time_not_available", requested_time=requested_time)
-                                                    booking_intent = False
-                                            else:
-                                                # No specific time requested, use first available slot
-                                                slot_to_use = slots[0]
-                                            
-                                            if slot_to_use:
-                                                slot_id_to_use = slot_to_use.get("slot_id")
-                                            
-                                elif result_json.get("slots") and result_json.get("provider_id"):
-                                    # Single provider result format
-                                    provider_id_to_use = result_json.get("provider_id")
-                                    slots = result_json.get("slots", [])
-                                    
-                                    if slots:
-                                        slot_to_use = None
-                                        
-                                        if requested_time:
-                                            for slot in slots:
-                                                slot_start = slot.get("start", "")
-                                                if slot_start:
-                                                    # Parse ISO format time and convert to Lebanon timezone
-                                                    slot_dt = datetime.fromisoformat(slot_start.replace('Z', '+00:00'))
-                                                    # Convert to Lebanon time for comparison
-                                                    slot_dt_lebanon = slot_dt.astimezone(LEBANON_TZ)
-                                                    slot_hour = slot_dt_lebanon.hour
-                                                    slot_minute = slot_dt_lebanon.minute
-                                                    
-                                                    # Match if hour matches (allow some flexibility for minutes)
-                                                    if slot_hour == requested_time[0] and abs(slot_minute - requested_time[1]) <= 15:
-                                                        slot_to_use = slot
-                                                        logger.info("matched_time_slot", requested=requested_time, slot_time=(slot_hour, slot_minute))
-                                                        break
-                                            
-                                            if not slot_to_use:
-                                                logger.warning("requested_time_not_available", requested_time=requested_time)
-                                                booking_intent = False
-                                        else:
-                                            slot_to_use = slots[0]
-                                        
-                                        if slot_to_use:
-                                            slot_id_to_use = slot_to_use.get("slot_id")
-
-                                if booking_intent and provider_id_to_use and slot_id_to_use:
-                                    # Perform booking automatically
-                                    book_args = {"provider_id": provider_id_to_use, "slot_id": slot_id_to_use}
-                                    book_call_id = str(uuid.uuid4())
-                                    logger.info("auto_booking_triggered", provider_id=provider_id_to_use, slot_id=slot_id_to_use)
-                                    book_result = await self._execute_tool("book_appointment", book_args, user_id)
-
-                                    # Append synthetic tool call/result so callers and tests see it
-                                    all_tool_calls.append(
-                                        ToolCall(id=book_call_id, name="book_appointment", arguments=book_args)
-                                    )
-                                    all_tool_results.append(book_result)
-
-                                    # Check if booking failed (e.g., slot already taken)
-                                    if book_result.result.get("error"):
-                                        logger.warning("auto_booking_failed", error=book_result.result.get("error"))
-                                        # Don't return early - let the model handle the error and present alternatives
-                                    else:
-                                        # We executed the booking programmatically. Construct a
-                                        # final confirmation message and return immediately so
-                                        # we don't send synthetic 'tool' messages that violate
-                                        # the API message sequencing rules.
-                                        provider_name = None
-                                        # book_result is a ToolResult pydantic model; access the
-                                        # underlying result dict via .result
-                                        booked_time = book_result.result.get("time_start") or ""
-                                        # Try to get a friendly provider name from search result
-                                        if isinstance(result_json, dict):
-                                            if result_json.get("providers"):
-                                                # Find the provider name by matching provider_id
-                                                for p in result_json["providers"]:
-                                                    if p.get("provider_id") == provider_id_to_use:
-                                                        provider_name = p.get("provider_name")
-                                                        break
-                                                if not provider_name:
-                                                    provider_name = result_json["providers"][0].get("provider_name")
-                                            elif result_json.get("provider_name"):
-                                                provider_name = result_json.get("provider_name")
-
-                                        if not provider_name:
-                                            provider_name = "the selected provider"
-
-                                        confirmation = book_result.result.get("confirmation_code", "")
-                                        final_content = (
-                                            f"I've booked your appointment for {booked_time} with {provider_name}. "
-                                            f"Confirmation code: {confirmation}. An email confirmation has been sent to you."
-                                        )
-
-                                        final_message = ChatMessage(role="assistant", content=final_content)
-                                        return final_message, all_tool_calls, all_tool_results, total_usage
-                        except Exception:
-                            # Never crash the loop due to heuristic booking; log and continue
-                            logger.exception("auto_booking_failed")
-
-                    # Continue loop to get final response
-                    continue
-
-                else:
-                    # No more tool calls - we have final response
-                    final_message = ChatMessage(
+                # Check for errors
+                if not tool_result.success or tool_result.result.get("error"):
+                    error_msg = tool_result.error or tool_result.result.get("error", "Unknown error")
+                    return ChatMessage(
                         role="assistant",
-                        content=message.content or "",
-                    )
+                        content=f"I encountered an error: {error_msg}"
+                    ), all_tool_calls, all_tool_results, total_usage
 
-                    elapsed_ms = (time.perf_counter() - start_time) * 1000
+            # Generate final response based on execution results
+            final_response = await self._generate_final_response(
+                execution_plan=execution_plan,
+                tool_results=all_tool_results,
+                parameters=parameters,
+                user_message=user_message
+            )
 
-                    logger.info(
-                        "chat_turn_completed",
-                        iterations=iteration,
-                        tool_calls=len(all_tool_calls),
-                        latency_ms=elapsed_ms,
-                    )
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            logger.info(
+                "structured_chat_completed",
+                action=intent.action,
+                tools_executed=len(all_tool_calls),
+                latency_ms=elapsed_ms
+            )
 
-                    return final_message, all_tool_calls, all_tool_results, total_usage
+            return ChatMessage(role="assistant", content=final_response), all_tool_calls, all_tool_results, total_usage
 
-            except Exception as e:
-                import traceback
-                error_details = traceback.format_exc()
-                logger.error(
-                    "chat_turn_error", 
-                    error=str(e), 
-                    error_type=type(e).__name__,
-                    iteration=iteration,
-                    traceback=error_details
+        except Exception as e:
+            logger.error("execution_failed", error=str(e))
+            return ChatMessage(
+                role="assistant",
+                content="I encountered an error while processing your request. Please try again."
+            ), all_tool_calls, all_tool_results, total_usage
+
+    async def _handle_general_conversation(self, user_message: str, intent: Any) -> str:
+        """Handle general conversation (greetings, thanks, etc.)."""
+        user_lower = user_message.lower()
+        
+        if any(word in user_lower for word in ["hello", "hi", "hey"]):
+            return "Hello! I'm your CareConnect assistant. I can help you book appointments, answer questions about our services, or check your existing appointments. How can I help you today?"
+        
+        if any(word in user_lower for word in ["thank", "thanks"]):
+            return "You're welcome! Let me know if you need anything else."
+        
+        if any(word in user_lower for word in ["bye", "goodbye"]):
+            return "Goodbye! Take care and feel free to reach out if you need any assistance."
+        
+        return "I'm here to help with appointment booking and medical facility information. What can I assist you with?"
+
+    async def _handle_information_query(
+        self, user_message: str, intent: Any
+    ) -> tuple[ChatMessage, list[ToolCall], list[ToolResult], dict[str, int]]:
+        """Handle information queries using RAG."""
+        try:
+            retrieval = await self.rag_service.retrieve(user_message, top_k=3)
+            
+            if not retrieval.chunks:
+                return (
+                    ChatMessage(
+                        role="assistant",
+                        content="I don't have specific information about that. Could you rephrase or ask something else?"
+                    ),
+                    [],
+                    [],
+                    {}
                 )
-                error_message = ChatMessage(
+
+            # Format context from RAG
+            context = "\n\n".join(
+                f"**{chunk.doc_title}**\n{chunk.content}" for chunk in retrieval.chunks
+            )
+
+            # Use GPT to generate response based on context
+            response = await self.client.chat.completions.create(
+                model=settings.openai_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"You are a helpful medical facility assistant. Use the following information to answer the user's question:\n\n{context}"
+                    },
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
+
+            content = response.choices[0].message.content or "I couldn't generate a response."
+            
+            return (
+                ChatMessage(role="assistant", content=content),
+                [],
+                [],
+                {}
+            )
+
+        except Exception as e:
+            logger.error("rag_query_failed", error=str(e))
+            return (
+                ChatMessage(
                     role="assistant",
-                    content=f"I encountered an error while processing your request. Please try again or contact support if the issue persists.",
+                    content="I'm having trouble finding that information right now. Please try again."
+                ),
+                [],
+                [],
+                {}
+            )
+
+    async def _generate_final_response(
+        self,
+        execution_plan: Any,
+        tool_results: list[ToolResult],
+        parameters: Any,
+        user_message: str
+    ) -> str:
+        """Generate final human-friendly response based on execution results."""
+        
+        # Extract results from tools
+        results_summary = []
+        for tool_result in tool_results:
+            if tool_result.name == "book_appointment" and tool_result.success:
+                result_data = tool_result.result
+                time_start = result_data.get("time_start", "")
+                provider_name = result_data.get("provider_name", "the doctor")
+                confirmation = result_data.get("confirmation_code", "")
+                
+                return (
+                    f"✅ Your appointment has been booked!\n\n"
+                    f"📅 **When:** {time_start}\n"
+                    f"👨‍⚕️ **Doctor:** {provider_name}\n"
+                    f"🔖 **Confirmation Code:** {confirmation}\n\n"
+                    f"An email confirmation has been sent to you."
                 )
-                return error_message, all_tool_calls, all_tool_results, total_usage
 
-        # Max iterations reached
-        logger.warning("max_iterations_reached", iterations=iteration)
-        timeout_message = ChatMessage(
-            role="assistant",
-            content="I'm having trouble processing your request. Could you please try again with more specific details?",
-        )
-        return timeout_message, all_tool_calls, all_tool_results, total_usage
+            elif tool_result.name == "modify_appointment" and tool_result.success:
+                result_data = tool_result.result
+                new_time = result_data.get("new_time_start", "")
+                
+                return (
+                    f"✅ Your appointment has been rescheduled!\n\n"
+                    f"📅 **New Time:** {new_time}\n\n"
+                    f"A confirmation email has been sent."
+                )
 
+            elif tool_result.name == "cancel_appointment" and tool_result.success:
+                return "✅ Your appointment has been cancelled successfully."
+
+            elif tool_result.name == "get_user_appointments" and tool_result.success:
+                appointments = tool_result.result.get("appointments", [])
+                if not appointments:
+                    return "You don't have any appointments scheduled."
+                
+                response = f"**Your Appointments** ({len(appointments)} total):\n\n"
+                for apt in appointments[:5]:  # Show first 5
+                    response += (
+                        f"📅 {apt['datetime_display']}\n"
+                        f"👨‍⚕️ {apt['provider_name']} ({apt['department']})\n"
+                        f"🔖 {apt['confirmation_code']} • Status: {apt['status']}\n\n"
+                    )
+                
+                if len(appointments) > 5:
+                    response += f"... and {len(appointments) - 5} more."
+                
+                return response
+
+            elif tool_result.name == "search_timeslots" and tool_result.success:
+                result_data = tool_result.result
+                providers = result_data.get("providers", [])
+                
+                if not providers:
+                    return "I couldn't find any available appointment slots for that date and provider/department."
+                
+                response = "**Available Appointments:**\n\n"
+                for provider in providers[:2]:  # Show first 2 providers
+                    response += f"👨‍⚕️ **{provider['provider_name']}** ({provider['department']})\n"
+                    slots = provider.get('slots', [])[:3]  # Show first 3 slots
+                    for slot in slots:
+                        start_time = datetime.fromisoformat(slot['start'].replace('Z', '+00:00'))
+                        lebanon_time = start_time.astimezone(LEBANON_TZ)
+                        response += f"  • {lebanon_time.strftime('%I:%M %p')}\n"
+                    response += "\n"
+                
+                response += "Would you like to book one of these slots?"
+                return response
+
+        # Fallback response
+        return execution_plan.action_description
+
+    # Keep all existing tool execution methods
     async def _execute_tool(
         self, tool_name: str, arguments: dict[str, Any], user_id: int | None
     ) -> ToolResult:
