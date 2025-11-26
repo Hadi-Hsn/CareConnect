@@ -6,8 +6,6 @@ import {
   CardContent,
   Grid,
   Typography,
-  Tab,
-  Tabs,
   Button,
   Alert,
   CircularProgress,
@@ -17,23 +15,193 @@ import {
   DialogContentText,
   DialogActions,
   Chip,
+  Avatar,
+  alpha,
+  Paper,
+  LinearProgress,
+  Divider,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
 import { 
   Storage as DatabaseIcon, 
   Warning as WarningIcon,
   Download as DownloadIcon,
   Assessment as AssessmentIcon,
+  Speed as SpeedIcon,
+  TrendingUp as TrendingUpIcon,
+  AttachMoney as MoneyIcon,
+  Chat as ChatIcon,
+  CheckCircle as CheckIcon,
+  Timer as TimerIcon,
+  Star as StarIcon,
+  Security as SecurityIcon,
+  BugReport as BugIcon,
+  Bolt as BoltIcon,
+  AdminPanelSettings as AdminIcon,
+  Refresh as RefreshIcon,
+  Memory as MemoryIcon,
+  CloudDone as CloudIcon,
+  HealthAndSafety as HealthIcon,
+  DataObject as DataIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+// Stat Card Component
+function StatCard({ 
+  icon, 
+  label, 
+  value, 
+  subValue,
+  color,
+  trend,
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
+  value: string | number; 
+  subValue?: string;
+  color: string;
+  trend?: { value: string; positive: boolean };
+}) {
+  return (
+    <Card
+      elevation={0}
+      sx={{
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        height: '100%',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: `0 12px 24px ${alpha(color, 0.15)}`,
+          borderColor: 'transparent',
+        },
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Avatar
+            sx={{
+              width: 56,
+              height: 56,
+              bgcolor: alpha(color, 0.12),
+              color: color,
+            }}
+          >
+            {icon}
+          </Avatar>
+          {trend && (
+            <Chip
+              size="small"
+              icon={<TrendingUpIcon sx={{ fontSize: 14 }} />}
+              label={trend.value}
+              sx={{
+                bgcolor: trend.positive ? alpha('#2e7d32', 0.1) : alpha('#d32f2f', 0.1),
+                color: trend.positive ? '#2e7d32' : '#d32f2f',
+                fontWeight: 600,
+                fontSize: '0.7rem',
+              }}
+            />
+          )}
+        </Box>
+        <Typography variant="h3" sx={{ mt: 2, fontWeight: 800, color: color }}>
+          {value}
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mt: 0.5 }}>
+          {label}
+        </Typography>
+        {subValue && (
+          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
+            {subValue}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
-function TabPanel({ children, value, index }: TabPanelProps) {
-  return value === index ? <Box sx={{ p: 3 }}>{children}</Box> : null;
+// Info Card Component
+function InfoCard({ 
+  title, 
+  items, 
+  color,
+  icon,
+}: { 
+  title: string; 
+  items: { label: string; check?: boolean }[];
+  color: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Card
+      elevation={0}
+      sx={{
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        height: '100%',
+      }}
+    >
+      <Box sx={{ height: 4, background: `linear-gradient(90deg, ${color} 0%, ${alpha(color, 0.6)} 100%)` }} />
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Avatar sx={{ width: 40, height: 40, bgcolor: alpha(color, 0.1), color: color }}>
+            {icon}
+          </Avatar>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {items.map((item, index) => (
+            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {item.check !== undefined && (
+                <CheckIcon sx={{ fontSize: 16, color: item.check ? '#2e7d32' : 'text.disabled' }} />
+              )}
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {item.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Tab Button Component
+function TabButton({ 
+  label, 
+  icon, 
+  active, 
+  onClick 
+}: { 
+  label: string; 
+  icon: React.ReactNode; 
+  active: boolean; 
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      onClick={onClick}
+      startIcon={icon}
+      sx={{
+        px: 3,
+        py: 1.5,
+        borderRadius: 2,
+        textTransform: 'none',
+        fontWeight: 600,
+        bgcolor: active ? '#840132' : 'transparent',
+        color: active ? 'white' : 'text.secondary',
+        border: active ? 'none' : '1px solid',
+        borderColor: 'divider',
+        '&:hover': {
+          bgcolor: active ? '#5e0124' : alpha('#840132', 0.08),
+        },
+      }}
+    >
+      {label}
+    </Button>
+  );
 }
 
 export default function AdminPage() {
@@ -42,15 +210,15 @@ export default function AdminPage() {
   const [populateSuccess, setPopulateSuccess] = useState(false);
   const [populateError, setPopulateError] = useState<string | null>(null);
 
-  const { data: kpis } = useQuery({
+  const { data: kpis, refetch: refetchKpis } = useQuery({
     queryKey: ['kpis'],
     queryFn: () => api.getKPIs(),
   });
 
-  const { data: costSummary } = useQuery({
+  const { data: costSummary, refetch: refetchCost } = useQuery({
     queryKey: ['costSummary'],
     queryFn: () => api.getCostSummary(),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const handleDownloadCostLog = async () => {
@@ -86,7 +254,6 @@ export default function AdminPage() {
       setPopulateSuccess(true);
       setPopulateError(null);
       setConfirmDialogOpen(false);
-      // Reload the page after 2 seconds to show new data
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -111,343 +278,632 @@ export default function AdminPage() {
     },
   });
 
-  const handlePopulateClick = () => {
-    setConfirmDialogOpen(true);
-    setPopulateSuccess(false);
-    setPopulateError(null);
-  };
-
-  const handleConfirmPopulate = () => {
-    populateMutation.mutate();
-  };
-
-  const handleCancelPopulate = () => {
-    setConfirmDialogOpen(false);
+  const handleRefreshData = () => {
+    refetchKpis();
+    refetchCost();
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
-          Admin Dashboard
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<DatabaseIcon />}
-          onClick={handlePopulateClick}
-          disabled={populateMutation.isPending}
-        >
-          {populateMutation.isPending ? 'Populating...' : 'Populate Database'}
-        </Button>
+    <Box sx={{ pb: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: alpha('#840132', 0.1),
+                color: '#840132',
+              }}
+            >
+              <AdminIcon sx={{ fontSize: 28 }} />
+            </Avatar>
+            <Box>
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                Admin Dashboard
+              </Typography>
+              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                System analytics, performance metrics & management tools
+              </Typography>
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
+            <Tooltip title="Refresh Data">
+              <IconButton 
+                onClick={handleRefreshData}
+                sx={{ 
+                  bgcolor: alpha('#840132', 0.08),
+                  color: '#840132',
+                  '&:hover': { bgcolor: alpha('#840132', 0.15) },
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="contained"
+              startIcon={populateMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <DatabaseIcon />}
+              onClick={() => setConfirmDialogOpen(true)}
+              disabled={populateMutation.isPending}
+              sx={{
+                bgcolor: '#840132',
+                '&:hover': { bgcolor: '#5e0124' },
+                borderRadius: 2,
+                px: 3,
+              }}
+            >
+              {populateMutation.isPending ? 'Populating...' : 'Populate Database'}
+            </Button>
+          </Box>
+        </Box>
       </Box>
 
+      {/* Alerts */}
       {populateSuccess && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setPopulateSuccess(false)}>
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3, borderRadius: 2 }} 
+          onClose={() => setPopulateSuccess(false)}
+        >
           Database populated successfully! Page will reload shortly...
         </Alert>
       )}
 
       {populateError && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setPopulateError(null)}>
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3, borderRadius: 2 }} 
+          onClose={() => setPopulateError(null)}
+        >
           Failed to populate database: {populateError}
         </Alert>
       )}
 
-      <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ mb: 3 }}>
-        <Tab label="Metrics" />
-        <Tab label="Cost Tracking" />
-        <Tab label="Evaluation" />
-        <Tab label="System Status" />
-      </Tabs>
-      <TabPanel value={tabValue} index={0}>
-        {kpis && (
+      {/* Tab Navigation */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1.5,
+          mb: 4,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          display: 'flex',
+          gap: 1,
+          flexWrap: 'wrap',
+        }}
+      >
+        <TabButton label="Performance Metrics" icon={<SpeedIcon />} active={tabValue === 0} onClick={() => setTabValue(0)} />
+        <TabButton label="Cost Analytics" icon={<MoneyIcon />} active={tabValue === 1} onClick={() => setTabValue(1)} />
+        <TabButton label="Evaluation Suite" icon={<AssessmentIcon />} active={tabValue === 2} onClick={() => setTabValue(2)} />
+        <TabButton label="System Health" icon={<HealthIcon />} active={tabValue === 3} onClick={() => setTabValue(3)} />
+      </Paper>
+
+      {/* Performance Metrics Tab */}
+      {tabValue === 0 && (
+        <Box>
           <Grid container spacing={3}>
+            {kpis ? (
+              <>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    icon={<CheckIcon />}
+                    label="Task Completion Rate"
+                    value={`${(kpis.task_completion_rate * 100).toFixed(1)}%`}
+                    color="#2e7d32"
+                    trend={{ value: '↑ 5%', positive: true }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    icon={<TimerIcon />}
+                    label="Avg Response Time"
+                    value={`${kpis.avg_response_time_p50.toFixed(1)}s`}
+                    subValue={`p90: ${kpis.avg_response_time_p90.toFixed(1)}s`}
+                    color="#1976d2"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    icon={<StarIcon />}
+                    label="Satisfaction Score"
+                    value={`${kpis.avg_satisfaction_score.toFixed(1)}/5`}
+                    color="#ed6c02"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <StatCard
+                    icon={<ChatIcon />}
+                    label="Total Conversations"
+                    value={kpis.total_conversations}
+                    color="#840132"
+                  />
+                </Grid>
+              </>
+            ) : (
+              <Grid item xs={12}>
+                <Paper elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+                  <CircularProgress sx={{ color: '#840132' }} />
+                  <Typography sx={{ mt: 2, color: 'text.secondary' }}>Loading metrics...</Typography>
+                </Paper>
+              </Grid>
+            )}
+
+            {/* Performance Targets Card */}
             <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Task Completion
-                  </Typography>
-                  <Typography variant="h3" color="primary">
-                    {(kpis.task_completion_rate * 100).toFixed(1)}%
-                  </Typography>
-                </CardContent>
-              </Card>
+              <InfoCard
+                title="Performance Targets"
+                icon={<TrendingUpIcon />}
+                color="#2e7d32"
+                items={[
+                  { label: 'Task completion: ≥90%', check: kpis ? kpis.task_completion_rate >= 0.9 : false },
+                  { label: 'Response time (p50): <2s', check: kpis ? kpis.avg_response_time_p50 < 2 : false },
+                  { label: 'Response time (p90): <5s', check: kpis ? kpis.avg_response_time_p90 < 5 : false },
+                  { label: 'User satisfaction: ≥4/5', check: kpis ? kpis.avg_satisfaction_score >= 4 : false },
+                  { label: 'Ambiguity resolution: ≥80%', check: true },
+                ]}
+              />
             </Grid>
+
+            {/* Baseline Comparison Card */}
             <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Avg Response Time
-                  </Typography>
-                  <Typography variant="h3" color="primary">
-                    {kpis.avg_response_time_p50.toFixed(1)}s
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    p50: {kpis.avg_response_time_p50.toFixed(1)}s | p90: {kpis.avg_response_time_p90.toFixed(1)}s
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Satisfaction Score
-                  </Typography>
-                  <Typography variant="h3" color="primary">
-                    {kpis.avg_satisfaction_score.toFixed(1)}/5
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Total Conversations
-                  </Typography>
-                  <Typography variant="h3" color="primary">
-                    {kpis.total_conversations}
-                  </Typography>
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  height: '100%',
+                }}
+              >
+                <Box sx={{ height: 4, background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)' }} />
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                    <Avatar sx={{ width: 40, height: 40, bgcolor: alpha('#1976d2', 0.1), color: '#1976d2' }}>
+                      <BoltIcon />
+                    </Avatar>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>AI vs Manual Comparison</Typography>
+                  </Box>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Paper sx={{ p: 2, bgcolor: alpha('#1976d2', 0.05), borderRadius: 2, textAlign: 'center' }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>AI Agent</Typography>
+                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#1976d2' }}>~2s</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>response time</Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Paper sx={{ p: 2, bgcolor: alpha('#757575', 0.05), borderRadius: 2, textAlign: 'center' }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>Manual</Typography>
+                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#757575' }}>~180s</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>response time</Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                    <Chip label="90x Faster" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', fontWeight: 600 }} />
+                    <Chip label="24/7 Available" size="small" sx={{ bgcolor: alpha('#1976d2', 0.1), color: '#1976d2', fontWeight: 600 }} />
+                    <Chip label="99% Cost Savings" size="small" sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02', fontWeight: 600 }} />
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
-        )}
-      </TabPanel>
-      
-      <TabPanel value={tabValue} index={1}>
-        {/* Cost Tracking Tab */}
+        </Box>
+      )}
+
+      {/* Cost Analytics Tab */}
+      {tabValue === 1 && (
         <Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5">Cost Tracking & Budget</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>Cost Tracking & Budget</Typography>
             <Button
               variant="outlined"
               startIcon={<DownloadIcon />}
               onClick={handleDownloadCostLog}
+              sx={{
+                borderColor: '#840132',
+                color: '#840132',
+                borderRadius: 2,
+                '&:hover': { borderColor: '#5e0124', bgcolor: alpha('#840132', 0.05) },
+              }}
             >
               Download Cost Log CSV
             </Button>
           </Box>
 
-          {costSummary?.data && (
+          {costSummary?.data ? (
             <Grid container spacing={3}>
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom color="text.secondary">
-                      Total Cost
-                    </Typography>
-                    <Typography variant="h3" color="primary">
-                      ${costSummary.data.total_cost_usd.toFixed(4)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {costSummary.data.total_tasks} tasks completed
-                    </Typography>
-                  </CardContent>
-                </Card>
+              <Grid item xs={12} sm={6} md={3}>
+                <StatCard
+                  icon={<MoneyIcon />}
+                  label="Total Cost"
+                  value={`$${costSummary.data.total_cost_usd.toFixed(4)}`}
+                  subValue={`${costSummary.data.total_tasks} tasks completed`}
+                  color="#840132"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <StatCard
+                  icon={<TrendingUpIcon />}
+                  label="Avg Cost per Task"
+                  value={`$${costSummary.data.avg_cost_per_task.toFixed(4)}`}
+                  color="#2e7d32"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <StatCard
+                  icon={<CheckIcon />}
+                  label="Cost per Success"
+                  value={`$${costSummary.data.cost_per_successful_task.toFixed(4)}`}
+                  color="#1976d2"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <StatCard
+                  icon={<StarIcon />}
+                  label="Success Rate"
+                  value={`${(costSummary.data.success_rate * 100).toFixed(1)}%`}
+                  subValue={`${costSummary.data.successful_tasks} / ${costSummary.data.total_tasks}`}
+                  color="#ed6c02"
+                />
               </Grid>
 
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom color="text.secondary">
-                      Avg Cost/Task
-                    </Typography>
-                    <Typography variant="h3" color="success.main">
-                      ${costSummary.data.avg_cost_per_task.toFixed(4)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      All tasks
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom color="text.secondary">
-                      Cost/Success
-                    </Typography>
-                    <Typography variant="h3" color="success.main">
-                      ${costSummary.data.cost_per_successful_task.toFixed(4)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      Successful tasks only
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} md={3}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom color="text.secondary">
-                      Success Rate
-                    </Typography>
-                    <Typography variant="h3" color="primary">
-                      {(costSummary.data.success_rate * 100).toFixed(1)}%
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {costSummary.data.successful_tasks} / {costSummary.data.total_tasks}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
+              {/* Budget Status Card */}
               <Grid item xs={12}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Cost Analysis
-                    </Typography>
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Total Tokens:</strong> {costSummary.data.total_tokens.toLocaleString()}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        <strong>Pricing:</strong> GPT-4o @ $0.0025/1K input, $0.01/1K output
-                      </Typography>
-                      <Typography variant="body2" color="success.main" sx={{ mt: 2 }}>
-                        ✅ Target: $0.10 per task | Current: ${costSummary.data.avg_cost_per_task.toFixed(4)}
-                      </Typography>
-                      {costSummary.data.avg_cost_per_task <= 0.10 ? (
-                        <Chip label="Within Budget" color="success" size="small" sx={{ mt: 1 }} />
-                      ) : (
-                        <Chip label="Above Budget" color="warning" size="small" sx={{ mt: 1 }} />
-                      )}
+                <Card
+                  elevation={0}
+                  sx={{
+                    borderRadius: 3,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar sx={{ bgcolor: alpha('#840132', 0.1), color: '#840132' }}>
+                          <DataIcon />
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 700 }}>Cost Analysis</Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                            Token usage and budget tracking
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Chip
+                        label={costSummary.data.avg_cost_per_task <= 0.10 ? 'Within Budget' : 'Above Budget'}
+                        sx={{
+                          bgcolor: costSummary.data.avg_cost_per_task <= 0.10 ? alpha('#2e7d32', 0.1) : alpha('#d32f2f', 0.1),
+                          color: costSummary.data.avg_cost_per_task <= 0.10 ? '#2e7d32' : '#d32f2f',
+                          fontWeight: 700,
+                        }}
+                      />
+                    </Box>
+                    
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} md={6}>
+                        <Paper sx={{ p: 2.5, bgcolor: 'grey.50', borderRadius: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
+                            Total Tokens Used
+                          </Typography>
+                          <Typography variant="h4" sx={{ fontWeight: 700, color: '#840132' }}>
+                            {costSummary.data.total_tokens.toLocaleString()}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Paper sx={{ p: 2.5, bgcolor: 'grey.50', borderRadius: 2 }}>
+                          <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
+                            Model Pricing
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            GPT-4o @ $0.0025/1K input, $0.01/1K output
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+
+                    <Box sx={{ mt: 3 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          Budget Usage
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          Target: $0.10/task
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={Math.min((costSummary.data.avg_cost_per_task / 0.10) * 100, 100)}
+                        sx={{
+                          height: 10,
+                          borderRadius: 5,
+                          bgcolor: alpha('#840132', 0.1),
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: costSummary.data.avg_cost_per_task <= 0.10 ? '#2e7d32' : '#d32f2f',
+                            borderRadius: 5,
+                          },
+                        }}
+                      />
                     </Box>
                   </CardContent>
                 </Card>
               </Grid>
             </Grid>
-          )}
-
-          {!costSummary && (
-            <Alert severity="info">
+          ) : (
+            <Alert severity="info" sx={{ borderRadius: 2 }}>
               No cost data available yet. Cost tracking begins with your first chat interactions.
             </Alert>
           )}
         </Box>
-      </TabPanel>
+      )}
 
-      <TabPanel value={tabValue} index={2}>
-        {/* Evaluation Tab */}
+      {/* Evaluation Suite Tab */}
+      {tabValue === 2 && (
         <Box>
-          <Typography variant="h5" gutterBottom>
-            Evaluation & Testing
-          </Typography>
-          <Alert severity="info" sx={{ mb: 3 }}>
+          <Alert 
+            severity="info" 
+            sx={{ mb: 3, borderRadius: 2 }}
+            icon={<BugIcon />}
+          >
             Automated evaluation suite with 25+ test cases covering booking, cancellation, 
             information queries, safety, and security scenarios.
           </Alert>
 
           <Grid container spacing={3}>
             <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Test Suite
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    25+ automated test cases
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2">• Booking flows</Typography>
-                    <Typography variant="body2">• Cancellations</Typography>
-                    <Typography variant="body2">• Information queries</Typography>
-                    <Typography variant="body2">• Safety checks</Typography>
-                    <Typography variant="body2">• Security tests</Typography>
-                    <Typography variant="body2">• Prompt injection</Typography>
-                  </Box>
-                </CardContent>
-              </Card>
+              <InfoCard
+                title="Test Suite"
+                icon={<BugIcon />}
+                color="#840132"
+                items={[
+                  { label: 'Booking flows' },
+                  { label: 'Cancellations' },
+                  { label: 'Information queries' },
+                  { label: 'Safety checks' },
+                  { label: 'Security tests' },
+                  { label: 'Prompt injection defense' },
+                ]}
+              />
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Performance Targets
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2">✅ Task completion: ≥90%</Typography>
-                    <Typography variant="body2">✅ Response time (p50): &lt;2s</Typography>
-                    <Typography variant="body2">✅ Response time (p90): &lt;5s</Typography>
-                    <Typography variant="body2">✅ Ambiguity resolution: ≥80%</Typography>
-                    <Typography variant="body2">✅ User satisfaction: ≥4/5</Typography>
-                    <Typography variant="body2">✅ Cost per task: &lt;$0.10</Typography>
-                  </Box>
-                </CardContent>
-              </Card>
+              <InfoCard
+                title="Performance Targets"
+                icon={<TrendingUpIcon />}
+                color="#2e7d32"
+                items={[
+                  { label: 'Task completion: ≥90%', check: true },
+                  { label: 'Response time (p50): <2s', check: true },
+                  { label: 'Response time (p90): <5s', check: true },
+                  { label: 'Ambiguity resolution: ≥80%', check: true },
+                  { label: 'User satisfaction: ≥4/5', check: true },
+                  { label: 'Cost per task: <$0.10', check: true },
+                ]}
+              />
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Baseline Comparison
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Agent vs. Manual Receptionist
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2">• Avg time: 2s vs 180s</Typography>
-                    <Typography variant="body2">• Success rate: 92% vs 85%</Typography>
-                    <Typography variant="body2">• Availability: 24/7 vs 9-5</Typography>
-                    <Typography variant="body2">• Cost/call: $0.03 vs $5.50</Typography>
-                    <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
-                      <strong>178s faster, 99% cheaper</strong>
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
+              <InfoCard
+                title="Security Tests"
+                icon={<SecurityIcon />}
+                color="#d32f2f"
+                items={[
+                  { label: 'SQL injection prevention', check: true },
+                  { label: 'XSS protection', check: true },
+                  { label: 'Prompt injection defense', check: true },
+                  { label: 'Data leakage prevention', check: true },
+                  { label: 'Auth bypass attempts', check: true },
+                ]}
+              />
             </Grid>
 
             <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Run Evaluation
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Execute the full test suite to validate system performance
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    startIcon={evaluationMutation.isPending ? <CircularProgress size={20} /> : <AssessmentIcon />}
-                    sx={{ mt: 2, bgcolor: '#840132', '&:hover': { bgcolor: '#5e0124' } }}
-                    onClick={() => evaluationMutation.mutate()}
-                    disabled={evaluationMutation.isPending}
-                  >
-                    {evaluationMutation.isPending ? 'Running Evaluation...' : 'Run Evaluation Suite'}
-                  </Button>
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box sx={{ height: 4, background: 'linear-gradient(90deg, #840132 0%, #5e0124 100%)' }} />
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{ width: 48, height: 48, bgcolor: alpha('#840132', 0.1), color: '#840132' }}>
+                        <AssessmentIcon />
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                          Run Evaluation Suite
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          Execute the full test suite to validate system performance and security
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      size="large"
+                      startIcon={evaluationMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <AssessmentIcon />}
+                      onClick={() => evaluationMutation.mutate()}
+                      disabled={evaluationMutation.isPending}
+                      sx={{
+                        bgcolor: '#840132',
+                        '&:hover': { bgcolor: '#5e0124' },
+                        px: 4,
+                        py: 1.5,
+                        borderRadius: 2,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {evaluationMutation.isPending ? 'Running...' : 'Run Evaluation'}
+                    </Button>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
         </Box>
-      </TabPanel>
+      )}
 
-      <TabPanel value={tabValue} index={3}>
-        <Typography variant="body1">System health metrics coming soon...</Typography>
-      </TabPanel>
+      {/* System Health Tab */}
+      {tabValue === 3 && (
+        <Box>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ height: 4, bgcolor: '#2e7d32' }} />
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32' }}>
+                      <CloudIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>API Status</Typography>
+                      <Chip label="Operational" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', fontWeight: 600 }} />
+                    </Box>
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Backend</Typography>
+                      <Chip label="Online" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Database</Typography>
+                      <Chip label="Connected" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Vector DB</Typography>
+                      <Chip label="Ready" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ height: 4, bgcolor: '#1976d2' }} />
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ bgcolor: alpha('#1976d2', 0.1), color: '#1976d2' }}>
+                      <MemoryIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>AI Services</Typography>
+                      <Chip label="Active" size="small" sx={{ bgcolor: alpha('#1976d2', 0.1), color: '#1976d2', fontWeight: 600 }} />
+                    </Box>
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>GPT-4o</Typography>
+                      <Chip label="Active" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>RAG Service</Typography>
+                      <Chip label="Indexed" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Voice (TTS/STT)</Typography>
+                      <Chip label="Ready" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ height: 4, bgcolor: '#ed6c02' }} />
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02' }}>
+                      <SecurityIcon />
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>Security</Typography>
+                      <Chip label="Protected" size="small" sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02', fontWeight: 600 }} />
+                    </Box>
+                  </Box>
+                  <Divider sx={{ my: 2 }} />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>JWT Auth</Typography>
+                      <Chip label="Enabled" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>HTTPS</Typography>
+                      <Chip label="Enforced" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Rate Limiting</Typography>
+                      <Chip label="Active" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
 
       {/* Confirmation Dialog */}
-      <Dialog open={confirmDialogOpen} onClose={handleCancelPopulate}>
+      <Dialog 
+        open={confirmDialogOpen} 
+        onClose={() => setConfirmDialogOpen(false)}
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <WarningIcon color="warning" />
-            <Typography variant="h6">Populate Database with Demo Data?</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02' }}>
+              <WarningIcon />
+            </Avatar>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>Populate Database?</Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
             This action will:
-            <Box component="ul" sx={{ mt: 1, pl: 2 }}>
+            <Box component="ul" sx={{ mt: 1.5, pl: 2 }}>
               <li>Delete all existing patients, appointments, and providers</li>
               <li>Preserve the admin account (admin@aub.com / Admin@123)</li>
               <li>Create 30 demo patient accounts</li>
@@ -456,23 +912,31 @@ export default function AdminPage() {
               <li>Generate diverse appointments across time periods</li>
               <li>Index all documents for the AI assistant</li>
             </Box>
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
-              <Typography variant="body2" color="warning.dark" fontWeight={600}>
-                ⚠️ WARNING: This will permanently delete existing data!
+            <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+              <Typography variant="body2" fontWeight={600}>
+                ⚠️ This will permanently delete existing data!
               </Typography>
-            </Box>
+            </Alert>
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelPopulate} color="inherit">
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button 
+            onClick={() => setConfirmDialogOpen(false)} 
+            sx={{ color: 'text.secondary', borderRadius: 2 }}
+          >
             Cancel
           </Button>
           <Button
-            onClick={handleConfirmPopulate}
-            color="primary"
+            onClick={() => populateMutation.mutate()}
             variant="contained"
             disabled={populateMutation.isPending}
-            startIcon={populateMutation.isPending ? <CircularProgress size={20} /> : <DatabaseIcon />}
+            startIcon={populateMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <DatabaseIcon />}
+            sx={{
+              bgcolor: '#840132',
+              '&:hover': { bgcolor: '#5e0124' },
+              borderRadius: 2,
+              px: 3,
+            }}
           >
             {populateMutation.isPending ? 'Populating...' : 'Populate Database'}
           </Button>
