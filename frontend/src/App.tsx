@@ -3,10 +3,12 @@ import { Box } from '@mui/material';
 import Layout from './components/Layout';
 import ChatPage from './pages/Chat';
 import AppointmentsPage from './pages/Appointments';
+import CalendarPage from './pages/Calendar';
 import LabsPage from './pages/Labs';
 import AdminPage from './pages/Admin';
 import IncidentsPage from './pages/Incidents';
 import ProvidersPage from './pages/Providers';
+import ProviderDirectoryPage from './pages/ProviderDirectory';
 import PatientsPage from './pages/Patients';
 import LoginPage from './pages/Login';
 
@@ -55,11 +57,35 @@ function App() {
             }
           />
           <Route
+            path="/calendar"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <CalendarPage />
+                </Layout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
             path="/labs"
             element={
               isAuthenticated ? (
                 <Layout>
                   <LabsPage />
+                </Layout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/find-providers"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <ProviderDirectoryPage />
                 </Layout>
               ) : (
                 <Navigate to="/login" />

@@ -276,6 +276,33 @@ TOOLS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_providers",
+            "description": (
+                "List doctors/providers in a specific department. "
+                "Returns provider names, specialties, and IDs for booking. "
+                "Use when user asks: 'who are the doctors in X department', "
+                "'list doctors in cardiology', 'show me rheumatology specialists'. "
+                "This queries the actual database - use this instead of guessing doctor names."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "department": {
+                        "type": "string",
+                        "description": (
+                            "Department name to search, e.g., 'Cardiology', 'Rheumatology', 'Radiology'. "
+                            "Case-insensitive partial match supported."
+                        ),
+                    },
+                },
+                "required": ["department"],
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 

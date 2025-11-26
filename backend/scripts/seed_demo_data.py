@@ -6,7 +6,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
 from app.core.db import async_session_maker, init_db
 from app.core.security import get_password_hash
@@ -19,6 +19,19 @@ from app.models import (
 )
 from app.schemas.rag import Document
 from app.services.rag_service import RAGService
+
+
+async def clear_database():
+    """Clear all seeded data from the database."""
+    async with async_session_maker() as session:
+        # Delete in order to respect foreign key constraints
+        # Delete providers first (no dependencies)
+        await session.execute(delete(Provider))
+        # Delete lab tests
+        await session.execute(delete(LabTest))
+        # Note: We keep users as they may have appointments/data
+        await session.commit()
+        print("✓ Cleared providers and lab tests from database")
 
 
 async def seed_users():
@@ -75,21 +88,21 @@ async def seed_providers():
                 department="Cardiology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Interventional Cardiology",
-                bio="Board-certified cardiologist with 15+ years of experience in interventional procedures",
+                bio="Fellowship-trained interventional cardiologist performing cardiac catheterizations, stent placements, and complex coronary interventions. Dedicated to providing cutting-edge heart care.",
             ),
             Provider(
-                name="Dr. Michael Roberts",
+                name="Dr. Marcus Webb",
                 department="Cardiology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Electrophysiology",
-                bio="Cardiac electrophysiologist specializing in arrhythmia treatment and pacemaker implantation",
+                bio="Cardiac electrophysiologist with expertise in diagnosing and treating heart rhythm disorders. Performs pacemaker and defibrillator implantations with precision and care.",
             ),
             Provider(
                 name="Dr. Lisa Chen",
                 department="Cardiology",
                 type=ProviderType.SPECIALIST,
                 specialty="Heart Failure",
-                bio="Heart failure specialist with expertise in advanced cardiac care",
+                bio="Heart failure specialist focused on advanced cardiac therapies and helping patients manage complex heart conditions to improve quality of life.",
             ),
             
             # Dermatology (3 providers)
@@ -98,21 +111,21 @@ async def seed_providers():
                 department="Dermatology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Medical Dermatology",
-                bio="Expert in treating skin conditions including acne, eczema, and psoriasis",
+                bio="Board-certified dermatologist treating a wide range of skin conditions including acne, eczema, psoriasis, and skin cancer screenings. Passionate about healthy skin for all ages.",
             ),
             Provider(
                 name="Dr. Alexander Petrov",
                 department="Dermatology",
                 type=ProviderType.SPECIALIST,
                 specialty="Cosmetic Dermatology",
-                bio="Cosmetic dermatologist specializing in anti-aging treatments and skin rejuvenation",
+                bio="Expert in aesthetic dermatology offering Botox, fillers, laser treatments, and personalized anti-aging solutions to help patients look and feel their best.",
             ),
             Provider(
                 name="Dr. Rachel Martinez",
                 department="Dermatology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Pediatric Dermatology",
-                bio="Pediatric dermatologist focused on children's skin health",
+                bio="Pediatric dermatologist specializing in children's skin health, from birthmarks and rashes to eczema and genetic skin conditions. Gentle care for young patients.",
             ),
             
             # Emergency Medicine (3 providers)
@@ -120,22 +133,22 @@ async def seed_providers():
                 name="Dr. Robert Thompson",
                 department="Emergency Medicine",
                 type=ProviderType.PHYSICIAN,
-                specialty="Emergency Medicine",
-                bio="Board-certified emergency physician with trauma care expertise",
+                specialty="Trauma Care",
+                bio="Board-certified emergency physician with Level 1 trauma center experience. Skilled in rapid assessment and life-saving interventions for critical patients.",
             ),
             Provider(
                 name="Dr. Samantha Lee",
                 department="Emergency Medicine",
                 type=ProviderType.PHYSICIAN,
-                specialty="Emergency Medicine",
-                bio="Emergency medicine specialist with experience in critical care",
+                specialty="Critical Care",
+                bio="Emergency medicine physician with additional training in critical care. Expert in managing severely ill patients and coordinating complex resuscitations.",
             ),
             Provider(
                 name="Dr. Carlos Ramirez",
                 department="Emergency Medicine",
                 type=ProviderType.PHYSICIAN,
-                specialty="Emergency Medicine",
-                bio="ER physician with expertise in pediatric emergencies",
+                specialty="Pediatric Emergency",
+                bio="Emergency physician with specialized training in pediatric emergencies. Compassionate care for children and families during stressful medical situations.",
             ),
             
             # Endocrinology (3 providers)
@@ -144,21 +157,21 @@ async def seed_providers():
                 department="Endocrinology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Diabetes Care",
-                bio="Endocrinologist specializing in diabetes management and insulin therapy",
+                bio="Endocrinologist dedicated to comprehensive diabetes management including insulin pump therapy, CGM technology, and personalized treatment plans for optimal glucose control.",
             ),
             Provider(
                 name="Dr. Daniel Kim",
                 department="Endocrinology",
                 type=ProviderType.SPECIALIST,
                 specialty="Thyroid Disorders",
-                bio="Expert in thyroid conditions including hypothyroidism and hyperthyroidism",
+                bio="Thyroid specialist with expertise in diagnosing and treating hypothyroidism, hyperthyroidism, thyroid nodules, and thyroid cancer. Uses advanced ultrasound diagnostics.",
             ),
             Provider(
                 name="Dr. Maria Gonzalez",
                 department="Endocrinology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Metabolic Disorders",
-                bio="Endocrinologist focused on metabolic syndrome and hormonal imbalances",
+                bio="Endocrinologist specializing in metabolic syndrome, obesity medicine, and hormonal imbalances. Focuses on holistic approaches to restore hormonal health.",
             ),
             
             # Gastroenterology (3 providers)
@@ -167,21 +180,21 @@ async def seed_providers():
                 department="Gastroenterology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Digestive Disorders",
-                bio="Gastroenterologist with expertise in IBS, Crohn's disease, and ulcerative colitis",
+                bio="Gastroenterologist treating IBS, inflammatory bowel disease, GERD, and other digestive conditions. Committed to improving gut health through evidence-based care.",
             ),
             Provider(
                 name="Dr. Amy Nguyen",
                 department="Gastroenterology",
                 type=ProviderType.SPECIALIST,
                 specialty="Hepatology",
-                bio="Liver specialist treating hepatitis, cirrhosis, and fatty liver disease",
+                bio="Liver specialist treating hepatitis, cirrhosis, fatty liver disease, and liver cancer. Provides comprehensive care from diagnosis through transplant evaluation.",
             ),
             Provider(
                 name="Dr. Steven Brown",
                 department="Gastroenterology",
                 type=ProviderType.PHYSICIAN,
-                specialty="Endoscopy",
-                bio="Expert in colonoscopy and upper endoscopy procedures",
+                specialty="Therapeutic Endoscopy",
+                bio="Advanced endoscopist performing colonoscopies, upper endoscopies, and complex therapeutic procedures including polyp removal and stent placement.",
             ),
             
             # General Surgery (3 providers)
@@ -189,22 +202,22 @@ async def seed_providers():
                 name="Dr. Thomas Anderson",
                 department="General Surgery",
                 type=ProviderType.SPECIALIST,
-                specialty="Abdominal Surgery",
-                bio="General surgeon specializing in laparoscopic and minimally invasive procedures",
+                specialty="Minimally Invasive Surgery",
+                bio="General surgeon specializing in laparoscopic and robotic surgery for gallbladder, hernia, and abdominal conditions. Faster recovery through smaller incisions.",
             ),
             Provider(
                 name="Dr. Linda Martinez",
                 department="General Surgery",
                 type=ProviderType.SPECIALIST,
                 specialty="Trauma Surgery",
-                bio="Trauma surgeon with expertise in emergency surgical interventions",
+                bio="Trauma and acute care surgeon providing emergency surgical interventions. Experienced in managing complex injuries and critical surgical conditions.",
             ),
             Provider(
                 name="Dr. Kevin O'Brien",
                 department="General Surgery",
                 type=ProviderType.SPECIALIST,
                 specialty="Colorectal Surgery",
-                bio="Colorectal surgeon specializing in bowel and rectal procedures",
+                bio="Colorectal surgeon treating colon cancer, diverticulitis, and inflammatory bowel disease. Expert in both open and minimally invasive techniques.",
             ),
             
             # Hematology (3 providers)
@@ -213,21 +226,21 @@ async def seed_providers():
                 department="Hematology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Blood Disorders",
-                bio="Hematologist treating anemia, clotting disorders, and blood cancers",
+                bio="Hematologist treating anemia, clotting disorders, and benign blood conditions. Provides thorough diagnostic workups and personalized treatment plans.",
             ),
             Provider(
                 name="Dr. Mohammed Ali",
                 department="Hematology",
                 type=ProviderType.SPECIALIST,
                 specialty="Bone Marrow Transplant",
-                bio="Specialist in bone marrow transplantation and stem cell therapy",
+                bio="Transplant hematologist specializing in bone marrow and stem cell transplantation for blood cancers and severe blood disorders. Leader in cellular therapy.",
             ),
             Provider(
                 name="Dr. Susan Clark",
                 department="Hematology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Coagulation Disorders",
-                bio="Expert in hemophilia and other bleeding disorders",
+                bio="Expert in bleeding and clotting disorders including hemophilia, von Willebrand disease, and thrombophilia. Provides comprehensive coagulation management.",
             ),
             
             # Infectious Disease (3 providers)
@@ -235,22 +248,22 @@ async def seed_providers():
                 name="Dr. David Chen",
                 department="Infectious Disease",
                 type=ProviderType.PHYSICIAN,
-                specialty="Infectious Disease",
-                bio="Infectious disease specialist treating complex infections and antimicrobial resistance",
+                specialty="Complex Infections",
+                bio="Infectious disease specialist treating complex bacterial, viral, and fungal infections. Expert in antibiotic stewardship and antimicrobial resistance.",
             ),
             Provider(
-                name="Dr. Sarah Johnson",
+                name="Dr. Aisha Patel",
                 department="Infectious Disease",
                 type=ProviderType.SPECIALIST,
                 specialty="HIV/AIDS Care",
-                bio="HIV specialist with expertise in antiretroviral therapy",
+                bio="HIV specialist providing comprehensive care including antiretroviral therapy, prevention strategies, and support for patients living with HIV.",
             ),
             Provider(
                 name="Dr. Mark Williams",
                 department="Infectious Disease",
                 type=ProviderType.PHYSICIAN,
                 specialty="Travel Medicine",
-                bio="Travel medicine expert providing pre-travel consultations and vaccinations",
+                bio="Travel medicine expert offering pre-travel consultations, vaccinations, and post-travel illness evaluation. Helps travelers stay healthy worldwide.",
             ),
             
             # Internal Medicine (3 providers)
@@ -258,22 +271,22 @@ async def seed_providers():
                 name="Dr. Maria Rodriguez",
                 department="Internal Medicine",
                 type=ProviderType.PHYSICIAN,
-                specialty="Family Medicine",
-                bio="Comprehensive family healthcare provider with 20+ years of experience",
+                specialty="Primary Care",
+                bio="Internist providing comprehensive adult primary care with focus on preventive medicine, chronic disease management, and building lasting patient relationships.",
             ),
             Provider(
                 name="Dr. John Davis",
                 department="Internal Medicine",
                 type=ProviderType.PHYSICIAN,
                 specialty="Geriatric Medicine",
-                bio="Internist specializing in elderly patient care",
+                bio="Geriatrician specializing in the unique healthcare needs of older adults. Expert in managing multiple conditions, medications, and promoting healthy aging.",
             ),
             Provider(
-                name="Sarah Johnson",
+                name="Emily Watson, NP",
                 department="Internal Medicine",
                 type=ProviderType.NURSE_PRACTITIONER,
                 specialty="Adult Primary Care",
-                bio="Nurse practitioner focused on preventive care and chronic disease management",
+                bio="Nurse practitioner focused on preventive care, health screenings, and chronic disease management. Partners with patients for optimal wellness.",
             ),
             
             # Nephrology (3 providers)
@@ -281,22 +294,22 @@ async def seed_providers():
                 name="Dr. Andrew Miller",
                 department="Nephrology",
                 type=ProviderType.PHYSICIAN,
-                specialty="Kidney Disease",
-                bio="Nephrologist specializing in chronic kidney disease and dialysis",
+                specialty="Chronic Kidney Disease",
+                bio="Nephrologist specializing in chronic kidney disease management, slowing progression, and preparing patients for dialysis or transplant when needed.",
             ),
             Provider(
                 name="Dr. Jennifer Lee",
                 department="Nephrology",
                 type=ProviderType.SPECIALIST,
                 specialty="Transplant Nephrology",
-                bio="Kidney transplant specialist managing pre and post-transplant care",
+                bio="Transplant nephrologist managing kidney transplant patients before and after surgery. Dedicated to maximizing transplant success and longevity.",
             ),
             Provider(
                 name="Dr. Richard Kumar",
                 department="Nephrology",
                 type=ProviderType.PHYSICIAN,
-                specialty="Hypertension",
-                bio="Expert in hypertension and its effects on kidney function",
+                specialty="Hypertensive Kidney Disease",
+                bio="Expert in hypertension and its effects on kidney function. Specializes in resistant hypertension and renovascular disease management.",
             ),
             
             # Neurology (3 providers)
@@ -305,21 +318,21 @@ async def seed_providers():
                 department="Neurology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Stroke Care",
-                bio="Neurologist specializing in stroke prevention and acute stroke treatment",
+                bio="Vascular neurologist specializing in stroke prevention, acute stroke treatment, and recovery. Certified in advanced stroke interventions.",
             ),
             Provider(
                 name="Dr. Catherine White",
                 department="Neurology",
                 type=ProviderType.SPECIALIST,
                 specialty="Epilepsy",
-                bio="Epilepsy specialist managing seizure disorders with advanced therapies",
+                bio="Epileptologist managing seizure disorders with the latest medications and advanced therapies including surgical options for drug-resistant epilepsy.",
             ),
             Provider(
                 name="Dr. Brian Foster",
                 department="Neurology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Movement Disorders",
-                bio="Expert in Parkinson's disease and other movement disorders",
+                bio="Movement disorder specialist treating Parkinson's disease, tremors, and dystonia. Offers deep brain stimulation programming and Botox therapy.",
             ),
             
             # Neurosurgery (3 providers)
@@ -327,22 +340,22 @@ async def seed_providers():
                 name="Dr. Christopher Adams",
                 department="Neurosurgery",
                 type=ProviderType.SPECIALIST,
-                specialty="Brain Surgery",
-                bio="Neurosurgeon specializing in brain tumor removal and complex cranial procedures",
+                specialty="Brain Tumor Surgery",
+                bio="Neurosurgeon specializing in brain tumor removal using advanced imaging guidance and microsurgical techniques for optimal outcomes.",
             ),
             Provider(
                 name="Dr. Michelle Turner",
                 department="Neurosurgery",
                 type=ProviderType.SPECIALIST,
                 specialty="Spine Surgery",
-                bio="Spine surgeon treating herniated discs, spinal stenosis, and scoliosis",
+                bio="Spine surgeon treating herniated discs, spinal stenosis, and deformities. Expert in minimally invasive and complex reconstructive spine procedures.",
             ),
             Provider(
                 name="Dr. Victor Petrov",
                 department="Neurosurgery",
                 type=ProviderType.SPECIALIST,
                 specialty="Pediatric Neurosurgery",
-                bio="Pediatric neurosurgeon treating congenital brain and spine conditions",
+                bio="Pediatric neurosurgeon treating congenital brain and spine conditions in children. Gentle approach with focus on long-term developmental outcomes.",
             ),
             
             # Obstetrics and Gynecology (3 providers)
@@ -351,44 +364,44 @@ async def seed_providers():
                 department="Obstetrics and Gynecology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Obstetrics",
-                bio="OB-GYN providing comprehensive prenatal care and delivery services",
+                bio="OB-GYN providing comprehensive prenatal care, labor and delivery, and postpartum support. Dedicated to healthy pregnancies and positive birth experiences.",
             ),
             Provider(
                 name="Dr. Laura Thompson",
                 department="Obstetrics and Gynecology",
                 type=ProviderType.SPECIALIST,
                 specialty="Gynecologic Surgery",
-                bio="Gynecologic surgeon performing minimally invasive procedures",
+                bio="Gynecologic surgeon performing minimally invasive hysterectomies, myomectomies, and endometriosis surgery with focus on fertility preservation.",
             ),
             Provider(
                 name="Dr. Angela Martinez",
                 department="Obstetrics and Gynecology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Maternal-Fetal Medicine",
-                bio="High-risk pregnancy specialist managing complex obstetric cases",
+                bio="Perinatologist managing high-risk pregnancies including multiple gestations, preeclampsia, and fetal abnormalities with expert care and monitoring.",
             ),
             
             # Oncology (3 providers)
             Provider(
-                name="Dr. David Kim",
+                name="Dr. David Park",
                 department="Oncology",
                 type=ProviderType.SPECIALIST,
                 specialty="Medical Oncology",
-                bio="Medical oncologist specializing in chemotherapy and immunotherapy",
+                bio="Medical oncologist providing chemotherapy, immunotherapy, and targeted therapies. Partners with patients through every step of their cancer journey.",
             ),
             Provider(
                 name="Dr. Susan Anderson",
                 department="Oncology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Radiation Oncology",
-                bio="Radiation oncologist providing advanced radiation therapy for cancer treatment",
+                bio="Radiation oncologist using advanced techniques including IMRT and stereotactic radiosurgery to target tumors precisely while protecting healthy tissue.",
             ),
             Provider(
                 name="Dr. Peter Chang",
                 department="Oncology",
                 type=ProviderType.SPECIALIST,
                 specialty="Hematologic Oncology",
-                bio="Specialist in leukemia, lymphoma, and blood cancers",
+                bio="Hematologic oncologist treating leukemia, lymphoma, and myeloma with cutting-edge therapies including CAR-T cell therapy and clinical trials.",
             ),
             
             # Ophthalmology (3 providers)
@@ -397,21 +410,21 @@ async def seed_providers():
                 department="Ophthalmology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Comprehensive Eye Care",
-                bio="Ophthalmologist providing comprehensive eye exams and vision correction",
+                bio="Ophthalmologist providing complete eye exams, glaucoma management, and vision correction. Committed to preserving and improving patients' sight.",
             ),
             Provider(
                 name="Dr. Jonathan Lee",
                 department="Ophthalmology",
                 type=ProviderType.SPECIALIST,
                 specialty="Retina Surgery",
-                bio="Retinal surgeon treating macular degeneration and diabetic retinopathy",
+                bio="Vitreoretinal surgeon treating macular degeneration, diabetic retinopathy, and retinal detachments with advanced surgical and injection therapies.",
             ),
             Provider(
                 name="Dr. Maria Santos",
                 department="Ophthalmology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Cataract Surgery",
-                bio="Cataract surgeon performing advanced lens replacement procedures",
+                bio="Cataract surgeon performing advanced lens replacement including premium IOLs for reduced dependence on glasses after surgery.",
             ),
             
             # Orthopedics (3 providers)
@@ -420,21 +433,21 @@ async def seed_providers():
                 department="Orthopedics",
                 type=ProviderType.SPECIALIST,
                 specialty="Sports Medicine",
-                bio="Orthopedic surgeon specializing in sports injuries and arthroscopic surgery",
+                bio="Sports medicine orthopedist treating ACL tears, rotator cuff injuries, and athletic conditions. Gets athletes back to peak performance safely.",
             ),
             Provider(
                 name="Dr. William Brown",
                 department="Orthopedics",
                 type=ProviderType.SPECIALIST,
                 specialty="Joint Replacement",
-                bio="Joint replacement specialist performing hip and knee replacements",
+                bio="Joint replacement surgeon performing hip, knee, and shoulder arthroplasty. Uses latest implant technology for improved mobility and reduced pain.",
             ),
             Provider(
                 name="Dr. Nicole Garcia",
                 department="Orthopedics",
                 type=ProviderType.PHYSICIAN,
                 specialty="Pediatric Orthopedics",
-                bio="Pediatric orthopedist treating childhood bone and joint conditions",
+                bio="Pediatric orthopedist treating fractures, scoliosis, and developmental conditions in children. Specialized care for growing bones and joints.",
             ),
             
             # Otolaryngology (ENT) (3 providers)
@@ -442,22 +455,22 @@ async def seed_providers():
                 name="Dr. Robert Davis",
                 department="Otolaryngology (ENT)",
                 type=ProviderType.PHYSICIAN,
-                specialty="Ear, Nose, and Throat",
-                bio="ENT specialist treating sinus conditions, hearing loss, and throat disorders",
+                specialty="General ENT",
+                bio="ENT physician treating sinus disorders, hearing loss, and throat conditions. Offers both medical management and surgical solutions.",
             ),
             Provider(
                 name="Dr. Lisa Wang",
                 department="Otolaryngology (ENT)",
                 type=ProviderType.SPECIALIST,
                 specialty="Head and Neck Surgery",
-                bio="Head and neck surgeon treating tumors and complex ENT conditions",
+                bio="Head and neck surgeon treating thyroid nodules, salivary gland tumors, and throat cancers with expertise in reconstructive techniques.",
             ),
             Provider(
                 name="Dr. Michael Johnson",
                 department="Otolaryngology (ENT)",
                 type=ProviderType.PHYSICIAN,
                 specialty="Pediatric ENT",
-                bio="Pediatric ENT specialist treating ear infections and tonsil conditions",
+                bio="Pediatric ENT specialist treating ear infections, tonsillitis, and airway problems in children with a gentle, kid-friendly approach.",
             ),
             
             # Pathology (3 providers)
@@ -465,22 +478,22 @@ async def seed_providers():
                 name="Dr. Patricia Moore",
                 department="Pathology",
                 type=ProviderType.PHYSICIAN,
-                specialty="Anatomic Pathology",
-                bio="Pathologist specializing in tissue diagnosis and cancer detection",
+                specialty="Surgical Pathology",
+                bio="Surgical pathologist providing accurate tissue diagnoses for cancer and other conditions. Expert in frozen sections and consultation services.",
             ),
             Provider(
                 name="Dr. George Wilson",
                 department="Pathology",
                 type=ProviderType.SPECIALIST,
                 specialty="Clinical Pathology",
-                bio="Clinical pathologist overseeing laboratory testing and diagnostics",
+                bio="Clinical pathologist overseeing laboratory operations and ensuring accurate, timely test results. Leader in quality assurance and lab diagnostics.",
             ),
             Provider(
                 name="Dr. Karen Thompson",
                 department="Pathology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Molecular Pathology",
-                bio="Molecular pathologist using genetic testing for disease diagnosis",
+                bio="Molecular pathologist using genetic and genomic testing to guide personalized cancer treatment and diagnose inherited conditions.",
             ),
             
             # Pediatrics (3 providers)
@@ -489,21 +502,21 @@ async def seed_providers():
                 department="Pediatrics",
                 type=ProviderType.PHYSICIAN,
                 specialty="General Pediatrics",
-                bio="Pediatrician with expertise in child development and preventive care",
+                bio="Pediatrician providing well-child care, immunizations, and illness management from newborn through adolescence. Partner in your child's health journey.",
             ),
             Provider(
                 name="Dr. Samuel Green",
                 department="Pediatrics",
                 type=ProviderType.SPECIALIST,
                 specialty="Pediatric Critical Care",
-                bio="Pediatric intensivist managing critically ill children",
+                bio="Pediatric intensivist caring for critically ill children in the ICU. Expert in complex medical management and life-saving interventions.",
             ),
             Provider(
                 name="Dr. Jennifer Adams",
                 department="Pediatrics",
                 type=ProviderType.PHYSICIAN,
                 specialty="Developmental Pediatrics",
-                bio="Developmental pediatrician supporting children with special needs",
+                bio="Developmental pediatrician evaluating and treating ADHD, autism, and developmental delays. Helps children reach their full potential.",
             ),
             
             # Physical Medicine and Rehabilitation (3 providers)
@@ -512,21 +525,21 @@ async def seed_providers():
                 department="Physical Medicine and Rehabilitation",
                 type=ProviderType.PHYSICIAN,
                 specialty="Rehabilitation Medicine",
-                bio="Physiatrist helping patients recover from injuries and disabilities",
+                bio="Physiatrist helping patients recover function after stroke, spinal cord injury, and brain injury. Focuses on maximizing independence and quality of life.",
             ),
             Provider(
                 name="Dr. Anna Kowalski",
                 department="Physical Medicine and Rehabilitation",
                 type=ProviderType.SPECIALIST,
                 specialty="Sports Rehabilitation",
-                bio="Sports medicine rehabilitation specialist for athletic injuries",
+                bio="Sports medicine physiatrist treating athletic injuries without surgery when possible. Uses injections, therapy, and innovative treatments for recovery.",
             ),
             Provider(
-                name="Dr. Thomas Lee",
+                name="Dr. Thomas Liu",
                 department="Physical Medicine and Rehabilitation",
                 type=ProviderType.PHYSICIAN,
                 specialty="Pain Management",
-                bio="Pain management specialist treating chronic pain conditions",
+                bio="Interventional pain specialist treating chronic back pain, neck pain, and joint pain with injections, nerve blocks, and comprehensive pain programs.",
             ),
             
             # Psychiatry (3 providers)
@@ -535,21 +548,21 @@ async def seed_providers():
                 department="Psychiatry",
                 type=ProviderType.PHYSICIAN,
                 specialty="Adult Psychiatry",
-                bio="Psychiatrist treating depression, anxiety, and mood disorders",
+                bio="Psychiatrist treating depression, anxiety, bipolar disorder, and other mental health conditions with medication management and supportive therapy.",
             ),
             Provider(
-                name="Dr. Michael Roberts",
+                name="Dr. Nathan Reynolds",
                 department="Psychiatry",
                 type=ProviderType.SPECIALIST,
-                specialty="Child Psychiatry",
-                bio="Child psychiatrist specializing in ADHD, autism, and behavioral issues",
+                specialty="Child & Adolescent Psychiatry",
+                bio="Child psychiatrist specializing in ADHD, anxiety, depression, and behavioral issues in children and teens. Family-centered approach to mental wellness.",
             ),
             Provider(
                 name="Dr. Jessica Brown",
                 department="Psychiatry",
                 type=ProviderType.PHYSICIAN,
                 specialty="Addiction Psychiatry",
-                bio="Addiction specialist treating substance use disorders",
+                bio="Addiction psychiatrist treating substance use disorders with evidence-based medications and therapy. Compassionate support for recovery.",
             ),
             
             # Pulmonology (3 providers)
@@ -558,21 +571,21 @@ async def seed_providers():
                 department="Pulmonology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Respiratory Medicine",
-                bio="Pulmonologist treating asthma, COPD, and lung infections",
+                bio="Pulmonologist treating asthma, COPD, and interstitial lung disease. Uses advanced diagnostics including bronchoscopy and pulmonary function testing.",
             ),
             Provider(
                 name="Dr. Diana Rodriguez",
                 department="Pulmonology",
                 type=ProviderType.SPECIALIST,
                 specialty="Critical Care Pulmonology",
-                bio="Intensivist managing ventilator-dependent patients",
+                bio="Pulmonary critical care physician managing respiratory failure and ventilator-dependent patients. Expert in ICU care and lung recovery.",
             ),
             Provider(
                 name="Dr. Frank Wilson",
                 department="Pulmonology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Sleep Medicine",
-                bio="Sleep medicine specialist treating sleep apnea and sleep disorders",
+                bio="Sleep medicine specialist diagnosing and treating sleep apnea, insomnia, and other sleep disorders. Helps patients achieve restful, healthy sleep.",
             ),
             
             # Radiology (3 providers)
@@ -581,21 +594,21 @@ async def seed_providers():
                 department="Radiology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Diagnostic Imaging",
-                bio="Radiologist expert in MRI, CT, and ultrasound imaging",
+                bio="Diagnostic radiologist interpreting MRI, CT, ultrasound, and X-ray studies. Provides timely, accurate imaging interpretation for clinical teams.",
             ),
             Provider(
                 name="Dr. Helen Chang",
                 department="Radiology",
                 type=ProviderType.SPECIALIST,
                 specialty="Interventional Radiology",
-                bio="Interventional radiologist performing minimally invasive procedures",
+                bio="Interventional radiologist performing minimally invasive image-guided procedures including biopsies, drain placements, and vascular interventions.",
             ),
             Provider(
                 name="Dr. Paul Mitchell",
                 department="Radiology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Neuroradiology",
-                bio="Neuroradiologist specializing in brain and spine imaging",
+                bio="Neuroradiologist specialized in brain and spine imaging. Expert in diagnosing strokes, tumors, and neurological conditions.",
             ),
             
             # Rheumatology (3 providers)
@@ -604,21 +617,21 @@ async def seed_providers():
                 department="Rheumatology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Autoimmune Diseases",
-                bio="Rheumatologist treating rheumatoid arthritis, lupus, and autoimmune conditions",
+                bio="Rheumatologist treating rheumatoid arthritis, lupus, and autoimmune conditions with the latest biologic therapies and personalized care plans.",
             ),
             Provider(
                 name="Dr. Nathan Green",
                 department="Rheumatology",
                 type=ProviderType.SPECIALIST,
                 specialty="Osteoarthritis",
-                bio="Joint specialist managing osteoarthritis and degenerative joint disease",
+                bio="Rheumatologist specializing in osteoarthritis and degenerative joint disease. Offers joint injections and comprehensive management strategies.",
             ),
             Provider(
                 name="Dr. Rachel Kim",
                 department="Rheumatology",
                 type=ProviderType.PHYSICIAN,
                 specialty="Vasculitis",
-                bio="Expert in inflammatory blood vessel disorders",
+                bio="Expert in inflammatory blood vessel disorders including giant cell arteritis and ANCA vasculitis. Skilled in complex immunosuppressive management.",
             ),
             
             # Urology (3 providers)
@@ -627,21 +640,21 @@ async def seed_providers():
                 department="Urology",
                 type=ProviderType.PHYSICIAN,
                 specialty="General Urology",
-                bio="Urologist treating kidney stones, prostate issues, and urinary tract conditions",
+                bio="Urologist treating kidney stones, enlarged prostate, and urinary conditions. Offers both medical and surgical treatment options.",
             ),
             Provider(
                 name="Dr. Amanda Scott",
                 department="Urology",
                 type=ProviderType.SPECIALIST,
                 specialty="Urologic Oncology",
-                bio="Urologic oncologist specializing in bladder, kidney, and prostate cancer",
+                bio="Urologic oncologist specializing in bladder, kidney, and prostate cancer. Performs robotic surgery and coordinates multidisciplinary cancer care.",
             ),
             Provider(
                 name="Dr. Gregory White",
                 department="Urology",
                 type=ProviderType.SPECIALIST,
                 specialty="Minimally Invasive Urology",
-                bio="Robotic surgery specialist performing advanced urologic procedures",
+                bio="Robotic surgery specialist performing advanced urologic procedures with smaller incisions, less pain, and faster recovery times.",
             ),
         ]
 
@@ -728,45 +741,14 @@ async def seed_lab_tests():
             )
         }
 
-        result = await session.execute(
-            select(LabTest).where(LabTest.code.in_(desired_tests.keys()))
-        )
-        existing_tests = {test.code: test for test in result.scalars()}
-
-        updates = 0
-        for code, lab_test in existing_tests.items():
-            data = desired_tests[code]
-            
-            changed = False
-            for field in ("name", "department", "description",
-                        "prep_instructions", "fasting_hours",
-                        "estimated_duration_minutes"):
-                new_value = data[field]
-                if getattr(lab_test, field) != new_value:
-                    setattr(lab_test, field, new_value)
-                    changed = True
-
-            if changed:
-                updates += 1
-
-        new_tests = []
-        for code, data in desired_tests.items():
-            if code in existing_tests:
-                continue
-            new_tests.append(
-                LabTest(code=code, **data)
-            )
-
-        if updates:
-            print(f"✓ Updated {updates} existing lab tests")
-        if new_tests:
-            session.add_all(new_tests)
-            print(f"✓ Added {len(new_tests)} new lab tests")
-
-        if updates or new_tests:
-            await session.commit()
-        else:
-            print("✓ Lab tests already up to date, skipped seeding")
+        # Add all lab tests (database was cleared first)
+        lab_tests = [
+            LabTest(code=code, **data)
+            for code, data in desired_tests.items()
+        ]
+        session.add_all(lab_tests)
+        await session.commit()
+        print(f"✓ Seeded {len(lab_tests)} lab tests")
 
 async def seed_documents():
     """Seed facility documents for RAG."""
@@ -1017,6 +999,9 @@ async def main():
     # Initialize database
     await init_db()
     print("✓ Database initialized")
+
+    # Clear existing data first
+    await clear_database()
 
     # Seed data
     await seed_users()

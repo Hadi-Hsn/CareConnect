@@ -309,18 +309,39 @@ class AgentRouter:
                                 
                                 # Check if user specified a doctor name
                                 requested_provider_name = None
+                                requested_department = None
                                 if last_user_message:
                                     user_text = last_user_message.content.lower()
                                     # Match patterns like "with dr brian", "with dr. smith", "doctor ahmed"
                                     provider_patterns = [
-                                        r'(?:with|book)\s+(?:dr\.?\s+|doctor\s+)(\w+)',
-                                        r'appointment\s+(?:with\s+)?(?:dr\.?\s+|doctor\s+)(\w+)',
+                                        r'(?:with|book)\s+(?:dr\.?\s+|doctor\s+)(\w+(?:\s+\w+)?)',  # Capture first and last name
+                                        r'appointment\s+(?:with\s+)?(?:dr\.?\s+|doctor\s+)(\w+(?:\s+\w+)?)',
                                     ]
                                     for pattern in provider_patterns:
                                         match = re.search(pattern, user_text)
                                         if match:
-                                            requested_provider_name = match.group(1)
+                                            requested_provider_name = match.group(1).strip()
                                             logger.info("parsed_provider_name", name=requested_provider_name, original_text=user_text)
+                                            break
+                                    
+                                    # Also try to extract department if mentioned
+                                    department_keywords = {
+                                        'cardiology': 'Cardiology',
+                                        'cardiologist': 'Cardiology',
+                                        'heart': 'Cardiology',
+                                        'dermatology': 'Dermatology',
+                                        'dermatologist': 'Dermatology',
+                                        'skin': 'Dermatology',
+                                        'psychiatry': 'Psychiatry',
+                                        'psychiatrist': 'Psychiatry',
+                                        'mental health': 'Psychiatry',
+                                        'internal medicine': 'Internal Medicine',
+                                        'primary care': 'Internal Medicine',
+                                    }
+                                    for keyword, dept in department_keywords.items():
+                                        if keyword in user_text:
+                                            requested_department = dept
+                                            logger.info("parsed_department", department=dept, keyword=keyword)
                                             break
                                 
                                 # Handle results with multiple providers
@@ -330,20 +351,53 @@ class AgentRouter:
                                     # If user specified a provider name, try to match it
                                     if requested_provider_name:
                                         matched_provider = None
+                                        best_match_score = 0
+                                        
+                                        # Normalize requested name for matching
+                                        requested_parts = requested_provider_name.lower().split()
+                                        
                                         for provider in providers_list:
-                                            provider_name_lower = provider.get("provider_name", "").lower()
-                                            # Match if the requested name appears in the provider name
-                                            if requested_provider_name in provider_name_lower:
-                                                matched_provider = provider
-                                                logger.info("matched_provider_by_name", requested=requested_provider_name, matched=provider_name_lower)
-                                                break
+                                            provider_name = provider.get("provider_name", "")
+                                            provider_name_lower = provider_name.lower()
+                                            provider_dept = provider.get("department", "")
+                                            
+                                            # Calculate match score
+                                            match_score = 0
+                                            
+                                            # Check if all requested name parts appear in provider name
+                                            parts_matched = sum(1 for part in requested_parts if part in provider_name_lower)
+                                            if parts_matched == len(requested_parts):
+                                                match_score = parts_matched * 10  # Base score for matching all parts
+                                                
+                                                # Bonus points for exact match
+                                                if requested_provider_name.lower() in provider_name_lower:
+                                                    match_score += 5
+                                                
+                                                # Bonus points if department also matches
+                                                if requested_department and provider_dept == requested_department:
+                                                    match_score += 10
+                                                
+                                                # Prefer exact last name match (for "Michael Roberts" vs "Dr. Michael Roberts")
+                                                if requested_parts and requested_parts[-1] in provider_name_lower.split():
+                                                    match_score += 3
+                                                
+                                                if match_score > best_match_score:
+                                                    best_match_score = match_score
+                                                    matched_provider = provider
                                         
                                         if matched_provider:
                                             provider_id_to_use = matched_provider.get("provider_id")
                                             slots = matched_provider.get("slots", [])
+                                            logger.info("matched_provider_by_name", 
+                                                       requested=requested_provider_name,
+                                                       matched=matched_provider.get("provider_name"),
+                                                       score=best_match_score,
+                                                       department=matched_provider.get("department"))
                                         else:
                                             # Provider name specified but not found - disable auto-booking
-                                            logger.warning("provider_name_not_matched", requested=requested_provider_name)
+                                            logger.warning("provider_name_not_matched", 
+                                                          requested=requested_provider_name,
+                                                          available_providers=[p.get("provider_name") for p in providers_list])
                                             booking_intent = False
                                     else:
                                         # Multiple providers and no specific name requested
@@ -546,6 +600,8 @@ class AgentRouter:
                 result = await self._send_email_confirmation(**arguments)
             elif tool_name == "rag_lookup":
                 result = await self._rag_lookup(**arguments)
+            elif tool_name == "list_providers":
+                result = await self._list_providers(**arguments)
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
 
@@ -604,38 +660,53 @@ class AgentRouter:
 
             # Return all providers with their slots
             providers_with_slots = []
-            for provider in providers[:3]:  # Limit to first 3 providers for performance
+            providers_without_slots = []
+            
+            for provider in providers:
                 slots = await self.scheduling_client.get_timeslots(provider["id"], target_date)
-                # Only include providers with available slots
                 available_slots = [s for s in slots if s.available]
+                
+                provider_info = {
+                    "provider_id": provider["id"],
+                    "provider_name": provider["name"],
+                    "department": provider.get("department", ""),
+                    "specialty": provider.get("specialty", ""),
+                }
+                
                 if available_slots:
-                    providers_with_slots.append({
-                        "provider_id": provider["id"],
-                        "provider_name": provider["name"],
-                        "department": provider.get("department", ""),
-                        "specialty": provider.get("specialty", ""),
-                        "slots": [
-                            {
-                                "slot_id": s.slot_id,
-                                "start": s.start.isoformat(),
-                                "end": s.end.isoformat(),
-                            }
-                            for s in available_slots[:10]  # Limit to first 10 slots
-                        ],
-                    })
+                    # Provider has availability - include slots
+                    provider_info["slots"] = [
+                        {
+                            "slot_id": s.slot_id,
+                            "start": s.start.isoformat(),
+                            "end": s.end.isoformat(),
+                        }
+                        for s in available_slots[:10]  # Limit to first 10 slots
+                    ]
+                    providers_with_slots.append(provider_info)
+                else:
+                    # Provider has no availability - still list them
+                    providers_without_slots.append(provider_info)
+            
+            # Combine results - providers with slots first
+            all_providers = providers_with_slots + providers_without_slots
             
             if not providers_with_slots:
+                # No availability, but show all doctors in the department
                 return {
                     "department": department,
                     "date": date,
-                    "message": f"No available appointments found in {department} for {date}",
+                    "providers": all_providers,
+                    "has_availability": False,
+                    "message": f"No available appointments in {department} for {date}. Here are the doctors in this department:",
                 }
 
             return {
                 "department": department,
                 "date": date,
                 "providers": providers_with_slots,
-                "message": f"Found {len(providers_with_slots)} provider(s) with availability",
+                "has_availability": True,
+                "message": f"Found {len(providers_with_slots)} provider(s) with availability in {department}",
             }
 
         return {"error": "Either provider_id or department must be specified"}
@@ -801,10 +872,13 @@ class AgentRouter:
             }
 
         # Format appointments - same format as Appointments page
+        # Note: time_start is stored as naive datetime in Lebanon local time (no timezone info)
+        # We just format it directly - do NOT use astimezone() as that would incorrectly assume UTC
         appointments = []
         for appointment, provider in rows:
-            # Convert to Lebanon timezone for display
-            lebanon_time = appointment.time_start.astimezone(LEBANON_TZ)
+            # The time is stored as Lebanon local time without tzinfo
+            # Just format it directly without timezone conversion
+            appt_time = appointment.time_start
             
             appointments.append({
                 "appointment_id": appointment.id,
@@ -813,9 +887,9 @@ class AgentRouter:
                 "provider_id": provider.id,
                 "department": provider.department,
                 "specialty": provider.specialty,
-                "date": lebanon_time.strftime("%Y-%m-%d"),
-                "time": lebanon_time.strftime("%I:%M %p"),
-                "datetime_display": lebanon_time.strftime("%B %d, %Y at %I:%M %p"),
+                "date": appt_time.strftime("%Y-%m-%d"),
+                "time": appt_time.strftime("%I:%M %p"),
+                "datetime_display": appt_time.strftime("%B %d, %Y at %I:%M %p"),
                 "status": appointment.status,
                 "reason": appointment.reason,
             })
@@ -824,4 +898,33 @@ class AgentRouter:
             "appointments": appointments,
             "count": len(appointments),
             "status_filter": status,
+        }
+
+    async def _list_providers(self, department: str) -> dict[str, Any]:
+        """List providers in a specific department."""
+        # Use the scheduling client to search providers by department
+        providers = await self.scheduling_client.search_providers(department=department)
+        
+        if not providers:
+            return {
+                "providers": [],
+                "count": 0,
+                "department": department,
+                "message": f"No providers found in department: {department}",
+            }
+        
+        return {
+            "providers": [
+                {
+                    "provider_id": p["id"],
+                    "name": p["name"],
+                    "department": p["department"],
+                    "specialty": p.get("specialty", ""),
+                    "type": p.get("type", ""),
+                }
+                for p in providers
+            ],
+            "count": len(providers),
+            "department": department,
+            "message": f"Found {len(providers)} provider(s) in {department}",
         }

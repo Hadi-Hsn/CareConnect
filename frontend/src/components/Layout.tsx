@@ -15,9 +15,11 @@ import {
   useTheme,
   useMediaQuery,
   Avatar,
-  Divider,
   Menu,
   MenuItem,
+  alpha,
+  Tooltip,
+  Badge,
 } from '@mui/material';
 import {
   Chat as ChatIcon,
@@ -29,19 +31,26 @@ import {
   ReportProblem as IncidentIcon,
   MedicalServices as ProvidersIcon,
   People as PatientsIcon,
+  LocalHospital as DirectoryIcon,
+  KeyboardArrowRight as ArrowIcon,
+  CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 
-const DRAWER_WIDTH = 260;
+const DRAWER_WIDTH = 280;
 
 const allMenuItems = [
-  { text: 'Chat', icon: <ChatIcon />, path: '/chat', color: '#840132', roles: ['patient'] },
-  { text: 'Appointments', icon: <EventIcon />, path: '/appointments', color: '#000000', roles: ['patient', 'admin', 'staff'] },
-  { text: 'Lab Tests', icon: <ScienceIcon />, path: '/labs', color: '#808080', roles: ['patient', 'admin', 'staff'] },
-  { text: 'Providers', icon: <ProvidersIcon />, path: '/providers', color: '#840132', roles: ['admin', 'staff'] },
-  { text: 'Patients', icon: <PatientsIcon />, path: '/patients', color: '#000000', roles: ['admin', 'staff'] },
-  { text: 'Incidents', icon: <IncidentIcon />, path: '/incidents', color: '#808080', roles: ['admin', 'staff'] },
-  { text: 'Admin', icon: <AdminIcon />, path: '/admin', color: '#840132', roles: ['admin'] },
+  { text: 'AI Assistant', icon: <ChatIcon />, path: '/chat', color: '#840132', roles: ['patient'], description: 'Chat with our AI' },
+  { text: 'My Appointments', icon: <EventIcon />, path: '/appointments', color: '#2e7d32', roles: ['patient'], description: 'View your bookings' },
+  { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar', color: '#1976d2', roles: ['patient', 'admin', 'staff'], description: 'View calendar' },
+  { text: 'Lab Tests', icon: <ScienceIcon />, path: '/labs', color: '#1565c0', roles: ['patient'], description: 'Browse available tests' },
+  { text: 'Find Providers', icon: <DirectoryIcon />, path: '/find-providers', color: '#7b1fa2', roles: ['patient', 'admin', 'staff'], description: 'Search doctors' },
+  { text: 'Appointments', icon: <EventIcon />, path: '/appointments', color: '#2e7d32', roles: ['admin', 'staff'], description: 'Manage all appointments' },
+  { text: 'Lab Catalog', icon: <ScienceIcon />, path: '/labs', color: '#1565c0', roles: ['admin', 'staff'], description: 'Manage lab tests' },
+  { text: 'Manage Providers', icon: <ProvidersIcon />, path: '/providers', color: '#ed6c02', roles: ['admin', 'staff'], description: 'Provider management' },
+  { text: 'Patients', icon: <PatientsIcon />, path: '/patients', color: '#0288d1', roles: ['admin', 'staff'], description: 'Patient records' },
+  { text: 'Incidents', icon: <IncidentIcon />, path: '/incidents', color: '#d32f2f', roles: ['admin', 'staff'], description: 'View incidents' },
+  { text: 'Admin Panel', icon: <AdminIcon />, path: '/admin', color: '#840132', roles: ['admin'], description: 'System settings' },
 ];
 
 interface LayoutProps {
@@ -59,10 +68,6 @@ export default function Layout({ children }: LayoutProps) {
   // Get current user and filter menu items based on role
   const currentUser = api.getCurrentUser();
   const userRole = currentUser?.role || 'patient';
-  
-  // Debug logging
-  console.log('Current user:', currentUser);
-  console.log('User role:', userRole);
   
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
@@ -91,16 +96,18 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const drawer = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#fafbfc' }}>
+      {/* Header */}
+      <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: 1.5,
-          px: 2.5,
+          gap: 2,
+          px: 3,
           py: 2.5,
-          background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)',
-          boxShadow: '0 2px 8px rgba(132, 1, 50, 0.2)',
+          borderBottom: '1px solid',
+          borderColor: alpha('#840132', 0.1),
+          bgcolor: '#fff',
         }}
       >
         <Box
@@ -108,20 +115,20 @@ export default function Layout({ children }: LayoutProps) {
           src="/images/aub-logo.png"
           alt="AUB Logo"
           sx={{
-            width: { xs: '100px', sm: '150px' },
-            height: { xs: '37px', sm: '50px' },
-            filter: 'brightness(0) invert(1)',
+            width: 42,
+            height: 42,
+            flexShrink: 0,
           }}
         />
         <Box>
           <Typography
-            variant="h6"
+            variant="h5"
             sx={{
-              color: 'white',
-              fontWeight: 700,
-              fontSize: '1.2rem',
-              lineHeight: 1.2,
-              letterSpacing: '0.5px',
+              color: '#840132',
+              fontWeight: 800,
+              fontSize: '1.3rem',
+              lineHeight: 1.1,
+              letterSpacing: '-0.5px',
             }}
           >
             CareConnect
@@ -129,7 +136,7 @@ export default function Layout({ children }: LayoutProps) {
           <Typography
             variant="caption"
             sx={{
-              color: 'rgba(255, 255, 255, 0.85)',
+              color: 'text.secondary',
               fontSize: '0.7rem',
               fontWeight: 500,
               letterSpacing: '0.3px',
@@ -138,131 +145,224 @@ export default function Layout({ children }: LayoutProps) {
             AUB Medical Center
           </Typography>
         </Box>
-      </Toolbar>
-      <Divider sx={{ borderColor: 'rgba(132, 1, 50, 0.12)' }} />
-      <List sx={{ px: 1.5, py: 2, flexGrow: 1 }}>
-        {menuItems.map((item) => {
-          const isSelected = location.pathname === item.path;
-          return (
-            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
-              <ListItemButton
-                selected={isSelected}
-                onClick={() => handleMenuClick(item.path)}
+      </Box>
+
+      {/* Navigation */}
+      <Box sx={{ px: 2, py: 3, flexGrow: 1, overflowY: 'auto' }}>
+        <Typography
+          variant="overline"
+          sx={{
+            px: 2,
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            color: 'text.disabled',
+            letterSpacing: '1px',
+          }}
+        >
+          Navigation
+        </Typography>
+        <List sx={{ mt: 1 }}>
+          {menuItems.map((item) => {
+            const isSelected = location.pathname === item.path;
+            return (
+              <ListItem key={item.text + item.path} disablePadding sx={{ mb: 0.5 }}>
+                <Tooltip title={item.description} placement="right" arrow>
+                  <ListItemButton
+                    selected={isSelected}
+                    onClick={() => handleMenuClick(item.path)}
+                    sx={{
+                      borderRadius: 2.5,
+                      py: 1.5,
+                      px: 2,
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&.Mui-selected': {
+                        background: `linear-gradient(135deg, ${alpha(item.color, 0.12)} 0%, ${alpha(item.color, 0.06)} 100%)`,
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          left: 0,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: 4,
+                          height: '60%',
+                          borderRadius: '0 4px 4px 0',
+                          bgcolor: item.color,
+                        },
+                        '&:hover': {
+                          background: `linear-gradient(135deg, ${alpha(item.color, 0.18)} 0%, ${alpha(item.color, 0.1)} 100%)`,
+                        },
+                      },
+                      '&:hover': {
+                        background: alpha(item.color, 0.06),
+                        transform: 'translateX(4px)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 44,
+                        color: isSelected ? item.color : 'text.secondary',
+                        transition: 'color 0.2s ease',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: isSelected ? alpha(item.color, 0.15) : 'transparent',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {item.icon}
+                      </Box>
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={item.text}
+                      primaryTypographyProps={{
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: '0.9rem',
+                        color: isSelected ? 'text.primary' : 'text.secondary',
+                      }}
+                    />
+                    {isSelected && (
+                      <ArrowIcon sx={{ color: item.color, fontSize: 18 }} />
+                    )}
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+            );
+          })}
+        </List>
+      </Box>
+      
+      {/* User Card */}
+      <Box sx={{ p: 2 }}>
+        <Box
+          sx={{
+            p: 2,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Badge
+              overlap="circular"
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              badgeContent={
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    bgcolor: '#4caf50',
+                    border: '2px solid white',
+                  }}
+                />
+              }
+            >
+              <Avatar
                 sx={{
-                  borderRadius: 3,
-                  py: 1.5,
-                  px: 2,
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(132, 1, 50, 0.12)',
-                    borderLeft: '4px solid #840132',
-                    '&:hover': {
-                      backgroundColor: 'rgba(132, 1, 50, 0.18)',
-                    },
-                  },
+                  width: 44,
+                  height: 44,
+                  background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  boxShadow: '0 4px 12px rgba(132, 1, 50, 0.3)',
+                }}
+              >
+                {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+              </Avatar>
+            </Badge>
+            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  color: 'text.primary',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentUser?.name || 'User'}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    bgcolor: userRole === 'admin' ? '#840132' : userRole === 'staff' ? '#1976d2' : '#4caf50',
+                  }}
+                />
+                {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+              </Typography>
+            </Box>
+            <Tooltip title="Sign out">
+              <IconButton
+                size="small"
+                onClick={handleLogout}
+                sx={{
+                  color: 'text.secondary',
                   '&:hover': {
-                    backgroundColor: 'rgba(132, 1, 50, 0.06)',
+                    color: '#d32f2f',
+                    bgcolor: alpha('#d32f2f', 0.1),
                   },
                 }}
               >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 40,
-                    color: isSelected ? '#840132' : '#808080',
-                  }}
-                >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
-                  primaryTypographyProps={{
-                    fontWeight: isSelected ? 700 : 500,
-                    fontSize: '0.95rem',
-                    color: isSelected ? '#000000' : '#808080',
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
-      </List>
-      
-      {/* User info at bottom */}
-      <Divider sx={{ borderColor: 'rgba(132, 1, 50, 0.12)' }} />
-      <Box
-        sx={{
-          p: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-          background: 'linear-gradient(180deg, transparent 0%, rgba(132, 1, 50, 0.02) 100%)',
-        }}
-      >
-        <Avatar
-          sx={{
-            width: 36,
-            height: 36,
-            bgcolor: '#840132',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-          }}
-        >
-          {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
-        </Avatar>
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              color: '#000000',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {currentUser?.name || 'User'}
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{
-              color: '#808080',
-              fontSize: '0.75rem',
-              textTransform: 'capitalize',
-            }}
-          >
-            {userRole}
-          </Typography>
+                <LogoutIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
     </Box>
   );
 
   return (
-        <Box sx={{ display: 'flex', width: '100%', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
+    <Box sx={{ display: 'flex', width: '100%', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
       {/* Rest of JSX */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
           zIndex: (theme: any) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(90deg, #840132 0%, #5e0124 80%, #000000 100%)',
-          backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 4px 16px rgba(132, 1, 50, 0.2)',
+          bgcolor: '#fff',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {isMobile && (
               <IconButton
-                color="inherit"
                 aria-label="open drawer"
                 edge="start"
                 onClick={handleDrawerToggle}
                 sx={{
-                  borderRadius: 0,
+                  color: '#840132',
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    backgroundColor: alpha('#840132', 0.08),
                   },
                 }}
               >
@@ -274,9 +374,8 @@ export default function Layout({ children }: LayoutProps) {
               src="/images/aub-logo.png"
               alt="AUB Logo"
               sx={{
-                width: { xs: '100px', sm: '150px' },
-                height: { xs: '37px', sm: '50px' },
-                filter: 'brightness(0) invert(1)',
+                width: { xs: '100px', sm: '120px' },
+                height: { xs: '37px', sm: '44px' },
                 display: { xs: 'none', sm: 'block' },
               }}
             />
@@ -286,36 +385,45 @@ export default function Layout({ children }: LayoutProps) {
               component="div"
               sx={{
                 fontWeight: 700,
-                fontSize: { xs: '1rem', sm: '1.25rem' },
-                letterSpacing: '0.5px',
-                background: 'linear-gradient(90deg, #ffffff 0%, rgba(255,255,255,0.9) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                fontSize: { xs: '1rem', sm: '1.15rem' },
+                color: '#840132',
               }}
             >
-              {isMobile ? 'CareConnect' : 'CareConnect - Smart Health Assistant'}
+              {isMobile ? 'CareConnect' : 'CareConnect'}
             </Typography>
+            {!isMobile && (
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: 400,
+                  borderLeft: '1px solid',
+                  borderColor: 'divider',
+                  pl: 2,
+                  ml: 1,
+                }}
+              >
+                Smart Health Assistant
+              </Typography>
+            )}
           </Box>
           <IconButton
-            color="inherit"
             onClick={handleProfileMenuOpen}
             sx={{
-              borderRadius: 0,
               transition: 'all 0.2s ease',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                transform: 'scale(1.05)',
+                backgroundColor: alpha('#840132', 0.08),
               },
             }}
           >
             <Avatar
               sx={{
-                width: 36,
-                height: 36,
-                bgcolor: 'rgba(255, 255, 255, 0.25)',
+                width: 38,
+                height: 38,
+                bgcolor: alpha('#840132', 0.1),
+                color: '#840132',
                 fontSize: '1rem',
                 fontWeight: 700,
-                border: '2px solid rgba(255, 255, 255, 0.3)',
               }}
             >
               {currentUser?.name?.charAt(0).toUpperCase() || 'U'}

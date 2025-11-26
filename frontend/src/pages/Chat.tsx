@@ -5,30 +5,30 @@ import remarkGfm from 'remark-gfm';
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Grid,
   IconButton,
   MenuItem,
   Paper,
   TextField,
   Typography,
-  Chip,
   CircularProgress,
   Alert,
+  alpha,
+  InputAdornment,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { 
   Send as SendIcon, 
-  SupportAgent as SupportAgentIcon,
   Phone as PhoneIcon,
   Mic as MicIcon,
-  Chat as ChatIcon,
+  Keyboard as KeyboardIcon,
   Refresh as RefreshIcon,
+  SupportAgent as SupportAgentIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 import type { ChatMessage, ToolResult } from '@/types/api';
@@ -91,7 +91,7 @@ export default function ChatPage() {
   const [session, setSession] = useState<ChatSession>(getCurrentSession);
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessagesFromStorage());
   const [input, setInput] = useState('');
-  const [toolResults, setToolResults] = useState<ToolResult[]>([]);
+  const [, setToolResults] = useState<ToolResult[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
   const [handoverDialogOpen, setHandoverDialogOpen] = useState(false);
   const [handoverSubject, setHandoverSubject] = useState('');
@@ -233,248 +233,287 @@ export default function ChatPage() {
   }, [voiceMode]);
 
   return (
-    <Grid container spacing={3} sx={{ height: 'calc(100vh - 100px)' }}>
-      <Grid item xs={12} md={8}>
-        <Paper elevation={2} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h5">Chat with CareConnect</Typography>
-              <Typography variant="body2" color="text.secondary">
-                I can help you book appointments, find providers, and answer facility questions
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton
-                onClick={handleNewSession}
-                color="default"
-                title="Start new conversation"
-                sx={{ border: 1, borderColor: 'divider' }}
-              >
-                <RefreshIcon />
-              </IconButton>
-              <IconButton
-                onClick={() => setVoiceMode(false)}
-                color={!voiceMode ? 'primary' : 'default'}
-                sx={{ 
-                  border: !voiceMode ? 2 : 1, 
-                  borderColor: !voiceMode ? 'primary.main' : 'divider' 
-                }}
-              >
-                <ChatIcon />
-              </IconButton>
-              <IconButton
-                onClick={() => setVoiceMode(true)}
-                color={voiceMode ? 'primary' : 'default'}
-                sx={{ 
-                  border: voiceMode ? 2 : 1, 
-                  borderColor: voiceMode ? 'primary.main' : 'divider' 
-                }}
-              >
-                <MicIcon />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {/* Voice Mode Interface (compact at top) */}
-          {voiceMode && (
-            <Box 
-              sx={{ 
-                borderBottom: 1, 
-                borderColor: 'divider',
-                bgcolor: 'background.default',
+    <Box sx={{ 
+      height: 'calc(100vh - 120px)', 
+      display: 'flex', 
+      flexDirection: 'column',
+    }}>
+      {/* Chat Container - Full Width */}
+      <Paper
+        elevation={0}
+        sx={{ 
+          flex: 1,
+          display: 'flex', 
+          flexDirection: 'column',
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          overflow: 'hidden',
+          bgcolor: '#fff',
+        }}
+      >
+        {/* Header */}
+        <Box 
+          sx={{ 
+            px: 3, 
+            py: 1.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            bgcolor: '#fff',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              AI Assistant
+            </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SupportAgentIcon sx={{ fontSize: 18 }} />}
+              onClick={handleHandoverClick}
+              disabled={messages.length === 0}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.8125rem',
+                borderColor: '#ed6c02',
+                color: '#ed6c02',
+                px: 2,
+                py: 0.5,
+                borderRadius: 2,
+                '&:hover': { 
+                  bgcolor: alpha('#ed6c02', 0.08),
+                  borderColor: '#ed6c02',
+                },
+                '&.Mui-disabled': {
+                  borderColor: '#e0e0e0',
+                  color: 'text.disabled',
+                },
               }}
             >
-              <VoiceChat
-                onTranscription={handleVoiceTranscription}
-                onSpeechToText={handleSpeechToText}
-                onTextToSpeech={handleTextToSpeech}
-                responseText={lastResponseText}
-                isProcessing={chatMutation.isPending}
-                onResponseComplete={handleVoiceResponseComplete}
-              />
+              Talk to a Human
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Mode Tabs */}
+            <Tabs 
+              value={voiceMode ? 1 : 0} 
+              onChange={(_, v) => setVoiceMode(v === 1)}
+              sx={{
+                minHeight: 36,
+                '& .MuiTabs-indicator': {
+                  bgcolor: '#840132',
+                },
+                '& .MuiTab-root': {
+                  minHeight: 36,
+                  py: 0,
+                  px: 2,
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                  textTransform: 'none',
+                  color: 'text.secondary',
+                  '&.Mui-selected': {
+                    color: '#840132',
+                  },
+                },
+              }}
+            >
+              <Tab icon={<KeyboardIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Text" />
+              <Tab icon={<MicIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Voice" />
+            </Tabs>
+            
+            <Box sx={{ borderLeft: '1px solid', borderColor: 'divider', height: 24 }} />
+            
+            <IconButton
+              onClick={handleNewSession}
+              size="small"
+              title="New conversation"
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': { color: '#840132' },
+              }}
+            >
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
+
+        {/* Voice Mode Panel */}
+        {voiceMode && (
+          <Box 
+            sx={{ 
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              bgcolor: '#fafbfc',
+            }}
+          >
+            <VoiceChat
+              onTranscription={handleVoiceTranscription}
+              onSpeechToText={handleSpeechToText}
+              onTextToSpeech={handleTextToSpeech}
+              responseText={lastResponseText}
+              isProcessing={chatMutation.isPending}
+              onResponseComplete={handleVoiceResponseComplete}
+            />
+          </Box>
+        )}
+
+        {/* Messages Area - Scrollable */}
+        <Box 
+          sx={{ 
+            flex: 1,
+            overflowY: 'auto',
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2.5,
+            bgcolor: '#fafbfc',
+          }}
+        >
+          {/* Welcome State */}
+          {messages.length === 0 && (
+            <Box sx={{ py: 8, textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}>
+                How can I help you today?
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+                {voiceMode 
+                  ? "Click the microphone to start speaking" 
+                  : "Ask me about appointments, providers, or lab tests"}
+              </Typography>
             </Box>
           )}
 
-          {/* Chat History - Always Visible */}
-          <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
-            {messages.length === 0 && (
-              <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
-                <Typography variant="h6" gutterBottom>
-                  Welcome! How can I help you today?
-                </Typography>
-                <Typography variant="body2">
-                  {voiceMode 
-                    ? "Click the microphone button above to start speaking" 
-                    : "Try asking: \"Book an appointment with a cardiologist\" or \"When are my appointments?\""}
-                </Typography>
-              </Box>
-            )}
-            {messages.map((msg, idx) => (
+          {/* Message List */}
+          {messages.map((msg, idx) => (
+            <Box
+              key={idx}
+              sx={{
+                display: 'flex',
+                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              }}
+            >
               <Box
-                key={idx}
                 sx={{
-                  mb: 2,
-                  display: 'flex',
-                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '70%',
+                  py: 1.5,
+                  px: 2.5,
+                  bgcolor: msg.role === 'user' ? '#840132' : '#fff',
+                  color: msg.role === 'user' ? '#fff' : 'text.primary',
+                  borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                  border: msg.role === 'user' ? 'none' : '1px solid',
+                  borderColor: 'divider',
+                  '& p': { margin: '0.4em 0' },
+                  '& p:first-of-type': { marginTop: 0 },
+                  '& p:last-of-type': { marginBottom: 0 },
+                  '& ul, & ol': { my: 0.5, pl: 2.5 },
+                  '& li': { mb: 0.25 },
                 }}
               >
-                <Paper
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    maxWidth: '70%',
-                    bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
-                    color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                    '& p': { margin: '0.5em 0' },
-                    '& p:first-of-type': { marginTop: 0 },
-                    '& p:last-of-type': { marginBottom: 0 },
-                    '& ul, & ol': { 
-                      marginTop: '0.5em', 
-                      marginBottom: '0.5em',
-                      paddingLeft: '1.5em'
-                    },
-                    '& li': { marginBottom: '0.25em' },
-                    '& strong': { fontWeight: 700 },
-                    '& em': { fontStyle: 'italic' },
-                    '& code': {
-                      backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
-                      padding: '2px 6px',
-                      borderRadius: '3px',
-                      fontFamily: 'monospace',
-                      fontSize: '0.9em'
-                    },
-                    '& pre': {
-                      backgroundColor: msg.role === 'user' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
-                      padding: '1em',
-                      borderRadius: '4px',
-                      overflow: 'auto',
-                      '& code': {
-                        backgroundColor: 'transparent',
-                        padding: 0
-                      }
-                    },
-                    '& h1, & h2, & h3, & h4, & h5, & h6': {
-                      marginTop: '0.5em',
-                      marginBottom: '0.5em',
-                      fontWeight: 600
-                    },
-                    '& blockquote': {
-                      borderLeft: '3px solid',
-                      borderColor: msg.role === 'user' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.2)',
-                      paddingLeft: '1em',
-                      marginLeft: 0,
-                      fontStyle: 'italic'
-                    }
-                  }}
-                >
-                  {msg.role === 'user' ? (
-                    <Typography variant="body1">{msg.content}</Typography>
-                  ) : (
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        p: ({ children }) => <Typography variant="body1" component="p">{children}</Typography>,
-                        strong: ({ children }) => <strong>{children}</strong>,
-                        em: ({ children }) => <em>{children}</em>,
-                        li: ({ children }) => <li><Typography variant="body2" component="span">{children}</Typography></li>,
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
-                  )}
-                </Paper>
+                {msg.role === 'user' ? (
+                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>{msg.content}</Typography>
+                ) : (
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      p: ({ children }) => <Typography variant="body2" component="p" sx={{ lineHeight: 1.6 }}>{children}</Typography>,
+                      li: ({ children }) => <li><Typography variant="body2" component="span">{children}</Typography></li>,
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                )}
               </Box>
-            ))}
-            {chatMutation.isPending && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                <CircularProgress size={24} />
-              </Box>
-            )}
-            <div ref={messagesEndRef} />
-          </Box>
+            </Box>
+          ))}
 
-          {/* Text Input - Only show in text mode */}
-          {!voiceMode && (
-            <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
-              <TextField
-                fullWidth
-                placeholder="Type your message..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                disabled={chatMutation.isPending}
-              />
-              <IconButton
-                color="primary"
-                onClick={handleSend}
-                disabled={chatMutation.isPending || !input.trim()}
+          {/* Loading */}
+          {chatMutation.isPending && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <Box
+                sx={{
+                  py: 1.5,
+                  px: 2.5,
+                  bgcolor: '#fff',
+                  borderRadius: '18px 18px 18px 4px',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                }}
               >
-                <SendIcon />
-              </IconButton>
+                <CircularProgress size={14} sx={{ color: '#840132' }} />
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Processing...
+                </Typography>
+              </Box>
             </Box>
           )}
-        </Paper>
-      </Grid>
-      <Grid item xs={12} md={4}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Session Info
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Session ID: {session.id.split('_').pop()}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Messages: {messages.length}
-            </Typography>
-            {toolResults.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Recent Actions
-                </Typography>
-                {toolResults.map((result, idx) => (
-                  <Chip
-                    key={idx}
-                    label={result.name}
-                    size="small"
-                    color={result.success ? 'success' : 'error'}
-                    sx={{ mr: 1, mb: 1 }}
-                  />
-                ))}
-              </Box>
-            )}
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Quick Actions
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                • Book an appointment
-                <br />
-                • Find a provider
-                <br />
-                • Check lab requirements
-                <br />
-                • Get directions
-              </Typography>
-            </Box>
-            <Box sx={{ mt: 3 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                color="warning"
-                startIcon={<SupportAgentIcon />}
-                onClick={handleHandoverClick}
-                disabled={messages.length === 0}
-              >
-                Talk to a Human
-              </Button>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                Request assistance from our care team
-              </Typography>
-            </Box>
-          </CardContent>
-        </Card>
-      </Grid>
+          
+          <div ref={messagesEndRef} />
+        </Box>
+
+        {/* Input Area - Text Mode Only */}
+        {!voiceMode && (
+          <Box 
+            sx={{ 
+              p: 2,
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              bgcolor: '#fff',
+            }}
+          >
+            <TextField
+              fullWidth
+              multiline
+              maxRows={3}
+              placeholder="Type your message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={chatMutation.isPending}
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  bgcolor: '#fafbfc',
+                  '& fieldset': { borderColor: 'divider' },
+                  '&:hover fieldset': { borderColor: alpha('#840132', 0.3) },
+                  '&.Mui-focused fieldset': { borderColor: '#840132' },
+                },
+              }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={handleSend}
+                      disabled={chatMutation.isPending || !input.trim()}
+                      size="small"
+                      sx={{
+                        bgcolor: input.trim() ? '#840132' : 'transparent',
+                        color: input.trim() ? '#fff' : 'text.disabled',
+                        '&:hover': { bgcolor: input.trim() ? '#6a0129' : 'transparent' },
+                        '&.Mui-disabled': { bgcolor: 'transparent', color: 'text.disabled' },
+                      }}
+                    >
+                      <SendIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+        )}
+      </Paper>
 
       {/* Handover Dialog */}
       <Dialog open={handoverDialogOpen} onClose={handleHandoverClose} maxWidth="sm" fullWidth>
@@ -483,33 +522,31 @@ export default function ChatPage() {
             <DialogTitle>Request Human Assistance</DialogTitle>
             <DialogContent>
               <DialogContentText>
-                Our care team will review your conversation and contact you as soon as possible.
+                Our care team will review your conversation and contact you soon.
               </DialogContentText>
               <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
-                <strong>For medical emergencies:</strong> Please call 911 immediately.
+                <strong>For emergencies:</strong> Please call 911 immediately.
               </Alert>
               <TextField
                 autoFocus
                 margin="dense"
-                label="Subject / Reason"
-                type="text"
+                label="Subject"
                 fullWidth
                 required
                 value={handoverSubject}
                 onChange={(e) => setHandoverSubject(e.target.value)}
-                placeholder="e.g., Need help booking appointment, billing question"
+                placeholder="Brief description of your request"
                 sx={{ mb: 2 }}
               />
               <TextField
                 margin="dense"
-                label="Phone Number (Optional)"
+                label="Phone (Optional)"
                 type="tel"
                 fullWidth
                 value={handoverPhone}
                 onChange={(e) => setHandoverPhone(e.target.value)}
-                placeholder="+1-555-123-4567"
                 InputProps={{
-                  startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active' }} />,
+                  startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active', fontSize: 20 }} />,
                 }}
                 sx={{ mb: 2 }}
               />
@@ -521,10 +558,10 @@ export default function ChatPage() {
                 value={handoverPriority}
                 onChange={(e) => setHandoverPriority(e.target.value as any)}
               >
-                <MenuItem value="low">Low - General inquiry</MenuItem>
-                <MenuItem value="medium">Medium - Need assistance</MenuItem>
-                <MenuItem value="high">High - Urgent matter</MenuItem>
-                <MenuItem value="urgent">Urgent - Critical issue</MenuItem>
+                <MenuItem value="low">Low</MenuItem>
+                <MenuItem value="medium">Medium</MenuItem>
+                <MenuItem value="high">High</MenuItem>
+                <MenuItem value="urgent">Urgent</MenuItem>
               </TextField>
             </DialogContent>
             <DialogActions>
@@ -532,10 +569,9 @@ export default function ChatPage() {
               <Button
                 onClick={handleHandoverSubmit}
                 variant="contained"
-                color="primary"
                 disabled={handoverMutation.isPending || !handoverSubject.trim()}
               >
-                {handoverMutation.isPending ? 'Submitting...' : 'Submit Request'}
+                {handoverMutation.isPending ? 'Submitting...' : 'Submit'}
               </Button>
             </DialogActions>
           </>
@@ -547,19 +583,16 @@ export default function ChatPage() {
                 Your request has been received!
               </Alert>
               <Typography variant="body1" gutterBottom>
-                Thank you for reaching out. Our care team has been notified and will contact you within 24 hours.
+                Our team will contact you within 24 hours.
               </Typography>
               <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Confirmation Code
                 </Typography>
                 <Typography variant="h6" color="primary">
                   {confirmationCode}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Please save this confirmation code for your records.
-              </Typography>
             </DialogContent>
             <DialogActions>
               <Button onClick={handleHandoverClose} variant="contained">
@@ -569,6 +602,6 @@ export default function ChatPage() {
           </>
         )}
       </Dialog>
-    </Grid>
+    </Box>
   );
 }

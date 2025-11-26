@@ -1,31 +1,31 @@
 /**
- * VoiceChat - Main voice interaction component
- * Refactored into smaller, manageable components with improved VAD using hark
+ * VoiceChat - Professional voice interaction component
+ * Clean, minimal interface with conversation display and stop controls
  */
 
 import { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, IconButton, Typography, alpha, LinearProgress, Button } from '@mui/material';
+import {
+  Mic as MicIcon,
+  Stop as StopIcon,
+  VolumeUp as SpeakingIcon,
+  HourglassEmpty as ProcessingIcon,
+} from '@mui/icons-material';
 import type { VoiceChatProps, VoiceState } from './voice/types';
 import { useVoiceRecording } from './voice/useVoiceRecording';
 import { useAudioPlayback } from './voice/useAudioPlayback';
-import AudioVisualizer from './voice/AudioVisualizer';
-import VoiceButton from './voice/VoiceButton';
-import VoiceStatus from './voice/VoiceStatus';
-import TranscriptionDisplay from './voice/TranscriptionDisplay';
-import VoiceInstructions from './voice/VoiceInstructions';
 
 export default function VoiceChat({
   onTranscription,
   onSpeechToText,
   onTextToSpeech,
   responseText,
-  isProcessing = false,
   onResponseComplete,
 }: VoiceChatProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
-  const autoMode = true; // Always use phone call mode
+  const autoMode = true;
 
-  // Voice recording hook with improved VAD
+  // Voice recording hook
   const recording = useVoiceRecording({
     autoMode,
     onTranscription,
@@ -49,8 +49,8 @@ export default function VoiceChat({
     }
   }, [responseText, voiceState, playback]);
 
-  // Main button click handler
-  const handleMainButtonClick = () => {
+  // Handle main action
+  const handleAction = () => {
     if (voiceState === 'idle') {
       recording.startRecording();
     } else if (voiceState === 'listening') {
@@ -60,98 +60,173 @@ export default function VoiceChat({
     }
   };
 
-  // Get state color
-  const getStateColor = () => {
+  // Get status info
+  const getStatusInfo = () => {
     switch (voiceState) {
       case 'listening':
-      case 'speaking':
-        return '#840132'; // Berytus Red
+        return { text: 'Listening...', color: '#840132', icon: <MicIcon /> };
       case 'processing':
-        return '#808080'; // Gray
+        return { text: 'Processing...', color: '#666', icon: <ProcessingIcon /> };
+      case 'speaking':
+        return { text: 'Speaking...', color: '#2e7d32', icon: <SpeakingIcon /> };
       default:
-        return '#808080'; // Gray
+        return { text: 'Click to speak', color: '#666', icon: <MicIcon /> };
     }
   };
 
-  const stateColor = getStateColor();
+  const status = getStatusInfo();
+  const isActive = voiceState !== 'idle';
+  const canStop = voiceState === 'listening' || voiceState === 'speaking';
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: { xs: 2, sm: 3 },
-        padding: { xs: 2, sm: 2.5 },
-        background: 'linear-gradient(135deg, rgba(132, 1, 50, 0.04) 0%, rgba(132, 1, 50, 0.01) 100%)',
-        borderRadius: 0,
-        minHeight: { xs: '120px', sm: '140px' },
-      }}
-    >
-      {/* Left Section: Status and Instructions */}
+    <Box sx={{ p: 3 }}>
+      {/* Main Control Area */}
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 1.5,
-          flex: 1,
-          minWidth: 0, // Allow text to truncate
-        }}
-      >
-        {/* Status text */}
-        <VoiceStatus
-          voiceState={voiceState}
-          audioLevel={recording.audioLevel}
-          stateColor={stateColor}
-        />
-
-        {/* Transcription display - compact */}
-        {recording.transcription && (
-          <TranscriptionDisplay transcription={recording.transcription} />
-        )}
-      </Box>
-
-      {/* Center Section: Main Voice Button with Visualizer */}
-      <Box
-        sx={{
-          position: 'relative',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0,
+          gap: 3,
         }}
       >
-        {/* Audio visualizations */}
-        <AudioVisualizer
-          voiceState={voiceState}
-          audioLevel={recording.audioLevel}
-          silenceProgress={recording.silenceProgress}
-          stateColor={stateColor}
-        />
+        {/* Main Button */}
+        <Box sx={{ position: 'relative' }}>
+          <IconButton
+            onClick={handleAction}
+            disabled={voiceState === 'processing'}
+            sx={{
+              width: 72,
+              height: 72,
+              bgcolor: isActive ? status.color : '#f5f5f5',
+              color: isActive ? '#fff' : '#666',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: isActive ? status.color : '#e0e0e0',
+                transform: 'scale(1.05)',
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#e0e0e0',
+                color: '#999',
+              },
+            }}
+          >
+            {canStop ? <StopIcon sx={{ fontSize: 32 }} /> : status.icon}
+          </IconButton>
+          
+          {/* Listening indicator ring */}
+          {voiceState === 'listening' && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: -8,
+                borderRadius: '50%',
+                border: '3px solid',
+                borderColor: alpha('#840132', 0.3),
+                animation: 'pulse 1.5s ease-in-out infinite',
+                '@keyframes pulse': {
+                  '0%, 100%': { transform: 'scale(1)', opacity: 1 },
+                  '50%': { transform: 'scale(1.1)', opacity: 0.5 },
+                },
+              }}
+            />
+          )}
+        </Box>
 
-        {/* Main button */}
-        <VoiceButton
-          voiceState={voiceState}
-          audioLevel={recording.audioLevel}
-          stateColor={stateColor}
-          isProcessing={isProcessing}
-          onClick={handleMainButtonClick}
-        />
+        {/* Status Text */}
+        <Box sx={{ minWidth: 150 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              fontWeight: 600,
+              color: status.color,
+            }}
+          >
+            {status.text}
+          </Typography>
+          
+          {/* Audio level indicator */}
+          {voiceState === 'listening' && (
+            <LinearProgress
+              variant="determinate"
+              value={Math.min(recording.audioLevel * 100, 100)}
+              sx={{
+                mt: 1,
+                height: 4,
+                borderRadius: 2,
+                bgcolor: alpha('#840132', 0.1),
+                '& .MuiLinearProgress-bar': {
+                  bgcolor: '#840132',
+                  borderRadius: 2,
+                },
+              }}
+            />
+          )}
+          
+          {/* Silence countdown */}
+          {voiceState === 'listening' && recording.silenceProgress > 0 && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+              Sending in {Math.ceil((1 - recording.silenceProgress) * 2)}s...
+            </Typography>
+          )}
+        </Box>
+
+        {/* Stop Button (visible when active) */}
+        {canStop && (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleAction}
+            startIcon={<StopIcon />}
+            sx={{
+              borderColor: 'divider',
+              color: 'text.secondary',
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: '#d32f2f',
+                color: '#d32f2f',
+              },
+            }}
+          >
+            Stop
+          </Button>
+        )}
       </Box>
 
-      {/* Right Section: Instructions */}
-      <Box
+      {/* Transcription Display */}
+      {recording.transcription && (
+        <Box
+          sx={{
+            mt: 2,
+            p: 2,
+            bgcolor: '#fff',
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+            You said:
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'text.primary' }}>
+            "{recording.transcription}"
+          </Typography>
+        </Box>
+      )}
+
+      {/* Instructions */}
+      <Typography
+        variant="caption"
         sx={{
-          display: { xs: 'none', md: 'flex' },
-          flexDirection: 'column',
-          gap: 1,
-          flex: 1,
-          minWidth: 0,
+          display: 'block',
+          textAlign: 'center',
+          mt: 2,
+          color: 'text.disabled',
         }}
       >
-        <VoiceInstructions voiceState={voiceState} />
-      </Box>
+        {voiceState === 'idle' && 'Click the microphone to start, pause to auto-send'}
+        {voiceState === 'listening' && 'Speak clearly, pause when done'}
+        {voiceState === 'speaking' && 'Click Stop to interrupt'}
+      </Typography>
     </Box>
   );
 }
