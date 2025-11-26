@@ -97,6 +97,7 @@ export default function VoiceChat({
             sx={{
               width: 72,
               height: 72,
+              borderRadius: '50%',
               bgcolor: isActive ? status.color : '#f5f5f5',
               color: isActive ? '#fff' : '#666',
               transition: 'all 0.2s ease',

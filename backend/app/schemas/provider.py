@@ -24,6 +24,8 @@ class AvailabilitySlot(BaseModel):
     start_time: time
     end_time: time
 
+    model_config = {"from_attributes": True}
+
 
 class ProviderCreate(ProviderBase):
     """Provider creation schema."""
