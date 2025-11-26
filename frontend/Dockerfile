@@ -9,8 +9,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with workaround for npm optional dependencies bug
+# Remove node_modules and package-lock.json if they exist, then reinstall
+RUN rm -rf node_modules package-lock.json && \
+    npm install && \
+    npm cache clean --force
 
 # Copy application code
 COPY . .
