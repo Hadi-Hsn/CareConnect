@@ -42,7 +42,7 @@ export interface Appointment {
   provider_id: number;
   time_start: string;
   time_end: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  status: 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   channel: 'web' | 'phone' | 'agent';
   reason?: string;
   notes?: string;

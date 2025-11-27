@@ -44,7 +44,6 @@ import {
   CalendarMonth as CalendarIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
-  Pending as PendingIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
   ConfirmationNumber as ConfirmationIcon,
@@ -89,7 +88,6 @@ const formatLebanonTimeOnly = (dateString: string) => {
 // Status configuration
 const statusConfig: { [key: string]: { color: string; bgColor: string; icon: React.ReactElement; label: string } } = {
   confirmed: { color: '#2e7d32', bgColor: '#e8f5e9', icon: <CheckIcon fontSize="small" />, label: 'Confirmed' },
-  pending: { color: '#ed6c02', bgColor: '#fff3e0', icon: <PendingIcon fontSize="small" />, label: 'Pending' },
   cancelled: { color: '#d32f2f', bgColor: '#ffebee', icon: <CancelIcon fontSize="small" />, label: 'Cancelled' },
   completed: { color: '#1976d2', bgColor: '#e3f2fd', icon: <CheckIcon fontSize="small" />, label: 'Completed' },
   no_show: { color: '#757575', bgColor: '#f5f5f5', icon: <CancelIcon fontSize="small" />, label: 'No Show' },
@@ -97,7 +95,7 @@ const statusConfig: { [key: string]: { color: string; bgColor: string; icon: Rea
 
 // Appointment Card for Patient View
 function AppointmentCard({ appointment, index }: { appointment: any; index: number }) {
-  const status = statusConfig[appointment.status] || statusConfig.pending;
+  const status = statusConfig[appointment.status] || statusConfig.confirmed;
   
   return (
     <Fade in timeout={300 + index * 100}>
@@ -481,7 +479,6 @@ export default function AppointmentsPage() {
   const stats = {
     total: appointments?.length || 0,
     confirmed: appointments?.filter((a: any) => a.status === 'confirmed').length || 0,
-    pending: appointments?.filter((a: any) => a.status === 'pending').length || 0,
     cancelled: appointments?.filter((a: any) => a.status === 'cancelled').length || 0,
   };
 
@@ -510,7 +507,6 @@ export default function AppointmentsPage() {
           {[
             { label: 'Total', value: stats.total, color: '#840132', icon: <EventIcon /> },
             { label: 'Confirmed', value: stats.confirmed, color: '#2e7d32', icon: <CheckIcon /> },
-            { label: 'Pending', value: stats.pending, color: '#ed6c02', icon: <PendingIcon /> },
             { label: 'Cancelled', value: stats.cancelled, color: '#d32f2f', icon: <CancelIcon /> },
           ].map((stat) => (
             <Grid item xs={6} md={3} key={stat.label}>
@@ -571,7 +567,7 @@ export default function AppointmentsPage() {
                 </TableRow>
               ) : (
                 filteredAppointments?.map((appt: any) => {
-                  const status = statusConfig[appt.status] || statusConfig.pending;
+                  const status = statusConfig[appt.status] || statusConfig.confirmed;
                   return (
                     <TableRow key={appt.id} hover sx={{ '&:hover': { bgcolor: alpha('#840132', 0.02) } }}>
                       <TableCell><Chip label={`#${appt.id}`} size="small" variant="outlined" /></TableCell>
@@ -629,7 +625,7 @@ export default function AppointmentsPage() {
                   <Grid item xs={12} md={3}><TextField fullWidth type="time" label="Start Time" value={editTimeStart} onChange={(e) => setEditTimeStart(e.target.value)} InputLabelProps={{ shrink: true }} /></Grid>
                   <Grid item xs={12} md={3}><TextField fullWidth type="time" label="End Time" value={editTimeEnd} onChange={(e) => setEditTimeEnd(e.target.value)} InputLabelProps={{ shrink: true }} /></Grid>
                   <Grid item xs={12} md={2}><Button fullWidth variant="outlined" startIcon={<ScheduleIcon />} onClick={handleViewTimeSlots} disabled={!editProviderId || !editDate} sx={{ height: 56 }}>Slots</Button></Grid>
-                  <Grid item xs={12}><TextField select fullWidth label="Status" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}><MenuItem value="pending">Pending</MenuItem><MenuItem value="confirmed">Confirmed</MenuItem><MenuItem value="cancelled">Cancelled</MenuItem><MenuItem value="completed">Completed</MenuItem><MenuItem value="no_show">No Show</MenuItem></TextField></Grid>
+                  <Grid item xs={12}><TextField select fullWidth label="Status" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}><MenuItem value="confirmed">Confirmed</MenuItem><MenuItem value="cancelled">Cancelled</MenuItem><MenuItem value="completed">Completed</MenuItem><MenuItem value="no_show">No Show</MenuItem></TextField></Grid>
                   <Grid item xs={12}><TextField fullWidth multiline rows={3} label="Admin Notes" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Add notes..." /></Grid>
                 </Grid>
               </>

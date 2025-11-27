@@ -126,9 +126,7 @@ class MockSchedulingClient(SchedulingClient):
                     Appointment.provider_id == provider_id,
                     Appointment.time_start >= start_of_day,
                     Appointment.time_start <= end_of_day,
-                    Appointment.status.in_(
-                        [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]
-                    ),
+                    Appointment.status == AppointmentStatus.CONFIRMED,
                 )
             )
             booked_appointments = result.scalars().all()
@@ -192,9 +190,7 @@ class MockSchedulingClient(SchedulingClient):
                         Appointment.provider_id == provider_id,
                         Appointment.time_start == selected_slot.start,
                         Appointment.time_end == selected_slot.end,
-                        Appointment.status.in_(
-                            [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]
-                        ),
+                        Appointment.status == AppointmentStatus.CONFIRMED,
                     )
                 )
                 existing_appointment = result.scalar_one_or_none()

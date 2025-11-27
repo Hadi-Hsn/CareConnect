@@ -11,7 +11,6 @@ from app.core.db import Base
 class AppointmentStatus(str, Enum):
     """Appointment status."""
 
-    PENDING = "pending"
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
     COMPLETED = "completed"
@@ -39,7 +38,7 @@ class Appointment(Base):
     time_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     time_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[AppointmentStatus] = mapped_column(
-        String(50), default=AppointmentStatus.PENDING, nullable=False
+        String(50), default=AppointmentStatus.CONFIRMED, nullable=False
     )
     channel: Mapped[AppointmentChannel] = mapped_column(String(50), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)

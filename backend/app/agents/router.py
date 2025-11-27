@@ -917,7 +917,7 @@ class AgentRouter:
         if status == "upcoming":
             query = query.where(
                 Appointment.time_start >= lebanon_now,
-                Appointment.status.in_(["scheduled", "confirmed"])
+                Appointment.status == "confirmed"
             ).order_by(Appointment.time_start)
         elif status == "past":
             query = query.where(
@@ -1045,7 +1045,7 @@ class AgentRouter:
             .join(Provider)
             .where(
                 Appointment.user_id == user_id,
-                Appointment.status.in_([AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING]),
+                Appointment.status == AppointmentStatus.CONFIRMED,
                 Appointment.time_start < day_end,
                 Appointment.time_end > day_start,
             )

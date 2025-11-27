@@ -1360,7 +1360,7 @@ async def seed_appointments():
                     created_at=start_time - timedelta(days=random.randint(1, 14)),
                 ))
             
-            # Upcoming appointments (confirmed, pending)
+            # Upcoming appointments (confirmed)
             for i in range(num_upcoming):
                 days_ahead = random.randint(1, 30)
                 dept = random.choice(list(providers_by_dept.keys()))
@@ -1369,7 +1369,7 @@ async def seed_appointments():
                 start_time = now + timedelta(days=days_ahead)
                 start_time = start_time.replace(hour=random.choice([9, 10, 11, 14, 15, 16]), minute=random.choice([0, 30]), second=0, microsecond=0)
                 
-                status = random.choice([AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING])
+                status = AppointmentStatus.CONFIRMED
                 reason_list = reasons.get(dept, ["General consultation"])
                 
                 appointments.append(Appointment(

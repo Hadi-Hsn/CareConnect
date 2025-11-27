@@ -810,7 +810,6 @@ async def seed_appointments(patients, providers):
         statuses = [
             AppointmentStatus.CONFIRMED,
             AppointmentStatus.COMPLETED,
-            AppointmentStatus.PENDING,
         ]
         
         channels = [
@@ -849,7 +848,7 @@ async def seed_appointments(patients, providers):
                 elif days_offset < 0:
                     status = random.choice([AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED])
                 else:
-                    status = random.choice([AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING])
+                    status = AppointmentStatus.CONFIRMED
                 
                 # Get appropriate reason for department
                 reasons = APPOINTMENT_REASONS.get(department, ["General consultation"])

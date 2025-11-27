@@ -24,7 +24,6 @@ import {
   MedicalServices as MedicalIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
-  Pending as PendingIcon,
   Event as EventIcon,
 } from '@mui/icons-material';
 import {
@@ -45,7 +44,6 @@ import { api } from '@/lib/api';
 // Status configuration
 const statusConfig: { [key: string]: { color: string; bgColor: string; icon: React.ReactElement; label: string } } = {
   confirmed: { color: '#2e7d32', bgColor: '#e8f5e9', icon: <CheckIcon fontSize="small" />, label: 'Confirmed' },
-  pending: { color: '#ed6c02', bgColor: '#fff3e0', icon: <PendingIcon fontSize="small" />, label: 'Pending' },
   cancelled: { color: '#d32f2f', bgColor: '#ffebee', icon: <CancelIcon fontSize="small" />, label: 'Cancelled' },
   completed: { color: '#1976d2', bgColor: '#e3f2fd', icon: <CheckIcon fontSize="small" />, label: 'Completed' },
   no_show: { color: '#757575', bgColor: '#f5f5f5', icon: <CancelIcon fontSize="small" />, label: 'No Show' },
@@ -112,7 +110,7 @@ function AppointmentDetailDialog({
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             {appointments.map((appt: any, index: number) => {
-              const status = statusConfig[appt.status] || statusConfig.pending;
+              const status = statusConfig[appt.status] || statusConfig.confirmed;
               return (
                 <Fade in key={appt.id} timeout={300 + index * 100}>
                   <Paper
@@ -429,7 +427,7 @@ export default function CalendarPage() {
                   {hasAppointments && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                       {dayAppointments.slice(0, 2).map((appt: any) => {
-                        const status = statusConfig[appt.status] || statusConfig.pending;
+                        const status = statusConfig[appt.status] || statusConfig.confirmed;
                         return (
                           <Box
                             key={appt.id}
@@ -528,7 +526,7 @@ export default function CalendarPage() {
         {[
           { label: 'Total Appointments', value: appointments?.length || 0, color: '#840132' },
           { label: 'Confirmed', value: appointments?.filter((a: any) => a.status === 'confirmed').length || 0, color: '#2e7d32' },
-          { label: 'Pending', value: appointments?.filter((a: any) => a.status === 'pending').length || 0, color: '#ed6c02' },
+          { label: 'Completed', value: appointments?.filter((a: any) => a.status === 'completed').length || 0, color: '#ed6c02' },
           { label: 'This Month', value: appointments?.filter((a: any) => isSameMonth(parseISO(a.time_start), currentMonth)).length || 0, color: '#1976d2' },
         ].map((stat) => (
           <Grid item xs={6} md={3} key={stat.label}>

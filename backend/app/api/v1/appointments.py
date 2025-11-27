@@ -160,7 +160,7 @@ async def clear_cancelled_appointments(
     
     SAFETY: This endpoint ONLY deletes appointments with status='cancelled'.
     The WHERE clause explicitly filters for AppointmentStatus.CANCELLED, ensuring
-    confirmed, pending, completed, and no_show appointments are NEVER deleted.
+    confirmed, completed, and no_show appointments are NEVER deleted.
     """
     try:
         # Build delete query with explicit status filter for safety
