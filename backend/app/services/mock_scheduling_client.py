@@ -33,10 +33,16 @@ class MockSchedulingClient(SchedulingClient):
         """Get database session."""
         return async_session_maker()
 
-    def _generate_slots_for_date(self, target_date: date, filter_past: bool = True) -> list[TimeSlot]:
+    def _generate_slots_for_date(
+        self,
+        provider_id: int,
+        target_date: date,
+        filter_past: bool = True,
+    ) -> list[TimeSlot]:
         """Generate timeslots for a given date.
         
         Args:
+            provider_id: Provider the slots belong to (embedded in slot_id for validation)
             target_date: The date to generate slots for
             filter_past: If True, filter out past time slots for today
         """
@@ -60,7 +66,7 @@ class MockSchedulingClient(SchedulingClient):
             
             slots.append(
                 TimeSlot(
-                    slot_id=f"slot_{target_date.isoformat()}_{slot_id}",
+                    slot_id=f"slot_{provider_id}_{target_date.isoformat()}_{slot_id}",
                     start=current_time,
                     end=slot_end,
                     available=True,  # All slots available in mock
@@ -109,7 +115,7 @@ class MockSchedulingClient(SchedulingClient):
                 return []
 
             # Generate all possible slots (with past filtering for today)
-            all_slots = self._generate_slots_for_date(target_date, filter_past=True)
+            all_slots = self._generate_slots_for_date(provider_id, target_date, filter_past=True)
 
             # Get existing appointments for this provider on this date
             start_of_day = datetime.combine(target_date, time.min, tzinfo=LEBANON_TZ)
@@ -152,11 +158,23 @@ class MockSchedulingClient(SchedulingClient):
         # Format: slot_YYYY-MM-DD_N
         try:
             parts = slot_id.split("_")
-            date_str = parts[1]
-            slot_number = int(parts[2])
+            if len(parts) != 4:
+                raise ValueError("Invalid slot_id format")
+
+            _, slot_provider_id_str, date_str, slot_number_str = parts
+            slot_provider_id = int(slot_provider_id_str)
+
+            if slot_provider_id != provider_id:
+                raise ValueError(
+                    f"Slot {slot_id} does not belong to provider {provider_id}"
+                )
+
+            slot_number = int(slot_number_str)
 
             target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            slots = self._generate_slots_for_date(target_date, filter_past=False)  # Don't filter when booking
+            slots = self._generate_slots_for_date(
+                provider_id, target_date, filter_past=False
+            )  # Don't filter when booking
 
             if slot_number - 1 >= len(slots):
                 raise ValueError("Invalid slot number")
@@ -236,11 +254,17 @@ class MockSchedulingClient(SchedulingClient):
         try:
             # Parse new slot
             parts = new_slot_id.split("_")
-            date_str = parts[1]
-            slot_number = int(parts[2])
+            if len(parts) != 4:
+                raise ValueError("Invalid slot_id format")
+
+            _, slot_provider_id_str, date_str, slot_number_str = parts
+            slot_provider_id = int(slot_provider_id_str)
+            slot_number = int(slot_number_str)
 
             target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            slots = self._generate_slots_for_date(target_date, filter_past=False)  # Don't filter when modifying
+            slots = self._generate_slots_for_date(
+                slot_provider_id, target_date, filter_past=False
+            )  # Don't filter when modifying
 
             if slot_number - 1 >= len(slots):
                 raise ValueError("Invalid slot number")
@@ -256,6 +280,11 @@ class MockSchedulingClient(SchedulingClient):
 
                 if not appointment:
                     raise ValueError("Appointment not found")
+
+                if slot_provider_id != appointment.provider_id:
+                    raise ValueError(
+                        "New time slot belongs to a different provider than the appointment"
+                    )
 
                 appointment.time_start = selected_slot.start
                 appointment.time_end = selected_slot.end

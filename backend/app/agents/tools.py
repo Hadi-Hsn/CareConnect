@@ -86,11 +86,12 @@ TOOLS: list[dict[str, Any]] = [
                     },
                     "slot_id": {
                         "type": "string",
-                        "pattern": "^slot_\\d{4}-\\d{2}-\\d{2}_\\d+$",
+                        "pattern": "^slot_\\d+_\\d{4}-\\d{2}-\\d{2}_\\d+$",
                         "description": (
                             "ID of the time slot to book. "
-                            "Format: 'slot_YYYY-MM-DD_N' (e.g., 'slot_2025-11-21_3'). "
-                            "MUST be from search_timeslots results for the selected provider. "
+                            "Format: 'slot_PROVIDERID_YYYY-MM-DD_N' (e.g., 'slot_12_2025-11-21_3'). "
+                            "Provider ID embedded in the slot ensures bookings cannot mismatch doctors. "
+                            "MUST be returned by search_timeslots for the same provider. "
                             "NEVER construct manually."
                         ),
                     },
@@ -135,10 +136,11 @@ TOOLS: list[dict[str, Any]] = [
                     },
                     "new_slot_id": {
                         "type": "string",
-                        "pattern": "^slot_\\d{4}-\\d{2}-\\d{2}_\\d+$",
+                        "pattern": "^slot_\\d+_\\d{4}-\\d{2}-\\d{2}_\\d+$",
                         "description": (
                             "ID of the new time slot. "
-                            "Format: 'slot_YYYY-MM-DD_N'. "
+                            "Format: 'slot_PROVIDERID_YYYY-MM-DD_N'. "
+                            "Always ensure the provider portion matches the appointment's doctor. "
                             "MUST be from search_timeslots results. "
                             "Call search_timeslots with the new desired date first."
                         ),
