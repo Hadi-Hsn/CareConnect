@@ -1,6 +1,9 @@
 """Seed demo data for CareConnect."""
 import asyncio
+import json
+import random
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Add parent directory to path
@@ -16,6 +19,12 @@ from app.models import (
     Provider,
     ProviderType,
     LabTest,
+    Appointment,
+    AppointmentStatus,
+    AppointmentChannel,
+    HandoverIncident,
+    IncidentPriority,
+    IncidentStatus,
 )
 from app.schemas.rag import Document
 from app.services.rag_service import RAGService
@@ -25,55 +34,133 @@ async def clear_database():
     """Clear all seeded data from the database."""
     async with async_session_maker() as session:
         # Delete in order to respect foreign key constraints
-        # Delete providers first (no dependencies)
+        # Delete handover incidents first
+        await session.execute(delete(HandoverIncident))
+        # Delete appointments
+        await session.execute(delete(Appointment))
+        # Delete providers
         await session.execute(delete(Provider))
         # Delete lab tests
         await session.execute(delete(LabTest))
-        # Note: We keep users as they may have appointments/data
+        # Delete non-admin users for fresh start
+        await session.execute(delete(User).where(User.role != UserRole.ADMIN))
         await session.commit()
-        print("✓ Cleared providers and lab tests from database")
+        print("✓ Cleared existing demo data from database")
 
 
 async def seed_users():
-    """Seed demo users."""
+    """Seed demo users - realistic patient population."""
     async with async_session_maker() as session:
-        # Check if users already exist
+        # Define all users to seed
+        users_data = [
+            # Main demo patient
+            {
+                "email": "patient@gmail.com",
+                "name": "Sarah Mitchell",
+                "phone": "71123456",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            # Additional realistic patients
+            {
+                "email": "ahmad.hassan@gmail.com",
+                "name": "Ahmad Hassan",
+                "phone": "70234567",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "maya.khoury@hotmail.com",
+                "name": "Maya Khoury",
+                "phone": "76345678",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "omar.farah@gmail.com",
+                "name": "Omar Farah",
+                "phone": "03456789",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "layla.nassar@outlook.com",
+                "name": "Layla Nassar",
+                "phone": "71567890",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "rami.abboud@gmail.com",
+                "name": "Rami Abboud",
+                "phone": "70678901",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "nadia.saleh@yahoo.com",
+                "name": "Nadia Saleh",
+                "phone": "76789012",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "khalil.hanna@gmail.com",
+                "name": "Khalil Hanna",
+                "phone": "03890123",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "rita.gemayel@hotmail.com",
+                "name": "Rita Gemayel",
+                "phone": "71901234",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "fadi.moussa@gmail.com",
+                "name": "Fadi Moussa",
+                "phone": "70012345",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            # Admin user
+            {
+                "email": "admin@aub.com",
+                "name": "Dr. Administrator",
+                "phone": "01350000",
+                "country_code": "+961",
+                "role": UserRole.ADMIN,
+            },
+        ]
+        
+        # Check existing users
+        all_emails = [u["email"] for u in users_data]
         result = await session.execute(
-            select(User).where(User.email.in_(["hadihacan@gmail.com", "admin@aub.com"]))
+            select(User).where(User.email.in_(all_emails))
         )
         existing_users = result.scalars().all()
         existing_emails = {user.email for user in existing_users}
         
         users_to_add = []
-        
-        if "hadihacan@gmail.com" not in existing_emails:
-            users_to_add.append(
-                User(
-                    email="hadihacan@gmail.com",
-                    name="John Doe",
-                    phone="12345678",
-                    country_code="+961",
-                    role=UserRole.PATIENT,
-                    hashed_password=get_password_hash("password123"),
+        for user_data in users_data:
+            if user_data["email"] not in existing_emails:
+                users_to_add.append(
+                    User(
+                        email=user_data["email"],
+                        name=user_data["name"],
+                        phone=user_data["phone"],
+                        country_code=user_data["country_code"],
+                        role=user_data["role"],
+                        hashed_password=get_password_hash("password123" if user_data["role"] == UserRole.PATIENT else "Admin@123"),
+                    )
                 )
-            )
-        
-        if "admin@aub.com" not in existing_emails:
-            users_to_add.append(
-                User(
-                    email="admin@aub.com",
-                    name="Admin User",
-                    phone="99999999",
-                    country_code="+961",
-                    role=UserRole.ADMIN,
-                    hashed_password=get_password_hash("Admin@123"),
-                )
-            )
         
         if users_to_add:
             session.add_all(users_to_add)
             await session.commit()
-            print(f"✓ Seeded {len(users_to_add)} users")
+            print(f"✓ Seeded {len(users_to_add)} users (10 patients + 1 admin)")
         else:
             print(f"✓ Users already exist, skipped seeding")
 
@@ -1034,7 +1121,7 @@ async def seed_patient_test_results():
     async with async_session_maker() as session:
         # Get the demo patient user
         result = await session.execute(
-            select(User).where(User.email == "hadihacan@gmail.com")
+            select(User).where(User.email == "patient@gmail.com")
         )
         patient = result.scalar_one_or_none()
         
@@ -1190,6 +1277,266 @@ async def seed_patient_test_results():
         print(f"✓ Seeded {len(test_results_data)} test results for demo patient")
 
 
+def generate_confirmation_code():
+    """Generate a realistic confirmation code."""
+    import string
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=8))
+
+
+async def seed_appointments():
+    """Seed realistic appointment history for all patients."""
+    print("Seeding appointment history...")
+    
+    async with async_session_maker() as session:
+        # Get all patients
+        result = await session.execute(
+            select(User).where(User.role == UserRole.PATIENT)
+        )
+        patients = result.scalars().all()
+        
+        # Get all providers
+        result = await session.execute(select(Provider))
+        providers = result.scalars().all()
+        
+        if not patients or not providers:
+            print("⚠ No patients or providers found, skipping appointments")
+            return
+        
+        # Group providers by department for realistic booking
+        providers_by_dept = {}
+        for p in providers:
+            if p.department not in providers_by_dept:
+                providers_by_dept[p.department] = []
+            providers_by_dept[p.department].append(p)
+        
+        appointments = []
+        now = datetime.now(timezone.utc)
+        
+        # Appointment reasons by department
+        reasons = {
+            "Cardiology": ["Annual heart checkup", "Follow-up for blood pressure", "Chest discomfort evaluation", "ECG review"],
+            "Dermatology": ["Skin rash examination", "Mole check", "Acne treatment follow-up", "Annual skin screening"],
+            "Orthopedics": ["Knee pain consultation", "Back pain evaluation", "Sports injury follow-up", "Joint stiffness"],
+            "Internal Medicine": ["Annual physical", "Flu symptoms", "General checkup", "Fatigue evaluation"],
+            "Neurology": ["Headache consultation", "Migraine follow-up", "Numbness evaluation", "Sleep issues"],
+            "Gastroenterology": ["Stomach pain", "Digestive issues", "GERD follow-up", "Colonoscopy prep"],
+            "Ophthalmology": ["Eye exam", "Vision check", "Glasses prescription", "Eye strain"],
+            "Pulmonology": ["Breathing difficulty", "Asthma follow-up", "Cough evaluation", "Sleep apnea check"],
+            "Endocrinology": ["Diabetes management", "Thyroid follow-up", "Hormone evaluation", "Weight management"],
+            "Laboratory": ["Blood work", "Annual lab tests", "Lipid panel", "CBC test"],
+        }
+        
+        # Create appointments for each patient
+        for patient in patients:
+            # Main demo patient (patient@gmail.com) gets more appointments
+            is_main_patient = patient.email == "patient@gmail.com"
+            num_past = random.randint(5, 8) if is_main_patient else random.randint(1, 4)
+            num_upcoming = random.randint(2, 4) if is_main_patient else random.randint(0, 2)
+            
+            # Past appointments (completed, cancelled, no_show)
+            for i in range(num_past):
+                days_ago = random.randint(7, 180)
+                dept = random.choice(list(providers_by_dept.keys()))
+                provider = random.choice(providers_by_dept[dept])
+                
+                start_time = now - timedelta(days=days_ago, hours=random.randint(-4, 4))
+                start_time = start_time.replace(hour=random.choice([9, 10, 11, 14, 15, 16]), minute=random.choice([0, 30]), second=0, microsecond=0)
+                
+                status_weights = [AppointmentStatus.COMPLETED] * 8 + [AppointmentStatus.CANCELLED] * 1 + [AppointmentStatus.NO_SHOW] * 1
+                status = random.choice(status_weights)
+                
+                reason_list = reasons.get(dept, ["General consultation"])
+                
+                appointments.append(Appointment(
+                    user_id=patient.id,
+                    provider_id=provider.id,
+                    time_start=start_time,
+                    time_end=start_time + timedelta(minutes=30),
+                    status=status,
+                    channel=random.choice([AppointmentChannel.WEB, AppointmentChannel.AGENT, AppointmentChannel.PHONE]),
+                    reason=random.choice(reason_list),
+                    confirmation_code=generate_confirmation_code(),
+                    created_at=start_time - timedelta(days=random.randint(1, 14)),
+                ))
+            
+            # Upcoming appointments (confirmed, pending)
+            for i in range(num_upcoming):
+                days_ahead = random.randint(1, 30)
+                dept = random.choice(list(providers_by_dept.keys()))
+                provider = random.choice(providers_by_dept[dept])
+                
+                start_time = now + timedelta(days=days_ahead)
+                start_time = start_time.replace(hour=random.choice([9, 10, 11, 14, 15, 16]), minute=random.choice([0, 30]), second=0, microsecond=0)
+                
+                status = random.choice([AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING])
+                reason_list = reasons.get(dept, ["General consultation"])
+                
+                appointments.append(Appointment(
+                    user_id=patient.id,
+                    provider_id=provider.id,
+                    time_start=start_time,
+                    time_end=start_time + timedelta(minutes=30),
+                    status=status,
+                    channel=random.choice([AppointmentChannel.WEB, AppointmentChannel.AGENT]),
+                    reason=random.choice(reason_list),
+                    confirmation_code=generate_confirmation_code(),
+                    created_at=now - timedelta(days=random.randint(0, 7)),
+                ))
+        
+        session.add_all(appointments)
+        await session.commit()
+        print(f"✓ Seeded {len(appointments)} appointments across {len(patients)} patients")
+
+
+async def seed_incidents():
+    """Seed realistic handover incidents."""
+    print("Seeding handover incidents...")
+    
+    async with async_session_maker() as session:
+        # Get patients (excluding main demo patient)
+        result = await session.execute(
+            select(User).where(User.role == UserRole.PATIENT, User.email != "patient@gmail.com")
+        )
+        patients = result.scalars().all()
+        
+        if not patients:
+            print("⚠ No patients found for incidents")
+            return
+        
+        now = datetime.now(timezone.utc)
+        
+        # Realistic incident scenarios
+        incident_scenarios = [
+            {
+                "subject": "Emergency symptoms reported - chest pain",
+                "chat_summary": "Patient reported severe chest pain during booking conversation. Agent correctly identified emergency and directed to 911. Logging for records.",
+                "conversation": [
+                    {"role": "user", "content": "I need to see a doctor urgently, I have really bad chest pain"},
+                    {"role": "assistant", "content": "This sounds like a medical emergency. Please call 911 or go to the nearest emergency room immediately."},
+                    {"role": "user", "content": "OK I will go now"},
+                ],
+                "priority": IncidentPriority.URGENT,
+                "status": IncidentStatus.RESOLVED,
+                "resolution": "Patient was directed to ER. Follow-up confirmed patient received care at AUBMC ER.",
+            },
+            {
+                "subject": "Patient frustrated with appointment availability",
+                "chat_summary": "Patient expressed frustration that no cardiology appointments were available for 2 weeks. Requested human assistance to find earlier slot.",
+                "conversation": [
+                    {"role": "user", "content": "I need to see a cardiologist this week, it's urgent"},
+                    {"role": "assistant", "content": "I checked availability and the earliest cardiology appointment is in 2 weeks on December 10th. Would you like me to book that?"},
+                    {"role": "user", "content": "That's too late! I need to speak to someone who can help me get an earlier appointment"},
+                    {"role": "assistant", "content": "I understand your concern. Let me connect you with our patient services team who may be able to help with urgent scheduling."},
+                ],
+                "priority": IncidentPriority.HIGH,
+                "status": IncidentStatus.RESOLVED,
+                "resolution": "Patient services contacted. Found cancellation slot for December 2nd. Patient confirmed and satisfied.",
+            },
+            {
+                "subject": "Billing inquiry - outside agent scope",
+                "chat_summary": "Patient asked about insurance coverage and billing for upcoming procedure. Agent correctly identified this as outside scope and flagged for billing department.",
+                "conversation": [
+                    {"role": "user", "content": "How much will my MRI cost with my insurance?"},
+                    {"role": "assistant", "content": "I can help with scheduling appointments, but for billing and insurance questions, I'll need to connect you with our billing department."},
+                    {"role": "user", "content": "Can you transfer me to billing?"},
+                ],
+                "priority": IncidentPriority.LOW,
+                "status": IncidentStatus.CLOSED,
+                "resolution": "Transferred to billing department. Patient received cost estimate via email.",
+            },
+            {
+                "subject": "Medication refill request - needs physician review",
+                "chat_summary": "Patient requested medication refill through chat. Agent correctly declined and advised scheduling follow-up with prescribing physician.",
+                "conversation": [
+                    {"role": "user", "content": "I need a refill on my blood pressure medication"},
+                    {"role": "assistant", "content": "I cannot process medication refills. Please contact your physician's office directly or schedule a follow-up appointment."},
+                    {"role": "user", "content": "But I'm running out, can someone call in a refill?"},
+                ],
+                "priority": IncidentPriority.MEDIUM,
+                "status": IncidentStatus.RESOLVED,
+                "resolution": "Dr. Rodriguez's office contacted. Emergency 30-day refill approved. Follow-up scheduled.",
+            },
+            {
+                "subject": "Technical issue - appointment not showing",
+                "chat_summary": "Patient claims they booked an appointment but it's not showing in system. Needs investigation.",
+                "conversation": [
+                    {"role": "user", "content": "I booked an appointment last week but I don't see it anywhere"},
+                    {"role": "assistant", "content": "I can see your upcoming appointments. You have an appointment on December 5th with Dr. Chen in Cardiology."},
+                    {"role": "user", "content": "No that's wrong, I booked with a dermatologist for tomorrow"},
+                    {"role": "assistant", "content": "I don't see a dermatology appointment in your records. Let me flag this for our support team to investigate."},
+                ],
+                "priority": IncidentPriority.MEDIUM,
+                "status": IncidentStatus.IN_PROGRESS,
+                "admin_notes": "Checking system logs for booking attempt. May have been a session timeout issue.",
+            },
+            {
+                "subject": "Accessibility accommodation request",
+                "chat_summary": "Patient needs wheelchair assistance and sign language interpreter for upcoming appointment. Requires coordination with facilities.",
+                "conversation": [
+                    {"role": "user", "content": "I need special accommodations for my appointment"},
+                    {"role": "assistant", "content": "I'd be happy to note any special accommodations. What do you need?"},
+                    {"role": "user", "content": "I use a wheelchair and I also need a sign language interpreter"},
+                    {"role": "assistant", "content": "I'll flag this for our patient services team to coordinate these accommodations for you."},
+                ],
+                "priority": IncidentPriority.MEDIUM,
+                "status": IncidentStatus.RESOLVED,
+                "resolution": "Wheelchair assistance confirmed. ASL interpreter booked for Dec 8th appointment.",
+            },
+            {
+                "subject": "Complaint about wait time at previous visit",
+                "chat_summary": "Patient complained about 45-minute wait at last appointment. Wants to file formal complaint.",
+                "conversation": [
+                    {"role": "user", "content": "I want to file a complaint about my last visit"},
+                    {"role": "assistant", "content": "I'm sorry to hear about your experience. What happened during your visit?"},
+                    {"role": "user", "content": "I waited 45 minutes past my appointment time. This is unacceptable."},
+                    {"role": "assistant", "content": "I apologize for the long wait. I'll escalate this to our patient relations team who can address your complaint formally."},
+                ],
+                "priority": IncidentPriority.LOW,
+                "status": IncidentStatus.PENDING,
+            },
+            {
+                "subject": "Breathing difficulty reported - monitored",
+                "chat_summary": "Patient mentioned shortness of breath but clarified it was mild and ongoing for weeks. Not emergency but flagged for awareness.",
+                "conversation": [
+                    {"role": "user", "content": "I've been having some trouble breathing lately"},
+                    {"role": "assistant", "content": "I want to make sure you're safe. Is this severe or sudden? Are you having chest pain?"},
+                    {"role": "user", "content": "No no, it's mild. Been happening for a few weeks when I exercise"},
+                    {"role": "assistant", "content": "Thank you for clarifying. I'd recommend scheduling with a pulmonologist to evaluate this. Would you like me to find available appointments?"},
+                ],
+                "priority": IncidentPriority.MEDIUM,
+                "status": IncidentStatus.CLOSED,
+                "resolution": "Patient booked with pulmonology. Not an emergency case.",
+            },
+        ]
+        
+        incidents = []
+        for i, scenario in enumerate(incident_scenarios):
+            patient = patients[i % len(patients)]
+            days_ago = random.randint(1, 60)
+            
+            incident = HandoverIncident(
+                user_id=patient.id,
+                patient_name=patient.name,
+                patient_email=patient.email,
+                patient_phone=f"{patient.country_code}{patient.phone}" if patient.phone else None,
+                subject=scenario["subject"],
+                chat_summary=scenario["chat_summary"],
+                full_conversation=json.dumps(scenario["conversation"]),
+                priority=scenario["priority"],
+                status=scenario["status"],
+                admin_notes=scenario.get("admin_notes"),
+                resolution=scenario.get("resolution"),
+                created_at=now - timedelta(days=days_ago),
+                resolved_at=(now - timedelta(days=days_ago - random.randint(1, 3))) if scenario["status"] in [IncidentStatus.RESOLVED, IncidentStatus.CLOSED] else None,
+            )
+            incidents.append(incident)
+        
+        session.add_all(incidents)
+        await session.commit()
+        print(f"✓ Seeded {len(incidents)} handover incidents")
+
+
 async def main():
     """Run all seed functions."""
     print("🌱 Starting database seeding...")
@@ -1206,6 +1553,8 @@ async def main():
     await seed_users()
     await seed_providers()
     await seed_lab_tests()
+    await seed_appointments()  # Add appointment history
+    await seed_incidents()  # Add handover incidents
     await seed_patient_test_results()  # Add patient test results
     await seed_documents()
     await seed_doctor_documents()
@@ -1215,7 +1564,7 @@ async def main():
     print("✅ Database seeding completed successfully!")
     print()
     print("Demo credentials:")
-    print("  Patient: hadihacan@gmail.com / password123")
+    print("  Patient: patient@gmail.com / password123")
     print("  Admin:   admin@aub.com / Admin@123")
 
 
