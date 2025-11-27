@@ -600,50 +600,49 @@ export default function IncidentsPage() {
         {selectedIncident && (
           <>
             {/* Dialog Header */}
-            <Box
-              sx={{
-                background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)',
-                color: 'white',
-                p: 3,
-              }}
-            >
+            <DialogTitle sx={{ pb: 1 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography variant="overline" sx={{ opacity: 0.8 }}>
-                    Incident #{selectedIncident.id}
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>
-                    {selectedIncident.subject}
-                  </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar sx={{ width: 56, height: 56, bgcolor: alpha('#840132', 0.1), color: '#840132' }}>
+                    <WarningIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="overline" sx={{ color: 'text.secondary' }}>
+                      Incident #{selectedIncident.id}
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {selectedIncident.subject}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <Chip
+                        label={selectedIncident.priority.toUpperCase()}
+                        size="small"
+                        sx={{
+                          bgcolor: alpha(getPriorityColor(selectedIncident.priority), 0.1),
+                          color: getPriorityColor(selectedIncident.priority),
+                          fontWeight: 700,
+                        }}
+                      />
+                      <Chip
+                        label={selectedIncident.status.replace('_', ' ').toUpperCase()}
+                        size="small"
+                        sx={{
+                          bgcolor: alpha(getStatusColor(selectedIncident.status), 0.1),
+                          color: getStatusColor(selectedIncident.status),
+                          fontWeight: 700,
+                        }}
+                      />
+                    </Box>
+                  </Box>
                 </Box>
                 <IconButton
                   onClick={() => setDetailsDialogOpen(false)}
-                  sx={{ color: 'white', opacity: 0.8, '&:hover': { opacity: 1 } }}
+                  sx={{ color: 'text.secondary' }}
                 >
                   <CloseIcon />
                 </IconButton>
               </Box>
-              <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
-                <Chip
-                  label={selectedIncident.priority.toUpperCase()}
-                  size="small"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 700,
-                  }}
-                />
-                <Chip
-                  label={selectedIncident.status.replace('_', ' ').toUpperCase()}
-                  size="small"
-                  sx={{
-                    bgcolor: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    fontWeight: 700,
-                  }}
-                />
-              </Box>
-            </Box>
+            </DialogTitle>
 
             <DialogContent sx={{ p: 3 }}>
               <Grid container spacing={3}>
