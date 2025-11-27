@@ -4,7 +4,7 @@ import json
 import re
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import Any
 
@@ -16,7 +16,7 @@ from app.agents.prompts import SYSTEM_PROMPT, VOICE_MODE_INSTRUCTION
 from app.agents.tools import TOOLS
 from app.core.config import get_settings
 from app.core.logging import get_logger
-from app.models import Appointment, Provider, User
+from app.models import Appointment, AppointmentStatus, Provider, User
 from app.schemas.agent import ChatMessage, ToolCall, ToolResult
 from app.services.email_client import EmailService
 from app.services.intent_classifier import IntentClassifier, Intent
@@ -483,6 +483,27 @@ class AgentRouter:
                                             slot_id_to_use = slot_to_use.get("slot_id")
 
                                 if booking_intent and provider_id_to_use and slot_id_to_use:
+                                    # Double-booking guard: skip auto booking if slot overlaps existing appointment
+                                    if user_id and slot_id_to_use:
+                                        slot_times = await self._get_slot_datetimes(provider_id_to_use, slot_id_to_use)
+                                        if slot_times:
+                                            conflicts = await self._find_user_conflicts(user_id, *slot_times)
+                                            if conflicts:
+                                                booking_intent = False
+                                                conflict_msg = "User already has appointment(s) at that time:\n" + "\n".join(
+                                                    f"- {c['provider']} ({c['department']}) at {c['time']}"
+                                                    for c in conflicts
+                                                )
+                                                openai_messages.append(
+                                                    {
+                                                        "role": "system",
+                                                        "content": f"Avoid booking overlapping appointments unless the user explicitly insists.\n{conflict_msg}",
+                                                    }
+                                                )
+                                                logger.info("auto_booking_skipped_conflict", user_id=user_id, conflicts=len(conflicts))
+                                    if not booking_intent:
+                                        continue
+
                                     # Perform booking automatically
                                     book_args = {"provider_id": provider_id_to_use, "slot_id": slot_id_to_use}
                                     book_call_id = str(uuid.uuid4())
@@ -754,6 +775,18 @@ class AgentRouter:
         if not user_id:
             return {"error": "user_id is required to book an appointment"}
 
+        slot_times = await self._get_slot_datetimes(provider_id, slot_id)
+        if not slot_times:
+            return {"error": "Unable to validate the selected time slot. Please search availability again."}
+
+        slot_start, slot_end = slot_times
+        conflicts = await self._find_user_conflicts(user_id, slot_start, slot_end)
+        if conflicts:
+            return {
+                "error": "This slot overlaps with an existing appointment. Please pick a different time unless you explicitly want overlapping bookings.",
+                "conflicts": conflicts,
+            }
+
         if not self._slot_is_valid_for_user(user_id, provider_id, slot_id):
             return {
                 "error": (
@@ -968,3 +1001,74 @@ class AgentRouter:
             "department": department,
             "message": f"Found {len(providers)} provider(s) in {department}",
         }
+
+    async def _get_slot_datetimes(self, provider_id: int, slot_id: str) -> tuple[datetime, datetime] | None:
+        """Resolve a slot_id to concrete datetimes."""
+        try:
+            parts = slot_id.split("_")
+            if len(parts) != 4:
+                return None
+
+            _, slot_provider_id_str, date_str, _ = parts
+            if int(slot_provider_id_str) != provider_id:
+                return None
+
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            slots = await self.scheduling_client.get_timeslots(provider_id, target_date)
+            for slot in slots:
+                if slot.slot_id == slot_id:
+                    return slot.start, slot.end
+        except Exception as exc:
+            logger.warning("slot_resolution_failed", slot_id=slot_id, error=str(exc))
+        return None
+
+    async def _find_user_conflicts(
+        self,
+        user_id: int,
+        slot_start: datetime,
+        slot_end: datetime,
+    ) -> list[dict[str, str]]:
+        """Check if the user already has an appointment overlapping this slot."""
+        slot_start_local = slot_start.astimezone(LEBANON_TZ).replace(tzinfo=None)
+        slot_end_local = slot_end.astimezone(LEBANON_TZ).replace(tzinfo=None)
+
+        day_start = slot_start_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+
+        result = await self.db.execute(
+            select(Appointment, Provider)
+            .join(Provider)
+            .where(
+                Appointment.user_id == user_id,
+                Appointment.status.in_([AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING]),
+                Appointment.time_start < day_end,
+                Appointment.time_end > day_start,
+            )
+        )
+
+        rows = result.all()
+        conflicts: list[dict[str, str]] = []
+        for appt, provider in rows:
+            appt_start = appt.time_start
+            appt_end = appt.time_end
+            if appt_start.tzinfo:
+                appt_start_local = appt_start.astimezone(LEBANON_TZ).replace(tzinfo=None)
+            else:
+                appt_start_local = appt_start
+            if appt_end.tzinfo:
+                appt_end_local = appt_end.astimezone(LEBANON_TZ).replace(tzinfo=None)
+            else:
+                appt_end_local = appt_end
+
+            overlaps = appt_start_local < slot_end_local and appt_end_local > slot_start_local
+            if overlaps:
+                conflicts.append(
+                    {
+                        "appointment_id": str(appt.id),
+                        "provider": provider.name,
+                        "department": provider.department,
+                        "time": appt_start_local.strftime("%B %d, %Y at %I:%M %p"),
+                    }
+                )
+
+        return conflicts
