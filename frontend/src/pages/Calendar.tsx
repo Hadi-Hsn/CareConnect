@@ -68,11 +68,13 @@ function AppointmentDetailDialog({
   onClose,
   appointments,
   selectedDate,
+  isAdmin,
 }: {
   open: boolean;
   onClose: () => void;
   appointments: any[];
   selectedDate: Date | null;
+  isAdmin: boolean;
 }) {
   if (!selectedDate) return null;
 
@@ -135,6 +137,11 @@ function AppointmentDetailDialog({
                           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                             {appt.provider_department}
                           </Typography>
+                          {isAdmin && appt.user_name && (
+                            <Typography variant="body2" sx={{ color: '#840132', fontWeight: 600, mt: 0.5 }}>
+                              Patient: {appt.user_name}
+                            </Typography>
+                          )}
                         </Box>
                       </Box>
                       <Chip
@@ -567,6 +574,7 @@ export default function CalendarPage() {
         onClose={() => setDialogOpen(false)}
         appointments={selectedDate ? getAppointmentsForDate(selectedDate) : []}
         selectedDate={selectedDate}
+        isAdmin={isAdmin}
       />
     </Box>
   );

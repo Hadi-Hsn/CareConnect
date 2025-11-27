@@ -46,7 +46,7 @@ const allMenuItems = [
   { text: 'My Test Results', icon: <ResultsIcon />, path: '/test-results', color: '#9c27b0', roles: ['patient'], description: 'View your results' },
   { text: 'Calendar', icon: <CalendarIcon />, path: '/calendar', color: '#1976d2', roles: ['patient', 'admin', 'staff'], description: 'View calendar' },
   { text: 'Lab Tests', icon: <ScienceIcon />, path: '/labs', color: '#1565c0', roles: ['patient'], description: 'Browse available tests' },
-  { text: 'Find Providers', icon: <DirectoryIcon />, path: '/find-providers', color: '#7b1fa2', roles: ['patient', 'admin', 'staff'], description: 'Search doctors' },
+  { text: 'Find Providers', icon: <DirectoryIcon />, path: '/find-providers', color: '#7b1fa2', roles: ['patient'], description: 'Search doctors' },
   { text: 'Appointments', icon: <EventIcon />, path: '/appointments', color: '#2e7d32', roles: ['admin', 'staff'], description: 'Manage all appointments' },
   { text: 'Lab Catalog', icon: <ScienceIcon />, path: '/labs', color: '#1565c0', roles: ['admin', 'staff'], description: 'Manage lab tests' },
   { text: 'Manage Providers', icon: <ProvidersIcon />, path: '/providers', color: '#ed6c02', roles: ['admin', 'staff'], description: 'Provider management' },
