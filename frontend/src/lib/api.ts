@@ -397,6 +397,99 @@ class ApiClient {
     });
     return data.text;
   }
+
+  // Test Results (Admin)
+  async getTestResultsAdmin(userId?: number, status?: string): Promise<any[]> {
+    const { data } = await this.client.get('/test-results/admin/results', {
+      params: { user_id: userId, status_filter: status },
+    });
+    return data;
+  }
+
+  async createTestResult(resultData: {
+    user_id: number;
+    test_name: string;
+    test_category: string;
+    test_date: string;
+    result_value?: string;
+    result_unit?: string;
+    reference_range?: string;
+    status: string;
+    notes?: string;
+    ordered_by_provider_id?: number;
+  }): Promise<any> {
+    const { data } = await this.client.post('/test-results/admin/results', resultData);
+    return data;
+  }
+
+  async uploadTestResultPdf(resultId: number, file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    const { data } = await this.client.post(
+      `/test-results/admin/results/${resultId}/upload-pdf`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return data;
+  }
+
+  async createTestResultWithPdf(
+    userId: number,
+    testName: string,
+    testDate: string,
+    file: File,
+    options?: {
+      test_category?: string;
+      result_value?: string;
+      result_unit?: string;
+      reference_range?: string;
+      notes?: string;
+      ordered_by_provider_id?: number;
+    }
+  ): Promise<any> {
+    const formData = new FormData();
+    formData.append('user_id', String(userId));
+    formData.append('test_name', testName);
+    formData.append('test_date', testDate);
+    formData.append('file', file, file.name);
+    
+    if (options?.test_category) formData.append('test_category', options.test_category);
+    if (options?.result_value) formData.append('result_value', options.result_value);
+    if (options?.result_unit) formData.append('result_unit', options.result_unit);
+    if (options?.reference_range) formData.append('reference_range', options.reference_range);
+    if (options?.notes) formData.append('notes', options.notes);
+    if (options?.ordered_by_provider_id) formData.append('ordered_by_provider_id', String(options.ordered_by_provider_id));
+
+    const { data } = await this.client.post(
+      '/test-results/admin/results/upload-with-pdf',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return data;
+  }
+
+  async deleteTestResult(resultId: number): Promise<void> {
+    await this.client.delete(`/test-results/admin/results/${resultId}`);
+  }
+
+  // Test Results (Patient)
+  async getMyTestResults(filters?: { status_filter?: string; category?: string }): Promise<any[]> {
+    const { data } = await this.client.get('/test-results/my-results', { params: filters });
+    return data;
+  }
+
+  async getMyTestResultCategories(): Promise<string[]> {
+    const { data } = await this.client.get('/test-results/my-results/categories/list');
+    return data;
+  }
+
+  async downloadMyTestResultPdf(resultId: number): Promise<Blob> {
+    const response = await this.client.get(`/test-results/my-results/${resultId}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
 }
 
 export const api = new ApiClient();

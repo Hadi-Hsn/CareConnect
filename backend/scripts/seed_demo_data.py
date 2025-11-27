@@ -991,6 +991,182 @@ async def seed_lab_test_documents():
     print(f"✓ Indexed {len(LAB_TESTS)} lab test documents ({result.total_chunks} chunks)")
 
 
+async def seed_patient_test_results():
+    """Seed sample patient test results for the demo user."""
+    from datetime import datetime, timezone, timedelta
+    from io import BytesIO
+    from app.models import PatientTestResult
+    
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    except ImportError:
+        print("⚠ reportlab not installed, skipping test result PDF generation")
+        return
+    
+    print("Seeding patient test results...")
+    
+    async with async_session_maker() as session:
+        # Get the demo patient user
+        result = await session.execute(
+            select(User).where(User.email == "hadihacan@gmail.com")
+        )
+        patient = result.scalar_one_or_none()
+        
+        if not patient:
+            print("⚠ Demo patient not found, skipping test results")
+            return
+        
+        # Get a provider for ordering
+        provider_result = await session.execute(
+            select(Provider).where(Provider.department == "Internal Medicine").limit(1)
+        )
+        provider = provider_result.scalar_one_or_none()
+        
+        def generate_test_result_pdf(test_name: str, result_value: str, unit: str, reference: str, notes: str) -> bytes:
+            """Generate a sample test result PDF."""
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Title
+            title_style = ParagraphStyle(
+                'Title',
+                parent=styles['Heading1'],
+                fontSize=18,
+                textColor=colors.HexColor('#840132'),
+                spaceAfter=20,
+            )
+            story.append(Paragraph("AUB Medical Center", title_style))
+            story.append(Paragraph("Laboratory Test Report", styles['Heading2']))
+            story.append(Spacer(1, 20))
+            
+            # Patient Info
+            story.append(Paragraph(f"<b>Patient:</b> {patient.name}", styles['Normal']))
+            story.append(Paragraph(f"<b>Date:</b> {datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
+            story.append(Spacer(1, 20))
+            
+            # Test Results Table
+            data = [
+                ['Test Name', 'Result', 'Unit', 'Reference Range'],
+                [test_name, result_value, unit, reference],
+            ]
+            table = Table(data, colWidths=[180, 100, 80, 140])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#840132')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dddddd')),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 11),
+                ('TOPPADDING', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+            ]))
+            story.append(table)
+            story.append(Spacer(1, 20))
+            
+            # Notes
+            if notes:
+                story.append(Paragraph("<b>Notes:</b>", styles['Normal']))
+                story.append(Paragraph(notes, styles['Normal']))
+            
+            story.append(Spacer(1, 30))
+            story.append(Paragraph("This is an official laboratory report from AUB Medical Center.", styles['Normal']))
+            
+            doc.build(story)
+            return buffer.getvalue()
+        
+        # Sample test results
+        test_results_data = [
+            {
+                "test_name": "Complete Blood Count (CBC)",
+                "test_category": "Blood",
+                "test_date": datetime.now(timezone.utc) - timedelta(days=7),
+                "result_value": "14.2",
+                "result_unit": "g/dL",
+                "reference_range": "12.0 - 16.0 g/dL",
+                "status": "completed",
+                "notes": "Hemoglobin levels are within normal range. All blood cell counts are healthy.",
+            },
+            {
+                "test_name": "Lipid Panel",
+                "test_category": "Blood",
+                "test_date": datetime.now(timezone.utc) - timedelta(days=14),
+                "result_value": "185",
+                "result_unit": "mg/dL",
+                "reference_range": "< 200 mg/dL",
+                "status": "completed",
+                "notes": "Total cholesterol is within healthy limits. Continue current diet and exercise regimen.",
+            },
+            {
+                "test_name": "Thyroid Function Test (TSH)",
+                "test_category": "Blood",
+                "test_date": datetime.now(timezone.utc) - timedelta(days=21),
+                "result_value": "2.5",
+                "result_unit": "mIU/L",
+                "reference_range": "0.4 - 4.0 mIU/L",
+                "status": "reviewed",
+                "notes": "Thyroid function is normal. No thyroid medication adjustment needed.",
+            },
+            {
+                "test_name": "Chest X-Ray",
+                "test_category": "Imaging",
+                "test_date": datetime.now(timezone.utc) - timedelta(days=30),
+                "result_value": "Normal",
+                "result_unit": "",
+                "reference_range": "No abnormalities",
+                "status": "completed",
+                "notes": "Lungs are clear. Heart size is normal. No evidence of pneumonia or other abnormalities.",
+            },
+            {
+                "test_name": "HbA1c (Glycated Hemoglobin)",
+                "test_category": "Blood",
+                "test_date": datetime.now(timezone.utc) - timedelta(days=45),
+                "result_value": "5.4",
+                "result_unit": "%",
+                "reference_range": "< 5.7%",
+                "status": "reviewed",
+                "notes": "Blood sugar control is excellent. No signs of diabetes or pre-diabetes.",
+            },
+        ]
+        
+        for test_data in test_results_data:
+            # Generate PDF
+            pdf_data = generate_test_result_pdf(
+                test_data["test_name"],
+                test_data["result_value"],
+                test_data["result_unit"],
+                test_data["reference_range"],
+                test_data["notes"],
+            )
+            
+            test_result = PatientTestResult(
+                user_id=patient.id,
+                ordered_by_provider_id=provider.id if provider else None,
+                test_name=test_data["test_name"],
+                test_category=test_data["test_category"],
+                test_date=test_data["test_date"],
+                result_value=test_data["result_value"],
+                result_unit=test_data["result_unit"],
+                reference_range=test_data["reference_range"],
+                status=test_data["status"],
+                notes=test_data["notes"],
+                pdf_data=pdf_data,
+                pdf_filename=f"{test_data['test_name'].replace(' ', '_').replace('(', '').replace(')', '')}_Report.pdf",
+            )
+            session.add(test_result)
+        
+        await session.commit()
+        print(f"✓ Seeded {len(test_results_data)} test results for demo patient")
+
+
 async def main():
     """Run all seed functions."""
     print("🌱 Starting database seeding...")
@@ -1007,6 +1183,7 @@ async def main():
     await seed_users()
     await seed_providers()
     await seed_lab_tests()
+    await seed_patient_test_results()  # Add patient test results
     await seed_documents()
     await seed_doctor_documents()
     await seed_lab_test_documents()  # Add lab test documents

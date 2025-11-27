@@ -5,6 +5,7 @@ import ChatPage from './pages/Chat';
 import AppointmentsPage from './pages/Appointments';
 import CalendarPage from './pages/Calendar';
 import LabsPage from './pages/Labs';
+import TestResultsPage from './pages/TestResults';
 import AdminPage from './pages/Admin';
 import IncidentsPage from './pages/Incidents';
 import ProvidersPage from './pages/Providers';
@@ -74,6 +75,18 @@ function App() {
               isAuthenticated ? (
                 <Layout>
                   <LabsPage />
+                </Layout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/test-results"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <TestResultsPage />
                 </Layout>
               ) : (
                 <Navigate to="/login" />

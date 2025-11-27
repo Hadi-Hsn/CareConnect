@@ -30,6 +30,8 @@ import {
   Avatar,
   Divider,
   alpha,
+  MenuItem,
+  Snackbar,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -42,10 +44,24 @@ import {
   CalendarMonth as CalendarIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
+  Upload as UploadIcon,
+  PictureAsPdf as PdfIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { api } from '@/lib/api';
 
 const BRAND_COLOR = '#840132';
+
+const TEST_CATEGORIES = [
+  'Blood',
+  'Imaging',
+  'Cardiology',
+  'Urine',
+  'Microbiology',
+  'Pathology',
+  'Radiology',
+  'General',
+];
 
 interface Patient {
   id: number;
@@ -100,6 +116,21 @@ export default function PatientsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
+  
+  // Test result upload state
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadPatient, setUploadPatient] = useState<Patient | null>(null);
+  const [uploadForm, setUploadForm] = useState({
+    test_name: '',
+    test_category: 'General',
+    test_date: new Date().toISOString().split('T')[0],
+    result_value: '',
+    result_unit: '',
+    reference_range: '',
+    notes: '',
+  });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   useEffect(() => {
     fetchPatients();
@@ -174,6 +205,54 @@ export default function PatientsPage() {
       setSelectedPatient(null);
     } catch (err: any) {
       setError(err.message || 'Failed to delete patient');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Upload test result handlers
+  const handleUploadOpen = (patient: Patient) => {
+    setUploadPatient(patient);
+    setUploadForm({
+      test_name: '',
+      test_category: 'General',
+      test_date: new Date().toISOString().split('T')[0],
+      result_value: '',
+      result_unit: '',
+      reference_range: '',
+      notes: '',
+    });
+    setUploadFile(null);
+    setUploadDialogOpen(true);
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!uploadPatient || !uploadForm.test_name || !uploadFile) return;
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      
+      await api.createTestResultWithPdf(
+        uploadPatient.id,
+        uploadForm.test_name,
+        uploadForm.test_date + 'T00:00:00Z',
+        uploadFile,
+        {
+          test_category: uploadForm.test_category,
+          result_value: uploadForm.result_value || undefined,
+          result_unit: uploadForm.result_unit || undefined,
+          reference_range: uploadForm.reference_range || undefined,
+          notes: uploadForm.notes || undefined,
+        }
+      );
+      
+      await fetchPatients();
+      setUploadDialogOpen(false);
+      setUploadPatient(null);
+      setUploadSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload test result');
     } finally {
       setSubmitting(false);
     }
@@ -415,6 +494,15 @@ export default function PatientsPage() {
                           sx={{ color: BRAND_COLOR }}
                         >
                           <ViewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Upload Test Result">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleUploadOpen(patient)}
+                          sx={{ color: '#1976d2' }}
+                        >
+                          <UploadIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Edit Patient">
@@ -745,6 +833,183 @@ export default function PatientsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Upload Test Result Dialog */}
+      <Dialog 
+        open={uploadDialogOpen} 
+        onClose={() => setUploadDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Upload Test Result
+          {uploadPatient && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 400 }}>
+              For {uploadPatient.name}
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <TextField
+              label="Test Name *"
+              value={uploadForm.test_name}
+              onChange={(e) => setUploadForm({ ...uploadForm, test_name: e.target.value })}
+              fullWidth
+              placeholder="e.g., Complete Blood Count (CBC)"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                select
+                label="Category"
+                value={uploadForm.test_category}
+                onChange={(e) => setUploadForm({ ...uploadForm, test_category: e.target.value })}
+                fullWidth
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              >
+                {TEST_CATEGORIES.map((cat) => (
+                  <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                ))}
+              </TextField>
+              
+              <TextField
+                type="date"
+                label="Test Date *"
+                value={uploadForm.test_date}
+                onChange={(e) => setUploadForm({ ...uploadForm, test_date: e.target.value })}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Result Value"
+                value={uploadForm.result_value}
+                onChange={(e) => setUploadForm({ ...uploadForm, result_value: e.target.value })}
+                fullWidth
+                placeholder="e.g., 14.5"
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+              <TextField
+                label="Unit"
+                value={uploadForm.result_unit}
+                onChange={(e) => setUploadForm({ ...uploadForm, result_unit: e.target.value })}
+                sx={{ width: 150, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                placeholder="e.g., g/dL"
+              />
+            </Box>
+            
+            <TextField
+              label="Reference Range"
+              value={uploadForm.reference_range}
+              onChange={(e) => setUploadForm({ ...uploadForm, reference_range: e.target.value })}
+              fullWidth
+              placeholder="e.g., 12.0 - 16.0 g/dL"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+            
+            <TextField
+              label="Notes"
+              value={uploadForm.notes}
+              onChange={(e) => setUploadForm({ ...uploadForm, notes: e.target.value })}
+              fullWidth
+              multiline
+              rows={2}
+              placeholder="Additional notes about the test result..."
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+            
+            {/* PDF Upload */}
+            <Box
+              sx={{
+                p: 3,
+                border: '2px dashed',
+                borderColor: uploadFile ? '#2e7d32' : 'divider',
+                borderRadius: 2,
+                textAlign: 'center',
+                bgcolor: uploadFile ? alpha('#2e7d32', 0.05) : '#fafafa',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {uploadFile ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                  <PdfIcon sx={{ fontSize: 40, color: '#d32f2f' }} />
+                  <Box sx={{ textAlign: 'left' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {uploadFile.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      {(uploadFile.size / 1024).toFixed(1)} KB
+                    </Typography>
+                  </Box>
+                  <IconButton 
+                    size="small" 
+                    onClick={() => setUploadFile(null)}
+                    sx={{ color: '#d32f2f' }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ) : (
+                <label style={{ cursor: 'pointer', display: 'block' }}>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setUploadFile(file);
+                    }}
+                    style={{ display: 'none' }}
+                  />
+                  <PdfIcon sx={{ fontSize: 48, color: '#999', mb: 1 }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    Click to upload PDF report *
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    Maximum file size: 10MB
+                  </Typography>
+                </label>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button 
+            onClick={() => setUploadDialogOpen(false)} 
+            disabled={submitting} 
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUploadSubmit}
+            variant="contained"
+            disabled={submitting || !uploadForm.test_name || !uploadFile}
+            startIcon={submitting ? <CircularProgress size={16} sx={{ color: '#fff' }} /> : <UploadIcon />}
+            sx={{
+              bgcolor: BRAND_COLOR,
+              '&:hover': { bgcolor: '#5e0124' },
+              textTransform: 'none',
+              fontWeight: 600,
+            }}
+          >
+            {submitting ? 'Uploading...' : 'Upload Result'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={uploadSuccess}
+        autoHideDuration={4000}
+        onClose={() => setUploadSuccess(false)}
+        message="Test result uploaded successfully!"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }
