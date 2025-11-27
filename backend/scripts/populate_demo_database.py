@@ -792,6 +792,10 @@ async def seed_lab_tests():
             ),
         ]
 
+        for lab_test in lab_tests:
+            if not lab_test.code.startswith("RAD-"):
+                lab_test.department = "Laboratory"
+
         session.add_all(lab_tests)
         await session.commit()
         print(f"✓ Seeded {len(lab_tests)} lab tests")

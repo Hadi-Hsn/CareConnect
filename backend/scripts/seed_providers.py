@@ -600,6 +600,29 @@ async def seed_providers():
                 specialty="Minimally Invasive Urology",
                 bio="Robotic surgery specialist performing advanced urologic procedures",
             ),
+            
+            # Laboratory (3 providers)
+            Provider(
+                name="Lab Services Team A",
+                department="Laboratory",
+                type=ProviderType.SPECIALIST,
+                specialty="Diagnostic Lab Testing",
+                bio="Core laboratory team handling specimen collection and diagnostic testing",
+            ),
+            Provider(
+                name="Lab Services Team B",
+                department="Laboratory",
+                type=ProviderType.SPECIALIST,
+                specialty="Diagnostic Lab Testing",
+                bio="Experienced technologists ensuring timely turnaround for comprehensive panels",
+            ),
+            Provider(
+                name="Lab Services Team C",
+                department="Laboratory",
+                type=ProviderType.SPECIALIST,
+                specialty="Diagnostic Lab Testing",
+                bio="Dedicated lab technicians supporting high-volume test scheduling",
+            ),
         ]
 
         session.add_all(providers)

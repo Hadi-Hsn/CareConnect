@@ -669,7 +669,7 @@ async def seed_lab_tests():
         desired_tests = {
             "LAB-CBC": dict(
                 name="Complete Blood Count (CBC)",
-                department="Hematology",
+                department="Laboratory",
                 description="Measures different components of blood including red and white blood cells",
                 prep_instructions="No special preparation required",
                 fasting_hours=None,
@@ -677,7 +677,7 @@ async def seed_lab_tests():
             ),
             "LAB-LIPID": dict(
                 name="Lipid Panel",
-                department="Cardiology",
+                department="Laboratory",
                 description="Measures cholesterol and triglyceride levels",
                 prep_instructions="Fasting required before test",
                 fasting_hours=12,
@@ -685,7 +685,7 @@ async def seed_lab_tests():
             ),
             "LAB-THYROID": dict(
                 name="Thyroid Function Test",
-                department="Endocrinology",
+                department="Laboratory",
                 description="Measures thyroid hormone levels (TSH, T3, T4)",
                 prep_instructions="No special preparation required",
                 fasting_hours=None,
@@ -693,7 +693,7 @@ async def seed_lab_tests():
             ),
             "LAB-A1C": dict(
                 name="Hemoglobin A1C",
-                department="Endocrinology",
+                department="Laboratory",
                 description="Measures average blood sugar levels over 3 months",
                 prep_instructions="No fasting required",
                 fasting_hours=None,
@@ -701,7 +701,7 @@ async def seed_lab_tests():
             ),
             "LAB-CMP": dict(
                 name="Comprehensive Metabolic Panel",
-                department="Nephrology",
+                department="Laboratory",
                 description="Measures kidney function, blood sugar, and electrolytes",
                 prep_instructions="Fasting recommended",
                 fasting_hours=8,
@@ -709,7 +709,7 @@ async def seed_lab_tests():
             ),
             "LAB-LFT": dict(
                 name="Liver Function Test",
-                department="Gastroenterology",
+                department="Laboratory",
                 description="Evaluates liver health and function",
                 prep_instructions="No special preparation required",
                 fasting_hours=None,
@@ -717,7 +717,7 @@ async def seed_lab_tests():
             ),
             "LAB-UA": dict(
                 name="Urinalysis",
-                department="Nephrology",
+                department="Laboratory",
                 description="Analyzes urine for various health indicators",
                 prep_instructions="First morning urine sample preferred",
                 fasting_hours=None,

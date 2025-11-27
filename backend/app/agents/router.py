@@ -51,6 +51,8 @@ class AgentRouter:
             self.scheduling_client = MockSchedulingClient()
 
         self.max_iterations = 10  # Prevent infinite loops
+        # Cache latest slot search per user to validate bookings
+        self.user_slot_cache: dict[int, set[tuple[int, str]]] = {}
 
     async def chat_turn(
         self, messages: list[ChatMessage], user_id: int | None = None
@@ -587,7 +589,7 @@ class AgentRouter:
             if tool_name == "get_user_appointments":
                 result = await self._get_user_appointments(user_id=user_id, **arguments)
             elif tool_name == "search_timeslots":
-                result = await self._search_timeslots(**arguments)
+                result = await self._search_timeslots(user_id=user_id, **arguments)
             elif tool_name == "book_appointment":
                 # Remove user_id from arguments if present (we'll use the authenticated user_id)
                 book_args = {k: v for k, v in arguments.items() if k != 'user_id'}
@@ -622,13 +624,30 @@ class AgentRouter:
                 error=str(e),
             )
 
+    def _store_user_slots(self, user_id: int, slots: set[tuple[int, str]]) -> None:
+        """Store available slots for user validation."""
+        if slots:
+            self.user_slot_cache[user_id] = slots
+
+    def _slot_is_valid_for_user(self, user_id: int, provider_id: int, slot_id: str) -> bool:
+        """Check if slot is still in user's latest availability cache."""
+        cached = self.user_slot_cache.get(user_id)
+        if not cached:
+            return False
+        return (provider_id, slot_id) in cached
+
     async def _search_timeslots(
-        self, date: str, provider_id: int | None = None, department: str | None = None
+        self,
+        date: str,
+        provider_id: int | None = None,
+        department: str | None = None,
+        user_id: int | None = None,
     ) -> dict[str, Any]:
         """Search for available timeslots."""
         from datetime import datetime
 
         target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        found_slots: set[tuple[int, str]] = set()
 
         # If provider_id is given, search for that provider
         if provider_id:
@@ -636,7 +655,12 @@ class AgentRouter:
             result = await self.db.execute(select(Provider).where(Provider.id == provider_id))
             provider = result.scalar_one_or_none()
 
-            return {
+            if user_id:
+                for slot in slots:
+                    if slot.available:
+                        found_slots.add((provider_id, slot.slot_id))
+
+            result = {
                 "provider_id": provider_id,
                 "provider_name": provider.name if provider else "Unknown",
                 "department": provider.department if provider else "",
@@ -651,6 +675,9 @@ class AgentRouter:
                     for s in slots
                 ],
             }
+            if user_id:
+                self._store_user_slots(user_id, found_slots)
+            return result
 
         # If department is given, find providers in that department
         elif department:
@@ -683,6 +710,8 @@ class AgentRouter:
                         }
                         for s in available_slots[:10]  # Limit to first 10 slots
                     ]
+                    for s in available_slots[:10]:
+                        found_slots.add((provider["id"], s.slot_id))
                     providers_with_slots.append(provider_info)
                 else:
                     # Provider has no availability - still list them
@@ -691,6 +720,9 @@ class AgentRouter:
             # Combine results - providers with slots first
             all_providers = providers_with_slots + providers_without_slots
             
+            if user_id:
+                self._store_user_slots(user_id, found_slots)
+
             if not providers_with_slots:
                 # No availability, but show all doctors in the department
                 return {
@@ -721,6 +753,14 @@ class AgentRouter:
         """Book an appointment."""
         if not user_id:
             return {"error": "user_id is required to book an appointment"}
+
+        if not self._slot_is_valid_for_user(user_id, provider_id, slot_id):
+            return {
+                "error": (
+                    "This slot was not in the latest availability list. "
+                    "Please ask me to check availability again so we can confirm the correct provider and time."
+                )
+            }
 
         result = await self.scheduling_client.book_appointment(
             user_id=user_id,

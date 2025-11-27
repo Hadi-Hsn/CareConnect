@@ -17,6 +17,7 @@ from app.api.v1.agent import chat as agent_chat
 from app.core.config import get_settings
 from app.core.db import close_db, init_db
 from app.core.logging import get_logger, setup_logging
+from app.services.provider_initializer import ensure_lab_providers
 
 # Setup logging first
 setup_logging()
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     logger.info("starting_application", environment=settings.environment)
     await init_db()
+    await ensure_lab_providers()
     yield
     logger.info("shutting_down_application")
     await close_db()
