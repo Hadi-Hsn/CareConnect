@@ -656,6 +656,29 @@ async def seed_providers():
                 specialty="Minimally Invasive Urology",
                 bio="Robotic surgery specialist performing advanced urologic procedures with smaller incisions, less pain, and faster recovery times.",
             ),
+            
+            # Laboratory (3 providers for lab test appointments - named generically for patient convenience)
+            Provider(
+                name="Laboratory Services",
+                department="Laboratory",
+                type=ProviderType.SPECIALIST,
+                specialty="Diagnostic Lab Testing",
+                bio="Our laboratory team handles specimen collection and diagnostic testing including blood work, urinalysis, and comprehensive metabolic panels. Available for CBC, lipid panels, thyroid tests, and more.",
+            ),
+            Provider(
+                name="Laboratory Services - Morning",
+                department="Laboratory",
+                type=ProviderType.SPECIALIST,
+                specialty="Diagnostic Lab Testing",
+                bio="Morning laboratory services ensuring timely turnaround for fasting tests like lipid profiles, glucose tests, and metabolic panels.",
+            ),
+            Provider(
+                name="Laboratory Services - Afternoon",
+                department="Laboratory",
+                type=ProviderType.SPECIALIST,
+                specialty="Diagnostic Lab Testing",
+                bio="Afternoon laboratory services for non-fasting tests including CBC, A1C, liver function tests, and other routine laboratory services.",
+            ),
         ]
 
         session.add_all(providers)
