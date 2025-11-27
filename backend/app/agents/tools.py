@@ -116,11 +116,10 @@ TOOLS: list[dict[str, Any]] = [
             "name": "modify_appointment",
             "description": (
                 "Change an existing appointment to a new time slot. "
-                "Reschedules the appointment while keeping the same provider and reason. "
-                "REQUIRED: appointment_id (integer) and new_slot_id. "
-                "CRITICAL: If user provides confirmation_code, call get_user_appointments FIRST, "
-                "find the appointment, then use its appointment_id. "
-                "Use when user says: 'move', 'change', 'reschedule', 'switch', 'modify'."
+                "CRITICAL: You MUST call get_user_appointments FIRST to get the real appointment_id. "
+                "NEVER guess or make up appointment_id - it must come from get_user_appointments results. "
+                "Typical appointment_id values are small integers like 1, 2, 3, etc. "
+                "Workflow: 1) get_user_appointments → 2) search_timeslots for new time → 3) modify_appointment"
             ),
             "parameters": {
                 "type": "object",
@@ -128,10 +127,10 @@ TOOLS: list[dict[str, Any]] = [
                     "appointment_id": {
                         "type": "integer",
                         "description": (
-                            "Numeric ID of the appointment to modify. "
-                            "This is NOT the confirmation code (which is alphanumeric). "
-                            "Get from get_user_appointments results. "
-                            "Field name in results: 'appointment_id'."
+                            "Numeric ID of the appointment to modify (small integer like 1, 2, 3). "
+                            "MUST come from get_user_appointments results - NEVER guess this value. "
+                            "This is NOT the confirmation code (which is alphanumeric like 'ABC123XYZ'). "
+                            "Field name in get_user_appointments results: 'appointment_id'."
                         ),
                     },
                     "new_slot_id": {
@@ -140,9 +139,8 @@ TOOLS: list[dict[str, Any]] = [
                         "description": (
                             "ID of the new time slot. "
                             "Format: 'slot_PROVIDERID_YYYY-MM-DD_N'. "
-                            "Always ensure the provider portion matches the appointment's doctor. "
-                            "MUST be from search_timeslots results. "
-                            "Call search_timeslots with the new desired date first."
+                            "The PROVIDERID must match the original appointment's provider. "
+                            "MUST come from search_timeslots results for the same provider."
                         ),
                     },
                 },
@@ -157,10 +155,8 @@ TOOLS: list[dict[str, Any]] = [
             "name": "cancel_appointment",
             "description": (
                 "Cancel an existing appointment permanently. "
-                "REQUIRED: appointment_id (integer). "
-                "CRITICAL: If user provides confirmation_code instead of appointment_id, "
-                "call get_user_appointments FIRST, find the matching appointment, "
-                "then call cancel_appointment with its appointment_id. "
+                "CRITICAL: You MUST call get_user_appointments FIRST to get the real appointment_id. "
+                "NEVER guess or make up appointment_id - it must come from get_user_appointments results. "
                 "Always confirm cancellation details with user before calling."
             ),
             "parameters": {
@@ -169,10 +165,9 @@ TOOLS: list[dict[str, Any]] = [
                     "appointment_id": {
                         "type": "integer",
                         "description": (
-                            "Numeric ID of the appointment to cancel. "
-                            "This is NOT the confirmation code. "
-                            "Get from get_user_appointments results. "
-                            "Field name: 'appointment_id'."
+                            "Numeric ID of the appointment to cancel (small integer like 1, 2, 3). "
+                            "MUST come from get_user_appointments results - NEVER guess this value. "
+                            "Field name in get_user_appointments results: 'appointment_id'."
                         ),
                     },
                 },

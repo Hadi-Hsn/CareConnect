@@ -310,13 +310,23 @@ class MockSchedulingClient(SchedulingClient):
         """Cancel an appointment."""
         try:
             async with await self._get_session() as session:
+                # Get appointment with provider details
                 result = await session.execute(
-                    select(Appointment).where(Appointment.id == appointment_id)
+                    select(Appointment, Provider)
+                    .join(Provider, Appointment.provider_id == Provider.id)
+                    .where(Appointment.id == appointment_id)
                 )
-                appointment = result.scalar_one_or_none()
+                row = result.first()
 
-                if not appointment:
+                if not row:
                     raise ValueError("Appointment not found")
+
+                appointment, provider = row
+
+                # Store details before cancellation for response
+                cancelled_reason = appointment.reason or f"{provider.department} appointment"
+                cancelled_time = appointment.time_start
+                cancelled_confirmation = appointment.confirmation_code
 
                 appointment.status = AppointmentStatus.CANCELLED
                 appointment.updated_at = datetime.now(LEBANON_TZ)
@@ -328,7 +338,14 @@ class MockSchedulingClient(SchedulingClient):
                 return {
                     "appointment_id": appointment.id,
                     "status": str(appointment.status) if hasattr(appointment.status, 'value') else appointment.status,
-                    "message": "Appointment successfully cancelled",
+                    "cancelled_appointment": {
+                        "reason": cancelled_reason,
+                        "provider_name": provider.name,
+                        "department": provider.department,
+                        "date_time": cancelled_time.strftime("%B %d, %Y at %I:%M %p"),
+                        "confirmation_code": cancelled_confirmation,
+                    },
+                    "message": f"Successfully cancelled: {cancelled_reason} on {cancelled_time.strftime('%B %d, %Y at %I:%M %p')}",
                 }
 
         except Exception as e:

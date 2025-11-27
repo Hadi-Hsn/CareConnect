@@ -953,8 +953,12 @@ class AgentRouter:
             # Just format it directly without timezone conversion
             appt_time = appointment.time_start
             
+            # Include a clear label to help the agent identify the correct appointment
+            reason_label = appointment.reason or f"{provider.department} appointment"
+            
             appointments.append({
-                "appointment_id": appointment.id,
+                "appointment_id": appointment.id,  # USE THIS ID for modify/cancel operations
+                "id_for_modification": appointment.id,  # Duplicate to emphasize
                 "confirmation_code": appointment.confirmation_code,
                 "provider_name": provider.name,
                 "provider_id": provider.id,
@@ -965,6 +969,7 @@ class AgentRouter:
                 "datetime_display": appt_time.strftime("%B %d, %Y at %I:%M %p"),
                 "status": appointment.status,
                 "reason": appointment.reason,
+                "summary": f"ID={appointment.id}: {reason_label} on {appt_time.strftime('%B %d')} at {appt_time.strftime('%I:%M %p')}",
             })
 
         return {
