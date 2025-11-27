@@ -211,6 +211,32 @@ class ApiClient {
     await this.client.delete(`/appointments/${id}`);
   }
 
+  async clearCancelledAppointments(userId?: number): Promise<void> {
+    try {
+      const config: any = {
+        validateStatus: (status: number) => status === 204 || (status >= 200 && status < 300),
+      };
+      
+      // Only add user_id param if it's provided
+      if (userId !== undefined && userId !== null) {
+        config.params = { user_id: userId };
+      }
+      
+      await this.client.delete('/appointments/clear-cancelled', config);
+      
+      // 204 No Content is a valid success response
+      return;
+    } catch (error: any) {
+      console.error('API error in clearCancelledAppointments:', error);
+      console.error('Error response:', error?.response);
+      console.error('Error response data:', error?.response?.data);
+      
+      // Preserve the original error structure so the mutation can extract the message properly
+      // Don't wrap it in a new Error, just re-throw the axios error
+      throw error;
+    }
+  }
+
   // Lab Tests
   async getLabTests(filters?: { department?: string }): Promise<LabTest[]> {
     const { data } = await this.client.get<LabTest[]>('/labs', { params: filters });

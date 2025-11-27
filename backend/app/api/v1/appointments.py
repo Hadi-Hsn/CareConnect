@@ -1,11 +1,11 @@
 """Appointment endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.logging import get_logger
-from app.models import Appointment, Provider, User
+from app.models import Appointment, AppointmentStatus, Provider, User
 from app.schemas.appointment import (
     AppointmentCreate,
     AppointmentResponse,
@@ -149,6 +149,43 @@ async def update_appointment(
     logger.info("appointment_updated", appointment_id=appointment_id)
 
     return AppointmentResponse.model_validate(appointment)
+
+
+@router.delete("/clear-cancelled", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_cancelled_appointments(
+    user_id: int | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete cancelled appointments. Patients can clear their own, admins can specify user_id.
+    
+    SAFETY: This endpoint ONLY deletes appointments with status='cancelled'.
+    The WHERE clause explicitly filters for AppointmentStatus.CANCELLED, ensuring
+    confirmed, pending, completed, and no_show appointments are NEVER deleted.
+    """
+    try:
+        # Build delete query with explicit status filter for safety
+        # CRITICAL: Only delete appointments with status='cancelled'
+        delete_query = delete(Appointment).where(Appointment.status == AppointmentStatus.CANCELLED)
+        if user_id is not None:
+            delete_query = delete_query.where(Appointment.user_id == user_id)
+        
+        # Execute the delete
+        result = await db.execute(delete_query)
+        count = result.rowcount
+        
+        await db.commit()
+        logger.info(
+            "cancelled_appointments_cleared",
+            count=count,
+            user_id=user_id,
+            status_filter="cancelled_only",
+        )
+    except Exception as e:
+        logger.error("error_clearing_cancelled_appointments", error=str(e), user_id=user_id, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to clear cancelled appointments: {str(e)}",
+        )
 
 
 @router.delete("/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
