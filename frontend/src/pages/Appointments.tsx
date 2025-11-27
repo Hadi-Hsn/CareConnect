@@ -33,6 +33,7 @@ import {
   Fade,
   Tooltip,
   InputAdornment,
+  Snackbar,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -241,6 +242,8 @@ export default function AppointmentsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [timeSlotsDialogOpen, setTimeSlotsDialogOpen] = useState(false);
+  const [clearCancelledDialogOpen, setClearCancelledDialogOpen] = useState(false);
+  const [errorSnackbar, setErrorSnackbar] = useState({ open: false, message: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   
@@ -259,10 +262,127 @@ export default function AppointmentsPage() {
   const queryClient = useQueryClient();
 
   // Fetch appointments
-  const { data: appointments, isLoading } = useQuery({
+  const { data: appointments, isLoading, refetch: refetchAppointments } = useQuery({
     queryKey: ['appointments', isAdmin],
     queryFn: () => isAdmin ? api.getAppointments() : api.getAppointments({ user_id: currentUser?.id }),
   });
+  const clearCancelledMutation = useMutation({
+    mutationFn: async () => {
+      try {
+        const userId = isAdmin ? undefined : (currentUser?.id ?? undefined);
+        await api.clearCancelledAppointments(userId);
+      } catch (error: any) {
+        console.error('Error in clearCancelledAppointments:', error);
+        throw error;
+      }
+    },
+    onSuccess: async () => {
+      try {
+        setClearCancelledDialogOpen(false);
+        // Refetch appointments to get updated list
+        try {
+          await refetchAppointments();
+        } catch (refetchError) {
+          console.error('Error refetching appointments:', refetchError);
+          // Still invalidate to trigger a refetch on next render
+          queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        }
+      } catch (error) {
+        console.error('Error in onSuccess:', error);
+        setErrorSnackbar({
+          open: true,
+          message: 'Appointments cleared, but there was an error refreshing. Please refresh the page.',
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error('Failed to clear cancelled appointments - full error:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error keys:', error ? Object.keys(error) : 'no error');
+      if (error?.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+      
+      setClearCancelledDialogOpen(false);
+      
+      // Extract error message properly - handle all possible error structures
+      let errorMessage = 'Failed to clear cancelled appointments. Please try again.';
+      
+      try {
+        if (!error) {
+          errorMessage = 'Unknown error occurred';
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        } else if (error?.message) {
+          if (typeof error.message === 'string') {
+            errorMessage = error.message;
+          } else {
+            errorMessage = String(error.message);
+          }
+        } else if (error?.response) {
+          const responseData = error.response.data;
+          if (typeof responseData === 'string') {
+            errorMessage = responseData;
+          } else if (responseData?.detail) {
+            errorMessage = typeof responseData.detail === 'string' 
+              ? responseData.detail 
+              : String(responseData.detail);
+          } else if (responseData?.message) {
+            errorMessage = typeof responseData.message === 'string'
+              ? responseData.message
+              : String(responseData.message);
+          } else if (Array.isArray(responseData)) {
+            errorMessage = responseData.map((item: any) => {
+              if (typeof item === 'string') return item;
+              if (item?.msg) return item.msg;
+              if (item?.message) return item.message;
+              return JSON.stringify(item);
+            }).join(', ');
+          } else if (typeof responseData === 'object') {
+            // Try to extract meaningful message from object
+            const msg = responseData.msg || responseData.error || responseData.title;
+            errorMessage = msg ? String(msg) : `Server error: ${error.response.status}`;
+          } else {
+            errorMessage = `Server error: ${error.response.status}`;
+          }
+        } else {
+          // Fallback: try to stringify the error
+          errorMessage = String(error);
+        }
+      } catch (e) {
+        console.error('Error extracting error message:', e);
+        errorMessage = 'An unexpected error occurred. Please check the console for details.';
+      }
+      
+      // Ensure we have a valid string message
+      if (!errorMessage || errorMessage === '[object Object]') {
+        errorMessage = 'Failed to clear cancelled appointments. Please check the console for details.';
+      }
+      
+      setErrorSnackbar({
+        open: true,
+        message: errorMessage,
+      });
+    },
+  });
+
+  const handleClearCancelled = () => {
+    setClearCancelledDialogOpen(true);
+  };
+
+  const handleClearCancelledConfirm = () => {
+    try {
+      clearCancelledMutation.mutate();
+    } catch (error) {
+      console.error('Error calling mutation:', error);
+      setErrorSnackbar({
+        open: true,
+        message: 'An error occurred. Please try again.',
+      });
+    }
+  };
+
 
   // Fetch all providers
   const { data: providers } = useQuery({
@@ -406,7 +526,7 @@ export default function AppointmentsPage() {
         </Grid>
 
         {/* Filters */}
-        <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField placeholder="Search appointments..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} size="small" sx={{ flexGrow: 1, minWidth: 250 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.secondary' }} /></InputAdornment> }} />
           <TextField select size="small" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} sx={{ minWidth: 150 }} InputProps={{ startAdornment: <InputAdornment position="start"><FilterIcon sx={{ color: 'text.secondary', fontSize: 18 }} /></InputAdornment> }}>
             <MenuItem value="">All Status</MenuItem>
@@ -415,6 +535,16 @@ export default function AppointmentsPage() {
             <MenuItem value="cancelled">Cancelled</MenuItem>
             <MenuItem value="completed">Completed</MenuItem>
           </TextField>
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            onClick={handleClearCancelled}
+            disabled={clearCancelledMutation.isPending || stats.cancelled === 0}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {clearCancelledMutation.isPending ? 'Clearing...' : 'Clear Cancelled'}
+          </Button>
         </Paper>
 
         {/* Table */}
@@ -528,16 +658,71 @@ export default function AppointmentsPage() {
           <DialogContent>{selectedAppointment && (<Typography>Are you sure you want to cancel the appointment for <strong>{selectedAppointment.user_name}</strong> with <strong>{selectedAppointment.provider_name}</strong> on {formatLebanonTime(selectedAppointment.time_start)}?</Typography>)}</DialogContent>
           <DialogActions sx={{ p: 2 }}><Button onClick={() => setDeleteDialogOpen(false)}>No, Keep It</Button><Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleteMutation.isPending}>{deleteMutation.isPending ? 'Cancelling...' : 'Yes, Cancel'}</Button></DialogActions>
         </Dialog>
+
+        {/* Clear Cancelled Confirmation Dialog */}
+        <Dialog open={clearCancelledDialogOpen} onClose={() => setClearCancelledDialogOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+          <DialogTitle sx={{ pb: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#d32f2f' }}>Clear Cancelled Appointments</Typography>
+          </DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to permanently remove all cancelled appointments from the system? 
+              This action cannot be undone.
+            </Typography>
+            <Alert severity="warning" sx={{ mt: 2, borderRadius: 2 }}>
+              This will delete all cancelled appointments from the database.
+            </Alert>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setClearCancelledDialogOpen(false)}>Cancel</Button>
+            <Button 
+              variant="contained" 
+              color="error" 
+              onClick={handleClearCancelledConfirm} 
+              disabled={clearCancelledMutation.isPending}
+            >
+              {clearCancelledMutation.isPending ? 'Clearing...' : 'Yes, Clear All'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Error Snackbar */}
+        <Snackbar
+          open={errorSnackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setErrorSnackbar({ open: false, message: '' })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" onClose={() => setErrorSnackbar({ open: false, message: '' })}>
+            {errorSnackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
     );
   }
 
   // Patient view
+  const cancelledCount = appointments?.filter((a: any) => a.status === 'cancelled').length || 0;
+  
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800, background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 1 }}>My Appointments</Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary' }}>View and manage your upcoming healthcare appointments</Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 1 }}>My Appointments</Typography>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>View and manage your upcoming healthcare appointments</Typography>
+        </Box>
+        {cancelledCount > 0 && (
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            onClick={handleClearCancelled}
+            disabled={clearCancelledMutation.isPending}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {clearCancelledMutation.isPending ? 'Clearing...' : 'Clear Cancelled'}
+          </Button>
+        )}
       </Box>
       {(!appointments || appointments.length === 0) ? (
         <Paper elevation={0} sx={{ p: 6, borderRadius: 4, border: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
@@ -548,6 +733,47 @@ export default function AppointmentsPage() {
       ) : (
         <Grid container spacing={3}>{appointments.map((appt: any, index: number) => (<Grid item xs={12} md={6} key={appt.id}><AppointmentCard appointment={appt} index={index} /></Grid>))}</Grid>
       )}
+
+      {/* Clear Cancelled Confirmation Dialog */}
+      <Dialog open={clearCancelledDialogOpen} onClose={() => setClearCancelledDialogOpen(false)} PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: '#d32f2f' }}>Clear Cancelled Appointments</Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to permanently remove all cancelled appointments from your view? 
+            This action cannot be undone.
+          </Typography>
+          {isAdmin && (
+            <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+              This will remove all cancelled appointments from the system.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setClearCancelledDialogOpen(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleClearCancelledConfirm} 
+            disabled={clearCancelledMutation.isPending}
+          >
+            {clearCancelledMutation.isPending ? 'Clearing...' : 'Yes, Clear All'}
+          </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Error Snackbar */}
+        <Snackbar
+          open={errorSnackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setErrorSnackbar({ open: false, message: '' })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" onClose={() => setErrorSnackbar({ open: false, message: '' })}>
+            {errorSnackbar.message}
+          </Alert>
+        </Snackbar>
     </Box>
   );
 }
