@@ -34,9 +34,17 @@ import { api } from '@/lib/api';
 import type { ChatMessage, ToolResult } from '@/types/api';
 import VoiceChat from '@/components/VoiceChat';
 
-// Session management
-const CHAT_SESSION_KEY = 'careconnect_chat_session';
-const CHAT_MESSAGES_KEY = 'careconnect_chat_messages';
+// Storage helpers
+const STORAGE_PREFIX = 'careconnect_chat';
+
+const getSessionKey = (userId?: number) =>
+  `${STORAGE_PREFIX}_session_${userId ?? 'anonymous'}`;
+
+const getMessagesKey = (userId?: number) =>
+  `${STORAGE_PREFIX}_messages_${userId ?? 'anonymous'}`;
+
+const getDraftKey = (userId?: number) =>
+  `${STORAGE_PREFIX}_draft_${userId ?? 'anonymous'}`;
 
 interface ChatSession {
   id: string;
@@ -44,8 +52,8 @@ interface ChatSession {
   lastActivity: string;
 }
 
-function getCurrentSession(): ChatSession {
-  const stored = localStorage.getItem(CHAT_SESSION_KEY);
+function getCurrentSession(sessionKey: string): ChatSession {
+  const stored = localStorage.getItem(sessionKey);
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -53,26 +61,26 @@ function getCurrentSession(): ChatSession {
       // Invalid session, create new one
     }
   }
-  return createNewSession();
+  return createNewSession(sessionKey);
 }
 
-function createNewSession(): ChatSession {
+function createNewSession(sessionKey: string): ChatSession {
   const session: ChatSession = {
     id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     startedAt: new Date().toISOString(),
     lastActivity: new Date().toISOString(),
   };
-  localStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session));
+  localStorage.setItem(sessionKey, JSON.stringify(session));
   return session;
 }
 
-function updateSessionActivity(session: ChatSession): void {
+function updateSessionActivity(sessionKey: string, session: ChatSession): void {
   session.lastActivity = new Date().toISOString();
-  localStorage.setItem(CHAT_SESSION_KEY, JSON.stringify(session));
+  localStorage.setItem(sessionKey, JSON.stringify(session));
 }
 
-function loadMessagesFromStorage(): ChatMessage[] {
-  const stored = localStorage.getItem(CHAT_MESSAGES_KEY);
+function loadMessagesFromStorage(messagesKey: string): ChatMessage[] {
+  const stored = localStorage.getItem(messagesKey);
   if (stored) {
     try {
       return JSON.parse(stored);
@@ -83,14 +91,30 @@ function loadMessagesFromStorage(): ChatMessage[] {
   return [];
 }
 
-function saveMessagesToStorage(messages: ChatMessage[]): void {
-  localStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify(messages));
+function saveMessagesToStorage(messagesKey: string, messages: ChatMessage[]): void {
+  localStorage.setItem(messagesKey, JSON.stringify(messages));
+}
+
+function getStoredUserId(): number | undefined {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return undefined;
+  try {
+    const user = JSON.parse(userStr);
+    return user.id;
+  } catch {
+    return undefined;
+  }
 }
 
 export default function ChatPage() {
-  const [session, setSession] = useState<ChatSession>(getCurrentSession);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessagesFromStorage());
-  const [input, setInput] = useState('');
+  const currentUserId = getStoredUserId();
+  const sessionKey = getSessionKey(currentUserId);
+  const messagesKey = getMessagesKey(currentUserId);
+  const draftKey = getDraftKey(currentUserId);
+
+  const [session, setSession] = useState<ChatSession>(() => getCurrentSession(sessionKey));
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessagesFromStorage(messagesKey));
+  const [input, setInput] = useState(() => localStorage.getItem(draftKey) || '');
   const [, setToolResults] = useState<ToolResult[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
   const [handoverDialogOpen, setHandoverDialogOpen] = useState(false);
@@ -104,14 +128,7 @@ export default function ChatPage() {
 
   // Get current user ID from localStorage
   const getCurrentUserId = (): number | undefined => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return undefined;
-    try {
-      const user = JSON.parse(userStr);
-      return user.id;
-    } catch {
-      return undefined;
-    }
+    return currentUserId;
   };
 
   const chatMutation = useMutation({
@@ -136,11 +153,31 @@ export default function ChatPage() {
   });
 
   useEffect(() => {
-    saveMessagesToStorage(messages);
+    saveMessagesToStorage(messagesKey, messages);
     if (messages.length > 0) {
-      updateSessionActivity(session);
+      updateSessionActivity(sessionKey, session);
     }
-  }, [messages, session]);
+  }, [messages, session, messagesKey, sessionKey]);
+
+  useEffect(() => {
+    if (input) {
+      localStorage.setItem(draftKey, input);
+    } else {
+      localStorage.removeItem(draftKey);
+    }
+  }, [input, draftKey]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && input) {
+        localStorage.setItem(draftKey, input);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [input, draftKey]);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -149,6 +186,7 @@ export default function ChatPage() {
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setInput('');
+    localStorage.removeItem(draftKey);
 
     chatMutation.mutate(updatedMessages);
   };
@@ -203,6 +241,7 @@ export default function ChatPage() {
   // Reset lastResponseText after it's been used for TTS
   const handleVoiceResponseComplete = () => {
     setLastResponseText('');
+    localStorage.removeItem(draftKey);
   };
 
   const handleNewSession = () => {
@@ -213,12 +252,13 @@ export default function ChatPage() {
       if (!confirmed) return;
     }
     
-    const newSession = createNewSession();
+    const newSession = createNewSession(sessionKey);
     setSession(newSession);
     setMessages([]);
     setToolResults([]);
     setLastResponseText('');
-    localStorage.removeItem(CHAT_MESSAGES_KEY);
+    localStorage.removeItem(messagesKey);
+    localStorage.removeItem(draftKey);
   };
 
   useEffect(() => {
