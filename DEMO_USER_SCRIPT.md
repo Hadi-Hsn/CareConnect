@@ -42,7 +42,7 @@ CareConnect - Smart Health Assistant
 10. `Show me my upcoming appointments`
 
 ### Part 7: Modify an Appointment
-11. `I need to reschedule my cardiology appointment to 2:00 PM instead`
+11. `I need to reschedule my cardiology appointment to the next day, at the same time`
 
 ### Part 8: Cancel an Appointment
 12. `I need to cancel my lab test appointment`
@@ -68,6 +68,7 @@ CareConnect - Smart Health Assistant
 
 ### Part 11: Arabic Language Support
 21. `مرحبا، بدي احجز موعد عند دكتور قلب`
+'أرغب في حجز موعد مع الدكتور جيمس تشين يوم الخميس القادم.
 22. `Hi, بدي appointment عند الـ dermatology يوم Thursday`
 
 (Red Aub wallpaper Title: Human Support at any time)
@@ -80,7 +81,7 @@ CareConnect - Smart Health Assistant
 ### Part 13: Voice Support
 24. turn down music, ask anything and record the reply as well
 
-(Red Aub wallpaper Title: Voice Support)
+(Red Aub wallpaper Title: Whatsapp Support)
 
 ### Part 14: Whatsapp Support
 24. I will send you an short of my whastapp convo
