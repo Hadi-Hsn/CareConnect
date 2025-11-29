@@ -54,10 +54,12 @@ OPENAI_API_KEY=sk-proj-your-actual-key-here
 
 # Required: Secret for JWT tokens (any random string)
 JWT_SECRET=your-random-secret-key-change-this-in-production
+# Here is a newly generated JWT Key, replace 'your-random-secret-key-change-this-in-production' with 'a8bfce6ec2a2a158ee26a54d915596da'
 
 # Optional: Email settings (for appointment confirmations)
 SENDGRID_API_KEY=your-sendgrid-key-here
 SENDGRID_FROM_EMAIL=noreply@careconnect.com
+# Replace 'your-sendgrid-key-here' with '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' 
 
 # Optional: Environment
 ENVIRONMENT=development
