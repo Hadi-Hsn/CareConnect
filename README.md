@@ -133,8 +133,8 @@ Open your browser and visit:
 Use the demo credentials:
 
 | Role | Email | Password |
-|------|-------|----------|
-| **Patient** | hadihacan@gmail.com | password123 |
+|------|-------|---------|
+| **Patient** | patient@gmail.com | password123 |
 | **Admin** | admin@aub.com | Admin@123 |
 
 ---
@@ -144,7 +144,7 @@ Use the demo credentials:
 ### Test the Chat Assistant
 
 1. Go to http://localhost:5173
-2. Login as patient (`hadihacan@gmail.com` / `password123`)
+2. Login as patient (`patient@gmail.com` / `password123`)
 3. Click on **Chat** in the sidebar
 4. Try these example queries:
    - "I need to book an appointment with a cardiologist"
