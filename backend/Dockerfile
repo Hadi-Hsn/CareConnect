@@ -29,6 +29,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/healthz || exit 1
 
-# Run migrations and start server
-# Initialize database from models first (creates base tables), then run migrations
-CMD ["sh", "-c", "python -c 'import asyncio; from app.core.db import init_db; asyncio.run(init_db())' && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Run migrations, seed database, and start server
+CMD ["sh", "-c", "python -c 'import asyncio; from app.core.db import init_db; asyncio.run(init_db())' && alembic upgrade head && python scripts/seed_demo_data.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
