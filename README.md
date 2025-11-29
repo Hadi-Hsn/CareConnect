@@ -4,6 +4,10 @@
 
 CareConnect is a full-stack application that uses OpenAI's function calling (Responses API) and RAG (Retrieval-Augmented Generation) to help patients book appointments, find providers, and get facility information through natural conversation.
 
+## 🎥 Demo Video
+
+Watch a demonstration of CareConnect in action: [Demo Video](https://drive.google.com/file/d/1bJLHlo8Nqm0OtvOP7vh37QuxUUHi4FGF/view?usp=sharing)
+
 ---
 
 ## 🚀 Quick Start (5 Minutes)
@@ -70,7 +74,7 @@ docker-compose up -d
 
 **What happens during startup:**
 1. 🗄️ **ChromaDB** starts (vector database for RAG)
-2. 🐘 **PostgreSQL** starts (main database)
+2. 💾 **SQLite** database initializes (main database)
 3. 🔧 **Backend** starts (FastAPI server)
 4. 🎨 **Frontend** starts (React UI)
 5. ⚙️ **Database migrations** run automatically
@@ -145,6 +149,8 @@ Use the demo credentials:
    - "What are the requirements for a CBC blood test?"
    - "Show me my appointments"
    - "Where is the parking?"
+   - "Show me my lab test results"
+   - Switch to **Voice Mode** using the microphone button for voice interactions
 
 ### Test the Admin Panel
 
@@ -228,12 +234,19 @@ docker-compose exec backend python scripts/seed_demo_data.py
 - **Vector DB**: ChromaDB (Docker container, no credentials needed)
 - **Database**: SQLite (file-based, no credentials needed, persistent in Docker volumes)
 - **Email**: SendGrid / SMTP (configurable)
+- **WhatsApp**: Twilio WhatsApp Business API (optional)
+- **Voice**: OpenAI Whisper (STT) + OpenAI TTS (text-to-speech)
 - **Observability**: Prometheus + structured logging (structlog)
 
 ### Key Features
 
 ✅ **Conversational AI Agent** using OpenAI function calling  
 ✅ **RAG-powered information retrieval** for facility docs  
+✅ **Multi-channel support**: Web chat, WhatsApp, and Voice interfaces  
+✅ **WhatsApp Integration**: Full AI assistant access via WhatsApp using Twilio  
+✅ **Voice Chat**: Speech-to-text and text-to-speech with OpenAI Whisper and TTS  
+✅ **Lab Test Results**: View and manage patient lab test results with PDF support  
+✅ **Human Handover**: Escalate conversations to human support with incident tracking  
 ✅ **Mock scheduling client** (easy to swap for real EHR APIs)  
 ✅ **Production-grade patterns**: async, typed, tested, observable  
 ✅ **HIPAA-conscious design**: PHI masking, audit trails, privacy mode  
@@ -377,14 +390,14 @@ docker-compose exec frontend npm run build
 ### Database Operations
 
 ```bash
-# Access PostgreSQL database
-docker-compose exec db psql -U careconnect -d careconnect
+# Access SQLite database
+docker-compose exec backend sqlite3 /app/data/careconnect.db
 
 # Backup database
-docker-compose exec db pg_dump -U careconnect careconnect > backup.sql
+docker-compose exec backend cp /app/data/careconnect.db /app/data/careconnect.db.backup
 
 # Restore database
-cat backup.sql | docker-compose exec -T db psql -U careconnect -d careconnect
+docker-compose exec backend cp /app/data/careconnect.db.backup /app/data/careconnect.db
 ```
 
 ### ChromaDB (Vector Store)
@@ -476,6 +489,20 @@ docker-compose exec backend python tests/evaluation/run_eval.py
 - `POST /api/v1/appointments` - Create appointment
 - `PATCH /api/v1/appointments/{id}` - Update appointment
 
+**Voice** 🆕
+- `POST /api/v1/voice/speech-to-text` - Convert audio to text
+- `POST /api/v1/voice/text-to-speech` - Convert text to audio
+
+**Lab Test Results** 🆕
+- `GET /api/v1/test-results` - List patient test results
+- `GET /api/v1/test-results/{id}` - Get test result details
+- `GET /api/v1/test-results/{id}/pdf` - Download test result PDF
+
+**Handover** 🆕
+- `POST /api/v1/handover/request` - Request handover to human support
+- `GET /api/v1/handover/incidents` - List handover incidents (admin)
+- `PUT /api/v1/handover/incidents/{id}` - Update incident status (admin)
+
 Full OpenAPI spec: http://localhost:8000/docs
 
 ## 🔄 Swappable Components
@@ -499,6 +526,7 @@ The architecture uses interfaces to enable swapping:
 - [RAG Quick Start Guide](docs/RAG_QUICKSTART.md)
 - [Admin API Documentation](docs/ADMIN_API.md)
 - [Admin User Guide](docs/ADMIN_GUIDE.md)
+- [WhatsApp Integration Guide](WHATSAPP_INTEGRATION_GUIDE.md) 🆕
 - [Setup Documentation](setup/README.md) 🆕
 
 ---
