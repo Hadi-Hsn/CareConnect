@@ -69,7 +69,7 @@ async def whatsapp_webhook(request: Request, db: AsyncSession = Depends(get_db))
                 "👋 Welcome to *CareConnect*!\n\n"
                 "To use our AI health assistant via WhatsApp, you need to sign up first.\n\n"
                 "📱 *Please register at our portal:*\n"
-                f"{whatsapp_service.settings.frontend_origin if hasattr(whatsapp_service, 'settings') else 'http://localhost:5173'}\n\n"
+                "https://carecon.online/login\n\n"
                 "Make sure to use this phone number (*{phone}*) when signing up so we can connect your account!\n\n"
                 "Once registered, come back here and I'll be ready to help you! 🏥"
             ).format(phone=from_number)
