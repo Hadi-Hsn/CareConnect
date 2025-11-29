@@ -20,6 +20,14 @@ Demo credentials:
 
 ---
 
+## 👥 Team Members
+
+- Adam Tai Abou Dargham
+- Hadi Hasan
+- Safaa Salman
+
+  ---
+
 ## 🚀 Quick Start (5 Minutes)
 
 ### Prerequisites
