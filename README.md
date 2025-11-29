@@ -10,6 +10,16 @@ Watch a demonstration of CareConnect in action: [Demo Video](https://drive.googl
 
 ---
 
+## 🌐 Live Demo
+
+Check out our deployed version: **[https://carecon.online/login](https://carecon.online/login)**
+
+Demo credentials:
+- **Patient:** `patient@gmail.com` / `password123`
+- **Admin:** `admin@aub.com` / `Admin@123`
+
+---
+
 ## 🚀 Quick Start (5 Minutes)
 
 ### Prerequisites
