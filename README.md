@@ -6,6 +6,9 @@ CareConnect is a production-grade, full-stack healthcare logistics assistant tha
 
 The platform is scoped to healthcare logistics and informational support. It does **not** provide medical advice.
 
+## Demonstration System Walkthrough Video:  
+https://drive.google.com/file/d/1bJLHlo8Nqm0OtvOP7vh37QuxUUHi4FGF/view
+
 ---
 
 ## Key Capabilities
