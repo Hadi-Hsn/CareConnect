@@ -53,7 +53,7 @@ services:
       JWT_EXPIRATION_MINUTES: "1440"
 
       # App settings
-      FRONTEND_ORIGIN: http://carecon.online
+      FRONTEND_ORIGIN: https://carecon.online
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       ENVIRONMENT: production
       RATE_LIMIT_PER_MINUTE: "60"
@@ -79,10 +79,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE: /api/v1
+        VITE_API_BASE: https://carecon.online/api/v1
     container_name: careconnect-frontend
     ports:
-      - "80:80"
+      - "127.0.0.1:5173:80"
     environment:
       VITE_API_BASE: https://carecon.online/api/v1
       VITE_APP_NAME: CareConnect
