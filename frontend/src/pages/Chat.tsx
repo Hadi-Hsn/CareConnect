@@ -197,7 +197,7 @@ export default function ChatPage() {
   }, [input, draftKey]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || chatMutation.isPending) return;
 
     const userMessage: ChatMessage = { role: "user", content: input };
     const updatedMessages = [...messages, userMessage];
@@ -206,9 +206,6 @@ export default function ChatPage() {
     localStorage.removeItem(draftKey);
 
     chatMutation.mutate(updatedMessages);
-
-    // Keep focus on the input after sending
-    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const handleHandoverClick = () => {
@@ -286,6 +283,13 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Re-focus input after the AI finishes responding
+  useEffect(() => {
+    if (!chatMutation.isPending) {
+      inputRef.current?.focus();
+    }
+  }, [chatMutation.isPending]);
 
   // Scroll to bottom when switching modes
   useEffect(() => {
@@ -588,7 +592,6 @@ export default function ChatPage() {
                   handleSend();
                 }
               }}
-              disabled={chatMutation.isPending}
               size="small"
               sx={{
                 "& .MuiOutlinedInput-root": {
