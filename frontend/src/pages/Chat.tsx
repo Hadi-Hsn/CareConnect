@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { useState, useRef, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Box,
   Button,
@@ -21,30 +21,30 @@ import {
   InputAdornment,
   Tabs,
   Tab,
-} from '@mui/material';
-import { 
-  Send as SendIcon, 
+} from "@mui/material";
+import {
+  Send as SendIcon,
   Phone as PhoneIcon,
   Mic as MicIcon,
   Keyboard as KeyboardIcon,
   Refresh as RefreshIcon,
   SupportAgent as SupportAgentIcon,
-} from '@mui/icons-material';
-import { api } from '@/lib/api';
-import type { ChatMessage, ToolResult } from '@/types/api';
-import VoiceChat from '@/components/VoiceChat';
+} from "@mui/icons-material";
+import { api } from "@/lib/api";
+import type { ChatMessage, ToolResult } from "@/types/api";
+import VoiceChat from "@/components/VoiceChat";
 
 // Storage helpers
-const STORAGE_PREFIX = 'careconnect_chat';
+const STORAGE_PREFIX = "careconnect_chat";
 
 const getSessionKey = (userId?: number) =>
-  `${STORAGE_PREFIX}_session_${userId ?? 'anonymous'}`;
+  `${STORAGE_PREFIX}_session_${userId ?? "anonymous"}`;
 
 const getMessagesKey = (userId?: number) =>
-  `${STORAGE_PREFIX}_messages_${userId ?? 'anonymous'}`;
+  `${STORAGE_PREFIX}_messages_${userId ?? "anonymous"}`;
 
 const getDraftKey = (userId?: number) =>
-  `${STORAGE_PREFIX}_draft_${userId ?? 'anonymous'}`;
+  `${STORAGE_PREFIX}_draft_${userId ?? "anonymous"}`;
 
 interface ChatSession {
   id: string;
@@ -91,12 +91,15 @@ function loadMessagesFromStorage(messagesKey: string): ChatMessage[] {
   return [];
 }
 
-function saveMessagesToStorage(messagesKey: string, messages: ChatMessage[]): void {
+function saveMessagesToStorage(
+  messagesKey: string,
+  messages: ChatMessage[],
+): void {
   localStorage.setItem(messagesKey, JSON.stringify(messages));
 }
 
 function getStoredUserId(): number | undefined {
-  const userStr = localStorage.getItem('user');
+  const userStr = localStorage.getItem("user");
   if (!userStr) return undefined;
   try {
     const user = JSON.parse(userStr);
@@ -112,19 +115,28 @@ export default function ChatPage() {
   const messagesKey = getMessagesKey(currentUserId);
   const draftKey = getDraftKey(currentUserId);
 
-  const [session, setSession] = useState<ChatSession>(() => getCurrentSession(sessionKey));
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadMessagesFromStorage(messagesKey));
-  const [input, setInput] = useState(() => localStorage.getItem(draftKey) || '');
+  const [session, setSession] = useState<ChatSession>(() =>
+    getCurrentSession(sessionKey),
+  );
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    loadMessagesFromStorage(messagesKey),
+  );
+  const [input, setInput] = useState(
+    () => localStorage.getItem(draftKey) || "",
+  );
   const [, setToolResults] = useState<ToolResult[]>([]);
   const [voiceMode, setVoiceMode] = useState(false);
   const [handoverDialogOpen, setHandoverDialogOpen] = useState(false);
-  const [handoverSubject, setHandoverSubject] = useState('');
-  const [handoverPhone, setHandoverPhone] = useState('');
-  const [handoverPriority, setHandoverPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [handoverSubject, setHandoverSubject] = useState("");
+  const [handoverPhone, setHandoverPhone] = useState("");
+  const [handoverPriority, setHandoverPriority] = useState<
+    "low" | "medium" | "high" | "urgent"
+  >("medium");
   const [handoverSuccess, setHandoverSuccess] = useState(false);
-  const [confirmationCode, setConfirmationCode] = useState('');
-  const [lastResponseText, setLastResponseText] = useState('');
+  const [confirmationCode, setConfirmationCode] = useState("");
+  const [lastResponseText, setLastResponseText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Get current user ID from localStorage
   const getCurrentUserId = (): number | undefined => {
@@ -132,7 +144,8 @@ export default function ChatPage() {
   };
 
   const chatMutation = useMutation({
-    mutationFn: (messages: ChatMessage[]) => api.chat(messages, getCurrentUserId(), voiceMode),
+    mutationFn: (messages: ChatMessage[]) =>
+      api.chat(messages, getCurrentUserId(), voiceMode),
     onSuccess: (data) => {
       setMessages((prev) => [...prev, data.message]);
       setToolResults(data.tool_results);
@@ -144,7 +157,11 @@ export default function ChatPage() {
   });
 
   const handoverMutation = useMutation({
-    mutationFn: (data: { subject: string; phone: string | null; priority: string }) =>
+    mutationFn: (data: {
+      subject: string;
+      phone: string | null;
+      priority: string;
+    }) =>
       api.requestHandover(messages, data.subject, data.phone, data.priority),
     onSuccess: (data) => {
       setHandoverSuccess(true);
@@ -169,31 +186,36 @@ export default function ChatPage() {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && input) {
+      if (document.visibilityState === "hidden" && input) {
         localStorage.setItem(draftKey, input);
       }
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [input, draftKey]);
 
   const handleSend = () => {
     if (!input.trim()) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: input };
+    const userMessage: ChatMessage = { role: "user", content: input };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
-    setInput('');
+    setInput("");
     localStorage.removeItem(draftKey);
 
     chatMutation.mutate(updatedMessages);
+
+    // Keep focus on the input after sending
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const handleHandoverClick = () => {
     if (messages.length === 0) {
-      alert('Please start a conversation first before requesting human assistance.');
+      alert(
+        "Please start a conversation first before requesting human assistance.",
+      );
       return;
     }
     setHandoverDialogOpen(true);
@@ -202,7 +224,7 @@ export default function ChatPage() {
 
   const handleHandoverSubmit = () => {
     if (!handoverSubject.trim()) {
-      alert('Please provide a subject for your request.');
+      alert("Please provide a subject for your request.");
       return;
     }
 
@@ -215,16 +237,16 @@ export default function ChatPage() {
 
   const handleHandoverClose = () => {
     setHandoverDialogOpen(false);
-    setHandoverSubject('');
-    setHandoverPhone('');
-    setHandoverPriority('medium');
+    setHandoverSubject("");
+    setHandoverPhone("");
+    setHandoverPriority("medium");
     setHandoverSuccess(false);
-    setConfirmationCode('');
+    setConfirmationCode("");
   };
 
   // Voice mode handlers
   const handleVoiceTranscription = (text: string) => {
-    const userMessage: ChatMessage = { role: 'user', content: text };
+    const userMessage: ChatMessage = { role: "user", content: text };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     chatMutation.mutate(updatedMessages);
@@ -240,73 +262,78 @@ export default function ChatPage() {
 
   // Reset lastResponseText after it's been used for TTS
   const handleVoiceResponseComplete = () => {
-    setLastResponseText('');
+    setLastResponseText("");
     localStorage.removeItem(draftKey);
   };
 
   const handleNewSession = () => {
     if (messages.length > 0) {
       const confirmed = window.confirm(
-        'Starting a new session will clear your current conversation. Are you sure?'
+        "Starting a new session will clear your current conversation. Are you sure?",
       );
       if (!confirmed) return;
     }
-    
+
     const newSession = createNewSession(sessionKey);
     setSession(newSession);
     setMessages([]);
     setToolResults([]);
-    setLastResponseText('');
+    setLastResponseText("");
     localStorage.removeItem(messagesKey);
     localStorage.removeItem(draftKey);
   };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // Scroll to bottom when switching modes
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [voiceMode]);
 
   return (
-    <Box sx={{ 
-      height: 'calc(100vh - 120px)', 
-      display: 'flex', 
-      flexDirection: 'column',
-    }}>
+    <Box
+      sx={{
+        height: "calc(100vh - 120px)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {/* Chat Container - Full Width */}
       <Paper
         elevation={0}
-        sx={{ 
+        sx={{
           flex: 1,
-          display: 'flex', 
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
           borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          overflow: 'hidden',
-          bgcolor: '#fff',
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
+          bgcolor: "#fff",
         }}
       >
         {/* Header */}
-        <Box 
-          sx={{ 
-            px: 3, 
+        <Box
+          sx={{
+            px: 3,
             py: 1.5,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            bgcolor: '#fff',
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            bgcolor: "#fff",
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, color: "text.primary" }}
+            >
               AI Assistant
             </Typography>
             <Button
@@ -316,64 +343,78 @@ export default function ChatPage() {
               onClick={handleHandoverClick}
               disabled={messages.length === 0}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 600,
-                fontSize: '0.8125rem',
-                borderColor: '#ed6c02',
-                color: '#ed6c02',
+                fontSize: "0.8125rem",
+                borderColor: "#ed6c02",
+                color: "#ed6c02",
                 px: 2,
                 py: 0.5,
                 borderRadius: 2,
-                '&:hover': { 
-                  bgcolor: alpha('#ed6c02', 0.08),
-                  borderColor: '#ed6c02',
+                "&:hover": {
+                  bgcolor: alpha("#ed6c02", 0.08),
+                  borderColor: "#ed6c02",
                 },
-                '&.Mui-disabled': {
-                  borderColor: '#e0e0e0',
-                  color: 'text.disabled',
+                "&.Mui-disabled": {
+                  borderColor: "#e0e0e0",
+                  color: "text.disabled",
                 },
               }}
             >
               Talk to a Human
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             {/* Mode Tabs */}
-            <Tabs 
-              value={voiceMode ? 1 : 0} 
+            <Tabs
+              value={voiceMode ? 1 : 0}
               onChange={(_, v) => setVoiceMode(v === 1)}
               sx={{
                 minHeight: 36,
-                '& .MuiTabs-indicator': {
-                  bgcolor: '#840132',
+                "& .MuiTabs-indicator": {
+                  bgcolor: "#840132",
                 },
-                '& .MuiTab-root': {
+                "& .MuiTab-root": {
                   minHeight: 36,
                   py: 0,
                   px: 2,
-                  fontSize: '0.8125rem',
+                  fontSize: "0.8125rem",
                   fontWeight: 500,
-                  textTransform: 'none',
-                  color: 'text.secondary',
-                  '&.Mui-selected': {
-                    color: '#840132',
+                  textTransform: "none",
+                  color: "text.secondary",
+                  "&.Mui-selected": {
+                    color: "#840132",
                   },
                 },
               }}
             >
-              <Tab icon={<KeyboardIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Text" />
-              <Tab icon={<MicIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Voice" />
+              <Tab
+                icon={<KeyboardIcon sx={{ fontSize: 18 }} />}
+                iconPosition="start"
+                label="Text"
+              />
+              <Tab
+                icon={<MicIcon sx={{ fontSize: 18 }} />}
+                iconPosition="start"
+                label="Voice"
+              />
             </Tabs>
-            
-            <Box sx={{ borderLeft: '1px solid', borderColor: 'divider', height: 24 }} />
-            
+
+            <Box
+              sx={{
+                borderLeft: "1px solid",
+                borderColor: "divider",
+                height: 24,
+              }}
+            />
+
             <IconButton
               onClick={handleNewSession}
               size="small"
               title="New conversation"
-              sx={{ 
-                color: 'text.secondary',
-                '&:hover': { color: '#840132' },
+              sx={{
+                color: "text.secondary",
+                "&:hover": { color: "#840132" },
               }}
             >
               <RefreshIcon fontSize="small" />
@@ -383,11 +424,11 @@ export default function ChatPage() {
 
         {/* Voice Mode Panel */}
         {voiceMode && (
-          <Box 
-            sx={{ 
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              bgcolor: '#fafbfc',
+          <Box
+            sx={{
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              bgcolor: "#fafbfc",
             }}
           >
             <VoiceChat
@@ -402,26 +443,32 @@ export default function ChatPage() {
         )}
 
         {/* Messages Area - Scrollable */}
-        <Box 
-          sx={{ 
+        <Box
+          sx={{
             flex: 1,
-            overflowY: 'auto',
+            overflowY: "auto",
             p: 3,
-            display: 'flex',
-            flexDirection: 'column',
+            display: "flex",
+            flexDirection: "column",
             gap: 2.5,
-            bgcolor: '#fafbfc',
+            bgcolor: "#fafbfc",
           }}
         >
           {/* Welcome State */}
           {messages.length === 0 && (
-            <Box sx={{ py: 8, textAlign: 'center' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}>
+            <Box sx={{ py: 8, textAlign: "center" }}>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 600, color: "text.primary", mb: 1 }}
+              >
                 How can I help you today?
               </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-                {voiceMode 
-                  ? "Click the microphone to start speaking" 
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", mb: 3 }}
+              >
+                {voiceMode
+                  ? "Click the microphone to start speaking"
                   : "Ask me about appointments, providers, or lab tests"}
               </Typography>
             </Box>
@@ -432,35 +479,54 @@ export default function ChatPage() {
             <Box
               key={idx}
               sx={{
-                display: 'flex',
-                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                display: "flex",
+                justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
               }}
             >
               <Box
                 sx={{
-                  maxWidth: '70%',
+                  maxWidth: "70%",
                   py: 1.5,
                   px: 2.5,
-                  bgcolor: msg.role === 'user' ? '#840132' : '#fff',
-                  color: msg.role === 'user' ? '#fff' : 'text.primary',
-                  borderRadius: msg.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                  border: msg.role === 'user' ? 'none' : '1px solid',
-                  borderColor: 'divider',
-                  '& p': { margin: '0.4em 0' },
-                  '& p:first-of-type': { marginTop: 0 },
-                  '& p:last-of-type': { marginBottom: 0 },
-                  '& ul, & ol': { my: 0.5, pl: 2.5 },
-                  '& li': { mb: 0.25 },
+                  bgcolor: msg.role === "user" ? "#840132" : "#fff",
+                  color: msg.role === "user" ? "#fff" : "text.primary",
+                  borderRadius:
+                    msg.role === "user"
+                      ? "18px 18px 4px 18px"
+                      : "18px 18px 18px 4px",
+                  border: msg.role === "user" ? "none" : "1px solid",
+                  borderColor: "divider",
+                  "& p": { margin: "0.4em 0" },
+                  "& p:first-of-type": { marginTop: 0 },
+                  "& p:last-of-type": { marginBottom: 0 },
+                  "& ul, & ol": { my: 0.5, pl: 2.5 },
+                  "& li": { mb: 0.25 },
                 }}
               >
-                {msg.role === 'user' ? (
-                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>{msg.content}</Typography>
+                {msg.role === "user" ? (
+                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                    {msg.content}
+                  </Typography>
                 ) : (
-                  <ReactMarkdown 
+                  <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      p: ({ children }) => <Typography variant="body2" component="p" sx={{ lineHeight: 1.6 }}>{children}</Typography>,
-                      li: ({ children }) => <li><Typography variant="body2" component="span">{children}</Typography></li>,
+                      p: ({ children }) => (
+                        <Typography
+                          variant="body2"
+                          component="p"
+                          sx={{ lineHeight: 1.6 }}
+                        >
+                          {children}
+                        </Typography>
+                      ),
+                      li: ({ children }) => (
+                        <li>
+                          <Typography variant="body2" component="span">
+                            {children}
+                          </Typography>
+                        </li>
+                      ),
                     }}
                   >
                     {msg.content}
@@ -472,39 +538,39 @@ export default function ChatPage() {
 
           {/* Loading */}
           {chatMutation.isPending && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
               <Box
                 sx={{
                   py: 1.5,
                   px: 2.5,
-                  bgcolor: '#fff',
-                  borderRadius: '18px 18px 18px 4px',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  display: 'flex',
-                  alignItems: 'center',
+                  bgcolor: "#fff",
+                  borderRadius: "18px 18px 18px 4px",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  display: "flex",
+                  alignItems: "center",
                   gap: 1,
                 }}
               >
-                <CircularProgress size={14} sx={{ color: '#840132' }} />
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                <CircularProgress size={14} sx={{ color: "#840132" }} />
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   Processing...
                 </Typography>
               </Box>
             </Box>
           )}
-          
+
           <div ref={messagesEndRef} />
         </Box>
 
         {/* Input Area - Text Mode Only */}
         {!voiceMode && (
-          <Box 
-            sx={{ 
+          <Box
+            sx={{
               p: 2,
-              borderTop: '1px solid',
-              borderColor: 'divider',
-              bgcolor: '#fff',
+              borderTop: "1px solid",
+              borderColor: "divider",
+              bgcolor: "#fff",
             }}
           >
             <TextField
@@ -514,8 +580,10 @@ export default function ChatPage() {
               placeholder="Type your message..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              inputRef={inputRef}
+              autoFocus
               onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleSend();
                 }
@@ -523,12 +591,12 @@ export default function ChatPage() {
               disabled={chatMutation.isPending}
               size="small"
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 2,
-                  bgcolor: '#fafbfc',
-                  '& fieldset': { borderColor: 'divider' },
-                  '&:hover fieldset': { borderColor: alpha('#840132', 0.3) },
-                  '&.Mui-focused fieldset': { borderColor: '#840132' },
+                  bgcolor: "#fafbfc",
+                  "& fieldset": { borderColor: "divider" },
+                  "&:hover fieldset": { borderColor: alpha("#840132", 0.3) },
+                  "&.Mui-focused fieldset": { borderColor: "#840132" },
                 },
               }}
               InputProps={{
@@ -539,10 +607,15 @@ export default function ChatPage() {
                       disabled={chatMutation.isPending || !input.trim()}
                       size="small"
                       sx={{
-                        bgcolor: input.trim() ? '#840132' : 'transparent',
-                        color: input.trim() ? '#fff' : 'text.disabled',
-                        '&:hover': { bgcolor: input.trim() ? '#6a0129' : 'transparent' },
-                        '&.Mui-disabled': { bgcolor: 'transparent', color: 'text.disabled' },
+                        bgcolor: input.trim() ? "#840132" : "transparent",
+                        color: input.trim() ? "#fff" : "text.disabled",
+                        "&:hover": {
+                          bgcolor: input.trim() ? "#6a0129" : "transparent",
+                        },
+                        "&.Mui-disabled": {
+                          bgcolor: "transparent",
+                          color: "text.disabled",
+                        },
                       }}
                     >
                       <SendIcon fontSize="small" />
@@ -556,13 +629,19 @@ export default function ChatPage() {
       </Paper>
 
       {/* Handover Dialog */}
-      <Dialog open={handoverDialogOpen} onClose={handleHandoverClose} maxWidth="sm" fullWidth>
+      <Dialog
+        open={handoverDialogOpen}
+        onClose={handleHandoverClose}
+        maxWidth="sm"
+        fullWidth
+      >
         {!handoverSuccess ? (
           <>
             <DialogTitle>Request Human Assistance</DialogTitle>
             <DialogContent>
               <DialogContentText>
-                Our care team will review your conversation and contact you soon.
+                Our care team will review your conversation and contact you
+                soon.
               </DialogContentText>
               <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
                 <strong>For emergencies:</strong> Please call 911 immediately.
@@ -586,7 +665,11 @@ export default function ChatPage() {
                 value={handoverPhone}
                 onChange={(e) => setHandoverPhone(e.target.value)}
                 InputProps={{
-                  startAdornment: <PhoneIcon sx={{ mr: 1, color: 'action.active', fontSize: 20 }} />,
+                  startAdornment: (
+                    <PhoneIcon
+                      sx={{ mr: 1, color: "action.active", fontSize: 20 }}
+                    />
+                  ),
                 }}
                 sx={{ mb: 2 }}
               />
@@ -611,7 +694,7 @@ export default function ChatPage() {
                 variant="contained"
                 disabled={handoverMutation.isPending || !handoverSubject.trim()}
               >
-                {handoverMutation.isPending ? 'Submitting...' : 'Submit'}
+                {handoverMutation.isPending ? "Submitting..." : "Submit"}
               </Button>
             </DialogActions>
           </>
@@ -625,8 +708,8 @@ export default function ChatPage() {
               <Typography variant="body1" gutterBottom>
                 Our team will contact you within 24 hours.
               </Typography>
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              <Box sx={{ mt: 2, p: 2, bgcolor: "grey.100", borderRadius: 1 }}>
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
                   Confirmation Code
                 </Typography>
                 <Typography variant="h6" color="primary">

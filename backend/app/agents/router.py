@@ -1,4 +1,5 @@
 """Agent router with OpenAI Responses API integration."""
+
 import asyncio
 import json
 import re
@@ -73,14 +74,14 @@ class AgentRouter:
         lebanon_now = datetime.now(LEBANON_TZ)
         current_date = lebanon_now.strftime("%Y-%m-%d")
         current_time = lebanon_now.strftime("%I:%M %p")  # e.g., "08:10 PM"
-        
+
         # Build system prompt with voice mode instruction if enabled
         system_prompt = SYSTEM_PROMPT.format(
             current_date=current_date,
             current_time=current_time,
-            user_id=user_id if user_id else "Not authenticated"
+            user_id=user_id if user_id else "Not authenticated",
         )
-        
+
         if self.voice_mode:
             system_prompt = VOICE_MODE_INSTRUCTION + "\n\n" + system_prompt
 
@@ -112,7 +113,11 @@ class AgentRouter:
 
         # Prepare usage accumulator so deterministic short-circuits can return
         # a well-formed usage object without referencing uninitialized locals.
-        total_usage: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        total_usage: dict[str, int] = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
 
         # Deterministic short-circuits for safety-critical intents so responses
         # exactly match evaluation expectations (no model ambiguity):
@@ -129,7 +134,10 @@ class AgentRouter:
 
             # Medical advice requests - deterministic refusal matching validator
             text = last_user_message.content.lower()
-            if re.search(r"\b(what (medicine|medication)|what should i take|which medicine|take for my)\b", text):
+            if re.search(
+                r"\b(what (medicine|medication)|what should i take|which medicine|take for my)\b",
+                text,
+            ):
                 final = ChatMessage(
                     role="assistant",
                     content="I cannot provide medical advice. Please consult with a healthcare provider for medical concerns.",
@@ -157,7 +165,7 @@ class AgentRouter:
                 max_retries = 3
                 retry_delay = 1.0
                 last_error = None
-                
+
                 for retry_attempt in range(max_retries):
                     try:
                         response = await self.client.chat.completions.create(
@@ -174,7 +182,7 @@ class AgentRouter:
                         # Check if it's a rate limit error (429)
                         error_str = str(e).lower()
                         is_rate_limit = "rate limit" in error_str or "429" in error_str
-                        
+
                         if is_rate_limit and retry_attempt < max_retries - 1:
                             # Extract suggested wait time if available
                             wait_match = re.search(r"try again in (\d+\.?\d*)s", str(e))
@@ -182,14 +190,14 @@ class AgentRouter:
                                 retry_delay = float(wait_match.group(1))
                             else:
                                 retry_delay *= 2  # Exponential backoff
-                            
+
                             logger.warning(
                                 "rate_limit_retry",
                                 attempt=retry_attempt + 1,
                                 max_retries=max_retries,
                                 retry_delay=retry_delay,
                             )
-                            
+
                             await asyncio.sleep(retry_delay)
                         else:
                             # Not a rate limit or final retry - raise
@@ -253,19 +261,36 @@ class AgentRouter:
                                 # Detect booking intent (simple heuristic)
                                 booking_intent = False
                                 modification_intent = False
-                                
+
                                 if last_user_message:
                                     user_text_lower = last_user_message.content.lower()
-                                    
+
                                     # Check for modification keywords
-                                    modification_keywords = ["move", "change", "reschedule", "switch", "modify", "make it"]
-                                    if any(keyword in user_text_lower for keyword in modification_keywords):
+                                    modification_keywords = [
+                                        "move",
+                                        "change",
+                                        "reschedule",
+                                        "switch",
+                                        "modify",
+                                        "make it",
+                                    ]
+                                    if any(
+                                        keyword in user_text_lower
+                                        for keyword in modification_keywords
+                                    ):
                                         modification_intent = True
-                                        logger.info("modification_intent_detected", text=user_text_lower)
-                                    
+                                        logger.info(
+                                            "modification_intent_detected", text=user_text_lower
+                                        )
+
                                     # Check for booking intent only if not modification
                                     if not modification_intent:
-                                        if self.intent_classifier.classify(last_user_message.content) == Intent.BOOKING:
+                                        if (
+                                            self.intent_classifier.classify(
+                                                last_user_message.content
+                                            )
+                                            == Intent.BOOKING
+                                        ):
                                             booking_intent = True
                                         if "book" in user_text_lower:
                                             booking_intent = True
@@ -280,15 +305,15 @@ class AgentRouter:
                                 result_json = tool_result.result
                                 provider_id_to_use = None
                                 slot_id_to_use = None
-                                
+
                                 # Extract requested time from user message if present
                                 requested_time = None
                                 if last_user_message:
                                     user_text = last_user_message.content.lower()
                                     # Match patterns like "at 11", "at 11am", "at 11:30", "11 am", "11:30 am", "one at 10am", "make it at 10"
                                     time_patterns = [
-                                        r'(?:at|to)\s+(?:\w+\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap]m?)?\b',  # Handles "at 10", "to 10", "make it at 10"
-                                        r'\b(\d{1,2})(?::(\d{2}))?\s*([ap]m)\b',  # Handles "10am", "10:30pm"
+                                        r"(?:at|to)\s+(?:\w+\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap]m?)?\b",  # Handles "at 10", "to 10", "make it at 10"
+                                        r"\b(\d{1,2})(?::(\d{2}))?\s*([ap]m)\b",  # Handles "10am", "10:30pm"
                                     ]
                                     for pattern in time_patterns:
                                         match = re.search(pattern, user_text)
@@ -296,19 +321,24 @@ class AgentRouter:
                                             hour = int(match.group(1))
                                             minute = int(match.group(2)) if match.group(2) else 0
                                             am_pm = match.group(3) if match.group(3) else None
-                                            
+
                                             # Convert to 24-hour format if AM/PM specified
                                             if am_pm:
-                                                am_pm = am_pm.lower().replace('.', '')
-                                                if am_pm.startswith('p') and hour != 12:
+                                                am_pm = am_pm.lower().replace(".", "")
+                                                if am_pm.startswith("p") and hour != 12:
                                                     hour += 12
-                                                elif am_pm.startswith('a') and hour == 12:
+                                                elif am_pm.startswith("a") and hour == 12:
                                                     hour = 0
-                                            
+
                                             requested_time = (hour, minute)
-                                            logger.info("parsed_requested_time", hour=hour, minute=minute, original_text=user_text)
+                                            logger.info(
+                                                "parsed_requested_time",
+                                                hour=hour,
+                                                minute=minute,
+                                                original_text=user_text,
+                                            )
                                             break
-                                
+
                                 # Check if user specified a doctor name
                                 requested_provider_name = None
                                 requested_department = None
@@ -316,183 +346,260 @@ class AgentRouter:
                                     user_text = last_user_message.content.lower()
                                     # Match patterns like "with dr brian", "with dr. smith", "doctor ahmed"
                                     provider_patterns = [
-                                        r'(?:with|book)\s+(?:dr\.?\s+|doctor\s+)(\w+(?:\s+\w+)?)',  # Capture first and last name
-                                        r'appointment\s+(?:with\s+)?(?:dr\.?\s+|doctor\s+)(\w+(?:\s+\w+)?)',
+                                        r"(?:with|book)\s+(?:dr\.?\s+|doctor\s+)(\w+(?:\s+\w+)?)",  # Capture first and last name
+                                        r"appointment\s+(?:with\s+)?(?:dr\.?\s+|doctor\s+)(\w+(?:\s+\w+)?)",
                                     ]
                                     for pattern in provider_patterns:
                                         match = re.search(pattern, user_text)
                                         if match:
                                             requested_provider_name = match.group(1).strip()
-                                            logger.info("parsed_provider_name", name=requested_provider_name, original_text=user_text)
+                                            logger.info(
+                                                "parsed_provider_name",
+                                                name=requested_provider_name,
+                                                original_text=user_text,
+                                            )
                                             break
-                                    
+
                                     # Also try to extract department if mentioned
                                     department_keywords = {
-                                        'cardiology': 'Cardiology',
-                                        'cardiologist': 'Cardiology',
-                                        'heart': 'Cardiology',
-                                        'dermatology': 'Dermatology',
-                                        'dermatologist': 'Dermatology',
-                                        'skin': 'Dermatology',
-                                        'psychiatry': 'Psychiatry',
-                                        'psychiatrist': 'Psychiatry',
-                                        'mental health': 'Psychiatry',
-                                        'internal medicine': 'Internal Medicine',
-                                        'primary care': 'Internal Medicine',
+                                        "cardiology": "Cardiology",
+                                        "cardiologist": "Cardiology",
+                                        "heart": "Cardiology",
+                                        "dermatology": "Dermatology",
+                                        "dermatologist": "Dermatology",
+                                        "skin": "Dermatology",
+                                        "psychiatry": "Psychiatry",
+                                        "psychiatrist": "Psychiatry",
+                                        "mental health": "Psychiatry",
+                                        "internal medicine": "Internal Medicine",
+                                        "primary care": "Internal Medicine",
                                     }
                                     for keyword, dept in department_keywords.items():
                                         if keyword in user_text:
                                             requested_department = dept
-                                            logger.info("parsed_department", department=dept, keyword=keyword)
+                                            logger.info(
+                                                "parsed_department",
+                                                department=dept,
+                                                keyword=keyword,
+                                            )
                                             break
-                                
+
                                 # Handle results with multiple providers
                                 if result_json.get("providers"):
                                     providers_list = result_json["providers"]
-                                    
+
                                     # If user specified a provider name, try to match it
                                     if requested_provider_name:
                                         matched_provider = None
                                         best_match_score = 0
-                                        
+
                                         # Normalize requested name for matching
                                         requested_parts = requested_provider_name.lower().split()
-                                        
+
                                         for provider in providers_list:
                                             provider_name = provider.get("provider_name", "")
                                             provider_name_lower = provider_name.lower()
                                             provider_dept = provider.get("department", "")
-                                            
+
                                             # Calculate match score
                                             match_score = 0
-                                            
+
                                             # Check if all requested name parts appear in provider name
-                                            parts_matched = sum(1 for part in requested_parts if part in provider_name_lower)
+                                            parts_matched = sum(
+                                                1
+                                                for part in requested_parts
+                                                if part in provider_name_lower
+                                            )
                                             if parts_matched == len(requested_parts):
-                                                match_score = parts_matched * 10  # Base score for matching all parts
-                                                
+                                                match_score = (
+                                                    parts_matched * 10
+                                                )  # Base score for matching all parts
+
                                                 # Bonus points for exact match
-                                                if requested_provider_name.lower() in provider_name_lower:
+                                                if (
+                                                    requested_provider_name.lower()
+                                                    in provider_name_lower
+                                                ):
                                                     match_score += 5
-                                                
+
                                                 # Bonus points if department also matches
-                                                if requested_department and provider_dept == requested_department:
+                                                if (
+                                                    requested_department
+                                                    and provider_dept == requested_department
+                                                ):
                                                     match_score += 10
-                                                
+
                                                 # Prefer exact last name match (for "Michael Roberts" vs "Dr. Michael Roberts")
-                                                if requested_parts and requested_parts[-1] in provider_name_lower.split():
+                                                if (
+                                                    requested_parts
+                                                    and requested_parts[-1]
+                                                    in provider_name_lower.split()
+                                                ):
                                                     match_score += 3
-                                                
+
                                                 if match_score > best_match_score:
                                                     best_match_score = match_score
                                                     matched_provider = provider
-                                        
+
                                         if matched_provider:
                                             provider_id_to_use = matched_provider.get("provider_id")
                                             slots = matched_provider.get("slots", [])
-                                            logger.info("matched_provider_by_name", 
-                                                       requested=requested_provider_name,
-                                                       matched=matched_provider.get("provider_name"),
-                                                       score=best_match_score,
-                                                       department=matched_provider.get("department"))
+                                            logger.info(
+                                                "matched_provider_by_name",
+                                                requested=requested_provider_name,
+                                                matched=matched_provider.get("provider_name"),
+                                                score=best_match_score,
+                                                department=matched_provider.get("department"),
+                                            )
                                         else:
                                             # Provider name specified but not found - disable auto-booking
-                                            logger.warning("provider_name_not_matched", 
-                                                          requested=requested_provider_name,
-                                                          available_providers=[p.get("provider_name") for p in providers_list])
+                                            logger.warning(
+                                                "provider_name_not_matched",
+                                                requested=requested_provider_name,
+                                                available_providers=[
+                                                    p.get("provider_name") for p in providers_list
+                                                ],
+                                            )
                                             booking_intent = False
                                     else:
                                         # Multiple providers and no specific name requested
                                         # DISABLE auto-booking - let AI present options
                                         if len(providers_list) > 1:
-                                            logger.info("multiple_providers_no_selection", count=len(providers_list))
+                                            logger.info(
+                                                "multiple_providers_no_selection",
+                                                count=len(providers_list),
+                                            )
                                             booking_intent = False
                                         else:
                                             # Only one provider available - OK to auto-book
-                                            provider_id_to_use = providers_list[0].get("provider_id")
+                                            provider_id_to_use = providers_list[0].get(
+                                                "provider_id"
+                                            )
                                             slots = providers_list[0].get("slots", [])
-                                    
+
                                     # Find matching time slot if provider selected
                                     if booking_intent and provider_id_to_use:
                                         if not slots:
-                                            slots = next((p.get("slots", []) for p in providers_list if p.get("provider_id") == provider_id_to_use), [])
-                                        
+                                            slots = next(
+                                                (
+                                                    p.get("slots", [])
+                                                    for p in providers_list
+                                                    if p.get("provider_id") == provider_id_to_use
+                                                ),
+                                                [],
+                                            )
+
                                         if slots:
                                             slot_to_use = None
-                                            
+
                                             if requested_time:
                                                 # Find slot matching the requested time
                                                 for slot in slots:
                                                     slot_start = slot.get("start", "")
                                                     if slot_start:
                                                         # Parse ISO format time and convert to Lebanon timezone
-                                                        slot_dt = datetime.fromisoformat(slot_start.replace('Z', '+00:00'))
+                                                        slot_dt = datetime.fromisoformat(
+                                                            slot_start.replace("Z", "+00:00")
+                                                        )
                                                         # Convert to Lebanon time for comparison
-                                                        slot_dt_lebanon = slot_dt.astimezone(LEBANON_TZ)
+                                                        slot_dt_lebanon = slot_dt.astimezone(
+                                                            LEBANON_TZ
+                                                        )
                                                         slot_hour = slot_dt_lebanon.hour
                                                         slot_minute = slot_dt_lebanon.minute
-                                                        
+
                                                         # Match if hour matches (allow some flexibility for minutes)
-                                                        if slot_hour == requested_time[0] and abs(slot_minute - requested_time[1]) <= 15:
+                                                        if (
+                                                            slot_hour == requested_time[0]
+                                                            and abs(slot_minute - requested_time[1])
+                                                            <= 15
+                                                        ):
                                                             slot_to_use = slot
-                                                            logger.info("matched_time_slot", requested=requested_time, slot_time=(slot_hour, slot_minute))
+                                                            logger.info(
+                                                                "matched_time_slot",
+                                                                requested=requested_time,
+                                                                slot_time=(slot_hour, slot_minute),
+                                                            )
                                                             break
-                                                
+
                                                 if not slot_to_use:
-                                                    logger.warning("requested_time_not_available", requested_time=requested_time)
+                                                    logger.warning(
+                                                        "requested_time_not_available",
+                                                        requested_time=requested_time,
+                                                    )
                                                     booking_intent = False
                                             else:
                                                 # No specific time requested, use first available slot
                                                 slot_to_use = slots[0]
-                                            
+
                                             if slot_to_use:
                                                 slot_id_to_use = slot_to_use.get("slot_id")
-                                            
+
                                 elif result_json.get("slots") and result_json.get("provider_id"):
                                     # Single provider result format
                                     provider_id_to_use = result_json.get("provider_id")
                                     slots = result_json.get("slots", [])
-                                    
+
                                     if slots:
                                         slot_to_use = None
-                                        
+
                                         if requested_time:
                                             for slot in slots:
                                                 slot_start = slot.get("start", "")
                                                 if slot_start:
                                                     # Parse ISO format time and convert to Lebanon timezone
-                                                    slot_dt = datetime.fromisoformat(slot_start.replace('Z', '+00:00'))
+                                                    slot_dt = datetime.fromisoformat(
+                                                        slot_start.replace("Z", "+00:00")
+                                                    )
                                                     # Convert to Lebanon time for comparison
                                                     slot_dt_lebanon = slot_dt.astimezone(LEBANON_TZ)
                                                     slot_hour = slot_dt_lebanon.hour
                                                     slot_minute = slot_dt_lebanon.minute
-                                                    
+
                                                     # Match if hour matches (allow some flexibility for minutes)
-                                                    if slot_hour == requested_time[0] and abs(slot_minute - requested_time[1]) <= 15:
+                                                    if (
+                                                        slot_hour == requested_time[0]
+                                                        and abs(slot_minute - requested_time[1])
+                                                        <= 15
+                                                    ):
                                                         slot_to_use = slot
-                                                        logger.info("matched_time_slot", requested=requested_time, slot_time=(slot_hour, slot_minute))
+                                                        logger.info(
+                                                            "matched_time_slot",
+                                                            requested=requested_time,
+                                                            slot_time=(slot_hour, slot_minute),
+                                                        )
                                                         break
-                                            
+
                                             if not slot_to_use:
-                                                logger.warning("requested_time_not_available", requested_time=requested_time)
+                                                logger.warning(
+                                                    "requested_time_not_available",
+                                                    requested_time=requested_time,
+                                                )
                                                 booking_intent = False
                                         else:
                                             slot_to_use = slots[0]
-                                        
+
                                         if slot_to_use:
                                             slot_id_to_use = slot_to_use.get("slot_id")
 
                                 if booking_intent and provider_id_to_use and slot_id_to_use:
                                     # Double-booking guard: skip auto booking if slot overlaps existing appointment
                                     if user_id and slot_id_to_use:
-                                        slot_times = await self._get_slot_datetimes(provider_id_to_use, slot_id_to_use)
+                                        slot_times = await self._get_slot_datetimes(
+                                            provider_id_to_use, slot_id_to_use
+                                        )
                                         if slot_times:
-                                            conflicts = await self._find_user_conflicts(user_id, *slot_times)
+                                            conflicts = await self._find_user_conflicts(
+                                                user_id, *slot_times
+                                            )
                                             if conflicts:
                                                 booking_intent = False
-                                                conflict_msg = "User already has appointment(s) at that time:\n" + "\n".join(
-                                                    f"- {c['provider']} ({c['department']}) at {c['time']}"
-                                                    for c in conflicts
+                                                conflict_msg = (
+                                                    "User already has appointment(s) at that time:\n"
+                                                    + "\n".join(
+                                                        f"- {c['provider']} ({c['department']}) at {c['time']}"
+                                                        for c in conflicts
+                                                    )
                                                 )
                                                 openai_messages.append(
                                                     {
@@ -500,25 +607,45 @@ class AgentRouter:
                                                         "content": f"Avoid booking overlapping appointments unless the user explicitly insists.\n{conflict_msg}",
                                                     }
                                                 )
-                                                logger.info("auto_booking_skipped_conflict", user_id=user_id, conflicts=len(conflicts))
+                                                logger.info(
+                                                    "auto_booking_skipped_conflict",
+                                                    user_id=user_id,
+                                                    conflicts=len(conflicts),
+                                                )
                                     if not booking_intent:
                                         continue
 
                                     # Perform booking automatically
-                                    book_args = {"provider_id": provider_id_to_use, "slot_id": slot_id_to_use}
+                                    book_args = {
+                                        "provider_id": provider_id_to_use,
+                                        "slot_id": slot_id_to_use,
+                                    }
                                     book_call_id = str(uuid.uuid4())
-                                    logger.info("auto_booking_triggered", provider_id=provider_id_to_use, slot_id=slot_id_to_use)
-                                    book_result = await self._execute_tool("book_appointment", book_args, user_id)
+                                    logger.info(
+                                        "auto_booking_triggered",
+                                        provider_id=provider_id_to_use,
+                                        slot_id=slot_id_to_use,
+                                    )
+                                    book_result = await self._execute_tool(
+                                        "book_appointment", book_args, user_id
+                                    )
 
                                     # Append synthetic tool call/result so callers and tests see it
                                     all_tool_calls.append(
-                                        ToolCall(id=book_call_id, name="book_appointment", arguments=book_args)
+                                        ToolCall(
+                                            id=book_call_id,
+                                            name="book_appointment",
+                                            arguments=book_args,
+                                        )
                                     )
                                     all_tool_results.append(book_result)
 
                                     # Check if booking failed (e.g., slot already taken)
                                     if book_result.result.get("error"):
-                                        logger.warning("auto_booking_failed", error=book_result.result.get("error"))
+                                        logger.warning(
+                                            "auto_booking_failed",
+                                            error=book_result.result.get("error"),
+                                        )
                                         # Don't return early - let the model handle the error and present alternatives
                                     else:
                                         # We executed the booking programmatically. Construct a
@@ -538,21 +665,32 @@ class AgentRouter:
                                                         provider_name = p.get("provider_name")
                                                         break
                                                 if not provider_name:
-                                                    provider_name = result_json["providers"][0].get("provider_name")
+                                                    provider_name = result_json["providers"][0].get(
+                                                        "provider_name"
+                                                    )
                                             elif result_json.get("provider_name"):
                                                 provider_name = result_json.get("provider_name")
 
                                         if not provider_name:
                                             provider_name = "the selected provider"
 
-                                        confirmation = book_result.result.get("confirmation_code", "")
+                                        confirmation = book_result.result.get(
+                                            "confirmation_code", ""
+                                        )
                                         final_content = (
                                             f"I've booked your appointment for {booked_time} with {provider_name}. "
                                             f"Confirmation code: {confirmation}. An email confirmation has been sent to you."
                                         )
 
-                                        final_message = ChatMessage(role="assistant", content=final_content)
-                                        return final_message, all_tool_calls, all_tool_results, total_usage
+                                        final_message = ChatMessage(
+                                            role="assistant", content=final_content
+                                        )
+                                        return (
+                                            final_message,
+                                            all_tool_calls,
+                                            all_tool_results,
+                                            total_usage,
+                                        )
                         except Exception:
                             # Never crash the loop due to heuristic booking; log and continue
                             logger.exception("auto_booking_failed")
@@ -580,13 +718,14 @@ class AgentRouter:
 
             except Exception as e:
                 import traceback
+
                 error_details = traceback.format_exc()
                 logger.error(
-                    "chat_turn_error", 
-                    error=str(e), 
+                    "chat_turn_error",
+                    error=str(e),
                     error_type=type(e).__name__,
                     iteration=iteration,
-                    traceback=error_details
+                    traceback=error_details,
                 )
                 error_message = ChatMessage(
                     role="assistant",
@@ -613,7 +752,7 @@ class AgentRouter:
                 result = await self._search_timeslots(user_id=user_id, **arguments)
             elif tool_name == "book_appointment":
                 # Remove user_id from arguments if present (we'll use the authenticated user_id)
-                book_args = {k: v for k, v in arguments.items() if k != 'user_id'}
+                book_args = {k: v for k, v in arguments.items() if k != "user_id"}
                 result = await self._book_appointment(**book_args, user_id=user_id)
             elif tool_name == "modify_appointment":
                 result = await self._modify_appointment(**arguments)
@@ -709,18 +848,18 @@ class AgentRouter:
             # Return all providers with their slots
             providers_with_slots = []
             providers_without_slots = []
-            
+
             for provider in providers:
                 slots = await self.scheduling_client.get_timeslots(provider["id"], target_date)
                 available_slots = [s for s in slots if s.available]
-                
+
                 provider_info = {
                     "provider_id": provider["id"],
                     "provider_name": provider["name"],
                     "department": provider.get("department", ""),
                     "specialty": provider.get("specialty", ""),
                 }
-                
+
                 if available_slots:
                     # Provider has availability - include slots
                     provider_info["slots"] = [
@@ -737,10 +876,10 @@ class AgentRouter:
                 else:
                     # Provider has no availability - still list them
                     providers_without_slots.append(provider_info)
-            
+
             # Combine results - providers with slots first
             all_providers = providers_with_slots + providers_without_slots
-            
+
             if user_id:
                 self._store_user_slots(user_id, found_slots)
 
@@ -777,7 +916,9 @@ class AgentRouter:
 
         slot_times = await self._get_slot_datetimes(provider_id, slot_id)
         if not slot_times:
-            return {"error": "Unable to validate the selected time slot. Please search availability again."}
+            return {
+                "error": "Unable to validate the selected time slot. Please search availability again."
+            }
 
         slot_start, slot_end = slot_times
         conflicts = await self._find_user_conflicts(user_id, slot_start, slot_end)
@@ -814,18 +955,27 @@ class AgentRouter:
                     email_sent=email_result.get("email_sent", False),
                 )
             except Exception as e:
-                logger.error("auto_email_failed", error=str(e), appointment_id=result.get("appointment_id"))
+                logger.error(
+                    "auto_email_failed", error=str(e), appointment_id=result.get("appointment_id")
+                )
                 # Don't fail the booking if email fails
                 result["email_sent"] = False
                 result["email_error"] = str(e)
 
         return result
 
-    async def _modify_appointment(
-        self, appointment_id: int, new_slot_id: str
-    ) -> dict[str, Any]:
-        """Modify an appointment."""
+    async def _modify_appointment(self, appointment_id: int, new_slot_id: str) -> dict[str, Any]:
+        """Modify an appointment and send confirmation email."""
         result = await self.scheduling_client.modify_appointment(appointment_id, new_slot_id)
+
+        # Send email confirmation for the rescheduled appointment
+        if result.get("appointment_id"):
+            try:
+                email_result = await self._send_email_confirmation(result["appointment_id"])
+                result["email_sent"] = email_result.get("email_sent", False)
+            except Exception:
+                result["email_sent"] = False
+
         return result
 
     async def _cancel_appointment(self, appointment_id: int) -> dict[str, Any]:
@@ -837,7 +987,7 @@ class AgentRouter:
         """Send email confirmation for an appointment."""
         # Import here to avoid circular dependency
         from app.core.db import async_session_maker
-        
+
         # Use a fresh session to ensure we get the latest data
         # This prevents stale reads when the appointment was created in a different session
         async with async_session_maker() as session:
@@ -893,7 +1043,7 @@ class AgentRouter:
         self, user_id: int | None = None, status: str = "all", limit: int = 100
     ) -> dict[str, Any]:
         """Get user's appointments.
-        
+
         Default behavior matches the Appointments page: shows ALL appointments
         ordered by time (newest first), regardless of status.
         """
@@ -916,14 +1066,13 @@ class AgentRouter:
         # Apply status filter only if explicitly requested
         if status == "upcoming":
             query = query.where(
-                Appointment.time_start >= lebanon_now,
-                Appointment.status == "confirmed"
+                Appointment.time_start >= lebanon_now, Appointment.status == "confirmed"
             ).order_by(Appointment.time_start)
         elif status == "past":
             query = query.where(
                 or_(
                     Appointment.time_start < lebanon_now,
-                    Appointment.status.in_(["completed", "cancelled"])
+                    Appointment.status.in_(["completed", "cancelled"]),
                 )
             ).order_by(desc(Appointment.time_start))
         else:  # "all" - default behavior matching Appointments page
@@ -941,7 +1090,11 @@ class AgentRouter:
             return {
                 "appointments": [],
                 "count": 0,
-                "message": f"No {status} appointments found" if status != "all" else "No appointments found"
+                "message": (
+                    f"No {status} appointments found"
+                    if status != "all"
+                    else "No appointments found"
+                ),
             }
 
         # Format appointments - same format as Appointments page
@@ -952,25 +1105,27 @@ class AgentRouter:
             # The time is stored as Lebanon local time without tzinfo
             # Just format it directly without timezone conversion
             appt_time = appointment.time_start
-            
+
             # Include a clear label to help the agent identify the correct appointment
             reason_label = appointment.reason or f"{provider.department} appointment"
-            
-            appointments.append({
-                "appointment_id": appointment.id,  # USE THIS ID for modify/cancel operations
-                "id_for_modification": appointment.id,  # Duplicate to emphasize
-                "confirmation_code": appointment.confirmation_code,
-                "provider_name": provider.name,
-                "provider_id": provider.id,
-                "department": provider.department,
-                "specialty": provider.specialty,
-                "date": appt_time.strftime("%Y-%m-%d"),
-                "time": appt_time.strftime("%I:%M %p"),
-                "datetime_display": appt_time.strftime("%B %d, %Y at %I:%M %p"),
-                "status": appointment.status,
-                "reason": appointment.reason,
-                "summary": f"ID={appointment.id}: {reason_label} on {appt_time.strftime('%B %d')} at {appt_time.strftime('%I:%M %p')}",
-            })
+
+            appointments.append(
+                {
+                    "appointment_id": appointment.id,  # USE THIS ID for modify/cancel operations
+                    "id_for_modification": appointment.id,  # Duplicate to emphasize
+                    "confirmation_code": appointment.confirmation_code,
+                    "provider_name": provider.name,
+                    "provider_id": provider.id,
+                    "department": provider.department,
+                    "specialty": provider.specialty,
+                    "date": appt_time.strftime("%Y-%m-%d"),
+                    "time": appt_time.strftime("%I:%M %p"),
+                    "datetime_display": appt_time.strftime("%B %d, %Y at %I:%M %p"),
+                    "status": appointment.status,
+                    "reason": appointment.reason,
+                    "summary": f"ID={appointment.id}: {reason_label} on {appt_time.strftime('%B %d')} at {appt_time.strftime('%I:%M %p')}",
+                }
+            )
 
         return {
             "appointments": appointments,
@@ -982,7 +1137,7 @@ class AgentRouter:
         """List providers in a specific department."""
         # Use the scheduling client to search providers by department
         providers = await self.scheduling_client.search_providers(department=department)
-        
+
         if not providers:
             return {
                 "providers": [],
@@ -990,7 +1145,7 @@ class AgentRouter:
                 "department": department,
                 "message": f"No providers found in department: {department}",
             }
-        
+
         return {
             "providers": [
                 {
@@ -1007,7 +1162,9 @@ class AgentRouter:
             "message": f"Found {len(providers)} provider(s) in {department}",
         }
 
-    async def _get_slot_datetimes(self, provider_id: int, slot_id: str) -> tuple[datetime, datetime] | None:
+    async def _get_slot_datetimes(
+        self, provider_id: int, slot_id: str
+    ) -> tuple[datetime, datetime] | None:
         """Resolve a slot_id to concrete datetimes."""
         try:
             parts = slot_id.split("_")
