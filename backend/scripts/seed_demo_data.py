@@ -1,4 +1,5 @@
 """Seed demo data for CareConnect."""
+
 import asyncio
 import json
 import random
@@ -125,24 +126,37 @@ async def seed_users():
                 "country_code": "+961",
                 "role": UserRole.PATIENT,
             },
+            # Additional patients (custom)
+            {
+                "email": "hadi.wmail@gmail.com",
+                "name": "Hadi Hasan",
+                "phone": "71111111",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
+            {
+                "email": "samer.hacan@gmail.com",
+                "name": "Samer Hasan",
+                "phone": "71222222",
+                "country_code": "+961",
+                "role": UserRole.PATIENT,
+            },
             # Admin user
             {
-                "email": "admin@aub.com",
+                "email": "admin@admin.com",
                 "name": "Dr. Administrator",
                 "phone": "01350000",
                 "country_code": "+961",
                 "role": UserRole.ADMIN,
             },
         ]
-        
+
         # Check existing users
         all_emails = [u["email"] for u in users_data]
-        result = await session.execute(
-            select(User).where(User.email.in_(all_emails))
-        )
+        result = await session.execute(select(User).where(User.email.in_(all_emails)))
         existing_users = result.scalars().all()
         existing_emails = {user.email for user in existing_users}
-        
+
         users_to_add = []
         for user_data in users_data:
             if user_data["email"] not in existing_emails:
@@ -153,14 +167,16 @@ async def seed_users():
                         phone=user_data["phone"],
                         country_code=user_data["country_code"],
                         role=user_data["role"],
-                        hashed_password=get_password_hash("password123" if user_data["role"] == UserRole.PATIENT else "Admin@123"),
+                        hashed_password=get_password_hash(
+                            "password123" if user_data["role"] == UserRole.PATIENT else "Admin@123"
+                        ),
                     )
                 )
-        
+
         if users_to_add:
             session.add_all(users_to_add)
             await session.commit()
-            print(f"✓ Seeded {len(users_to_add)} users (10 patients + 1 admin)")
+            print(f"✓ Seeded {len(users_to_add)} users (12 patients + 1 admin)")
         else:
             print(f"✓ Users already exist, skipped seeding")
 
@@ -191,7 +207,6 @@ async def seed_providers():
                 specialty="Heart Failure",
                 bio="Heart failure specialist focused on advanced cardiac therapies and helping patients manage complex heart conditions to improve quality of life.",
             ),
-            
             # Dermatology (3 providers)
             Provider(
                 name="Dr. Jennifer Wong",
@@ -214,7 +229,6 @@ async def seed_providers():
                 specialty="Pediatric Dermatology",
                 bio="Pediatric dermatologist specializing in children's skin health, from birthmarks and rashes to eczema and genetic skin conditions. Gentle care for young patients.",
             ),
-            
             # Emergency Medicine (3 providers)
             Provider(
                 name="Dr. Robert Thompson",
@@ -237,7 +251,6 @@ async def seed_providers():
                 specialty="Pediatric Emergency",
                 bio="Emergency physician with specialized training in pediatric emergencies. Compassionate care for children and families during stressful medical situations.",
             ),
-            
             # Endocrinology (3 providers)
             Provider(
                 name="Dr. Patricia Singh",
@@ -260,7 +273,6 @@ async def seed_providers():
                 specialty="Metabolic Disorders",
                 bio="Endocrinologist specializing in metabolic syndrome, obesity medicine, and hormonal imbalances. Focuses on holistic approaches to restore hormonal health.",
             ),
-            
             # Gastroenterology (3 providers)
             Provider(
                 name="Dr. James Wilson",
@@ -283,7 +295,6 @@ async def seed_providers():
                 specialty="Therapeutic Endoscopy",
                 bio="Advanced endoscopist performing colonoscopies, upper endoscopies, and complex therapeutic procedures including polyp removal and stent placement.",
             ),
-            
             # General Surgery (3 providers)
             Provider(
                 name="Dr. Thomas Anderson",
@@ -306,7 +317,6 @@ async def seed_providers():
                 specialty="Colorectal Surgery",
                 bio="Colorectal surgeon treating colon cancer, diverticulitis, and inflammatory bowel disease. Expert in both open and minimally invasive techniques.",
             ),
-            
             # Hematology (3 providers)
             Provider(
                 name="Dr. Elizabeth Taylor",
@@ -329,7 +339,6 @@ async def seed_providers():
                 specialty="Coagulation Disorders",
                 bio="Expert in bleeding and clotting disorders including hemophilia, von Willebrand disease, and thrombophilia. Provides comprehensive coagulation management.",
             ),
-            
             # Infectious Disease (3 providers)
             Provider(
                 name="Dr. David Chen",
@@ -352,7 +361,6 @@ async def seed_providers():
                 specialty="Travel Medicine",
                 bio="Travel medicine expert offering pre-travel consultations, vaccinations, and post-travel illness evaluation. Helps travelers stay healthy worldwide.",
             ),
-            
             # Internal Medicine (3 providers)
             Provider(
                 name="Dr. Maria Rodriguez",
@@ -375,7 +383,6 @@ async def seed_providers():
                 specialty="Adult Primary Care",
                 bio="Nurse practitioner focused on preventive care, health screenings, and chronic disease management. Partners with patients for optimal wellness.",
             ),
-            
             # Nephrology (3 providers)
             Provider(
                 name="Dr. Andrew Miller",
@@ -398,7 +405,6 @@ async def seed_providers():
                 specialty="Hypertensive Kidney Disease",
                 bio="Expert in hypertension and its effects on kidney function. Specializes in resistant hypertension and renovascular disease management.",
             ),
-            
             # Neurology (3 providers)
             Provider(
                 name="Dr. Ahmed Hassan",
@@ -421,7 +427,6 @@ async def seed_providers():
                 specialty="Movement Disorders",
                 bio="Movement disorder specialist treating Parkinson's disease, tremors, and dystonia. Offers deep brain stimulation programming and Botox therapy.",
             ),
-            
             # Neurosurgery (3 providers)
             Provider(
                 name="Dr. Christopher Adams",
@@ -444,7 +449,6 @@ async def seed_providers():
                 specialty="Pediatric Neurosurgery",
                 bio="Pediatric neurosurgeon treating congenital brain and spine conditions in children. Gentle approach with focus on long-term developmental outcomes.",
             ),
-            
             # Obstetrics and Gynecology (3 providers)
             Provider(
                 name="Dr. Rebecca Harris",
@@ -467,7 +471,6 @@ async def seed_providers():
                 specialty="Maternal-Fetal Medicine",
                 bio="Perinatologist managing high-risk pregnancies including multiple gestations, preeclampsia, and fetal abnormalities with expert care and monitoring.",
             ),
-            
             # Oncology (3 providers)
             Provider(
                 name="Dr. David Park",
@@ -490,7 +493,6 @@ async def seed_providers():
                 specialty="Hematologic Oncology",
                 bio="Hematologic oncologist treating leukemia, lymphoma, and myeloma with cutting-edge therapies including CAR-T cell therapy and clinical trials.",
             ),
-            
             # Ophthalmology (3 providers)
             Provider(
                 name="Dr. Emily Carter",
@@ -513,7 +515,6 @@ async def seed_providers():
                 specialty="Cataract Surgery",
                 bio="Cataract surgeon performing advanced lens replacement including premium IOLs for reduced dependence on glasses after surgery.",
             ),
-            
             # Orthopedics (3 providers)
             Provider(
                 name="Dr. James Chen",
@@ -536,7 +537,6 @@ async def seed_providers():
                 specialty="Pediatric Orthopedics",
                 bio="Pediatric orthopedist treating fractures, scoliosis, and developmental conditions in children. Specialized care for growing bones and joints.",
             ),
-            
             # Otolaryngology (ENT) (3 providers)
             Provider(
                 name="Dr. Robert Davis",
@@ -559,7 +559,6 @@ async def seed_providers():
                 specialty="Pediatric ENT",
                 bio="Pediatric ENT specialist treating ear infections, tonsillitis, and airway problems in children with a gentle, kid-friendly approach.",
             ),
-            
             # Pathology (3 providers)
             Provider(
                 name="Dr. Patricia Moore",
@@ -582,7 +581,6 @@ async def seed_providers():
                 specialty="Molecular Pathology",
                 bio="Molecular pathologist using genetic and genomic testing to guide personalized cancer treatment and diagnose inherited conditions.",
             ),
-            
             # Pediatrics (3 providers)
             Provider(
                 name="Dr. Emily Taylor",
@@ -605,7 +603,6 @@ async def seed_providers():
                 specialty="Developmental Pediatrics",
                 bio="Developmental pediatrician evaluating and treating ADHD, autism, and developmental delays. Helps children reach their full potential.",
             ),
-            
             # Physical Medicine and Rehabilitation (3 providers)
             Provider(
                 name="Dr. Richard Martinez",
@@ -628,7 +625,6 @@ async def seed_providers():
                 specialty="Pain Management",
                 bio="Interventional pain specialist treating chronic back pain, neck pain, and joint pain with injections, nerve blocks, and comprehensive pain programs.",
             ),
-            
             # Psychiatry (3 providers)
             Provider(
                 name="Dr. Sophia Anderson",
@@ -651,7 +647,6 @@ async def seed_providers():
                 specialty="Addiction Psychiatry",
                 bio="Addiction psychiatrist treating substance use disorders with evidence-based medications and therapy. Compassionate support for recovery.",
             ),
-            
             # Pulmonology (3 providers)
             Provider(
                 name="Dr. Christopher Lee",
@@ -674,7 +669,6 @@ async def seed_providers():
                 specialty="Sleep Medicine",
                 bio="Sleep medicine specialist diagnosing and treating sleep apnea, insomnia, and other sleep disorders. Helps patients achieve restful, healthy sleep.",
             ),
-            
             # Radiology (3 providers)
             Provider(
                 name="Dr. Omar Nassar",
@@ -697,7 +691,6 @@ async def seed_providers():
                 specialty="Neuroradiology",
                 bio="Neuroradiologist specialized in brain and spine imaging. Expert in diagnosing strokes, tumors, and neurological conditions.",
             ),
-            
             # Rheumatology (3 providers)
             Provider(
                 name="Dr. Elizabeth Harris",
@@ -720,7 +713,6 @@ async def seed_providers():
                 specialty="Vasculitis",
                 bio="Expert in inflammatory blood vessel disorders including giant cell arteritis and ANCA vasculitis. Skilled in complex immunosuppressive management.",
             ),
-            
             # Urology (3 providers)
             Provider(
                 name="Dr. Benjamin Turner",
@@ -743,7 +735,6 @@ async def seed_providers():
                 specialty="Minimally Invasive Urology",
                 bio="Robotic surgery specialist performing advanced urologic procedures with smaller incisions, less pain, and faster recovery times.",
             ),
-            
             # Laboratory (3 providers for lab test appointments - named generically for patient convenience)
             Provider(
                 name="Laboratory Services",
@@ -848,17 +839,15 @@ async def seed_lab_tests():
                 prep_instructions="Remove all metal objects; inform staff of implants",
                 fasting_hours=None,
                 estimated_duration_minutes=30,
-            )
+            ),
         }
 
         # Add all lab tests (database was cleared first)
-        lab_tests = [
-            LabTest(code=code, **data)
-            for code, data in desired_tests.items()
-        ]
+        lab_tests = [LabTest(code=code, **data) for code, data in desired_tests.items()]
         session.add_all(lab_tests)
         await session.commit()
         print(f"✓ Seeded {len(lab_tests)} lab tests")
+
 
 async def seed_documents():
     """Seed facility documents for RAG."""
@@ -1015,17 +1004,19 @@ async def seed_doctor_documents():
     async with async_session_maker() as session:
         result = await session.execute(select(Provider))
         providers = result.scalars().all()
-        
+
         if not providers:
             print("⚠ No providers found - skipping doctor document indexing")
             return
-        
+
         # Create RAG documents for each doctor
         documents = []
         for provider in providers:
             # Handle provider.type which may be enum or string
-            provider_type = provider.type.value if hasattr(provider.type, 'value') else str(provider.type)
-            
+            provider_type = (
+                provider.type.value if hasattr(provider.type, "value") else str(provider.type)
+            )
+
             # Build a comprehensive profile document
             content = f"""
             {provider.name} - {provider.specialty}
@@ -1042,7 +1033,7 @@ async def seed_doctor_documents():
             
             To book an appointment with {provider.name}, you can search for available slots in the {provider.department} department or directly by provider ID {provider.id}.
             """
-            
+
             documents.append(
                 Document(
                     title=f"{provider.name} - {provider.specialty}",
@@ -1056,7 +1047,7 @@ async def seed_doctor_documents():
                     },
                 )
             )
-        
+
         # Index all doctor documents
         rag_service = RAGService()
         result = await rag_service.index_documents(documents, replace=False)
@@ -1067,22 +1058,22 @@ async def seed_lab_test_documents():
     """Seed lab test preparation documents for RAG."""
     from scripts.populate_lab_tests import LAB_TESTS, generate_lab_test_pdf
     from app.services.pdf_parser import PDFParser
-    
+
     print("Generating lab test preparation documents...")
-    
+
     rag_service = RAGService()
     pdf_parser = PDFParser()
-    
+
     # Create documents from lab test PDFs
     documents = []
-    
+
     for test_name, test_info in LAB_TESTS.items():
         # Generate PDF
         pdf_bytes = generate_lab_test_pdf(test_name, test_info)
-        
+
         # Extract text from PDF
         pdf_text = pdf_parser.extract_text_from_bytes(pdf_bytes)
-        
+
         # Create Document object
         documents.append(
             Document(
@@ -1095,7 +1086,7 @@ async def seed_lab_test_documents():
                 },
             )
         )
-    
+
     # Index all lab test documents
     result = await rag_service.index_documents(documents, replace=False)
     print(f"✓ Indexed {len(LAB_TESTS)} lab test documents ({result.total_chunks} chunks)")
@@ -1106,7 +1097,7 @@ async def seed_patient_test_results():
     from datetime import datetime, timezone, timedelta
     from io import BytesIO
     from app.models import PatientTestResult
-    
+
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import letter
@@ -1115,84 +1106,95 @@ async def seed_patient_test_results():
     except ImportError:
         print("⚠ reportlab not installed, skipping test result PDF generation")
         return
-    
+
     print("Seeding patient test results...")
-    
+
     async with async_session_maker() as session:
         # Get the demo patient user
-        result = await session.execute(
-            select(User).where(User.email == "patient@gmail.com")
-        )
+        result = await session.execute(select(User).where(User.email == "patient@gmail.com"))
         patient = result.scalar_one_or_none()
-        
+
         if not patient:
             print("⚠ Demo patient not found, skipping test results")
             return
-        
+
         # Get a provider for ordering
         provider_result = await session.execute(
             select(Provider).where(Provider.department == "Internal Medicine").limit(1)
         )
         provider = provider_result.scalar_one_or_none()
-        
-        def generate_test_result_pdf(test_name: str, result_value: str, unit: str, reference: str, notes: str) -> bytes:
+
+        def generate_test_result_pdf(
+            test_name: str, result_value: str, unit: str, reference: str, notes: str
+        ) -> bytes:
             """Generate a sample test result PDF."""
             buffer = BytesIO()
             doc = SimpleDocTemplate(buffer, pagesize=letter)
             styles = getSampleStyleSheet()
             story = []
-            
+
             # Title
             title_style = ParagraphStyle(
-                'Title',
-                parent=styles['Heading1'],
+                "Title",
+                parent=styles["Heading1"],
                 fontSize=18,
-                textColor=colors.HexColor('#840132'),
+                textColor=colors.HexColor("#2563EB"),
                 spaceAfter=20,
             )
-            story.append(Paragraph("AUB Medical Center", title_style))
-            story.append(Paragraph("Laboratory Test Report", styles['Heading2']))
+            story.append(Paragraph("CareConnect Medical Center", title_style))
+            story.append(Paragraph("Laboratory Test Report", styles["Heading2"]))
             story.append(Spacer(1, 20))
-            
+
             # Patient Info
-            story.append(Paragraph(f"<b>Patient:</b> {patient.name}", styles['Normal']))
-            story.append(Paragraph(f"<b>Date:</b> {datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
+            story.append(Paragraph(f"<b>Patient:</b> {patient.name}", styles["Normal"]))
+            story.append(
+                Paragraph(f"<b>Date:</b> {datetime.now().strftime('%B %d, %Y')}", styles["Normal"])
+            )
             story.append(Spacer(1, 20))
-            
+
             # Test Results Table
             data = [
-                ['Test Name', 'Result', 'Unit', 'Reference Range'],
+                ["Test Name", "Result", "Unit", "Reference Range"],
                 [test_name, result_value, unit, reference],
             ]
             table = Table(data, colWidths=[180, 100, 80, 140])
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#840132')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 12),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
-                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dddddd')),
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 11),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-            ]))
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2563EB")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 12),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f5f5f5")),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#dddddd")),
+                        ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 1), (-1, -1), 11),
+                        ("TOPPADDING", (0, 1), (-1, -1), 8),
+                        ("BOTTOMPADDING", (0, 1), (-1, -1), 8),
+                    ]
+                )
+            )
             story.append(table)
             story.append(Spacer(1, 20))
-            
+
             # Notes
             if notes:
-                story.append(Paragraph("<b>Notes:</b>", styles['Normal']))
-                story.append(Paragraph(notes, styles['Normal']))
-            
+                story.append(Paragraph("<b>Notes:</b>", styles["Normal"]))
+                story.append(Paragraph(notes, styles["Normal"]))
+
             story.append(Spacer(1, 30))
-            story.append(Paragraph("This is an official laboratory report from AUB Medical Center.", styles['Normal']))
-            
+            story.append(
+                Paragraph(
+                    "This is an official laboratory report from CareConnect Medical Center.",
+                    styles["Normal"],
+                )
+            )
+
             doc.build(story)
             return buffer.getvalue()
-        
+
         # Sample test results
         test_results_data = [
             {
@@ -1246,7 +1248,7 @@ async def seed_patient_test_results():
                 "notes": "Blood sugar control is excellent. No signs of diabetes or pre-diabetes.",
             },
         ]
-        
+
         for test_data in test_results_data:
             # Generate PDF
             pdf_data = generate_test_result_pdf(
@@ -1256,7 +1258,7 @@ async def seed_patient_test_results():
                 test_data["reference_range"],
                 test_data["notes"],
             )
-            
+
             test_result = PatientTestResult(
                 user_id=patient.id,
                 ordered_by_provider_id=provider.id if provider else None,
@@ -1272,7 +1274,7 @@ async def seed_patient_test_results():
                 pdf_filename=f"{test_data['test_name'].replace(' ', '_').replace('(', '').replace(')', '')}_Report.pdf",
             )
             session.add(test_result)
-        
+
         await session.commit()
         print(f"✓ Seeded {len(test_results_data)} test results for demo patient")
 
@@ -1280,110 +1282,173 @@ async def seed_patient_test_results():
 def generate_confirmation_code():
     """Generate a realistic confirmation code."""
     import string
+
     chars = string.ascii_uppercase + string.digits
-    return ''.join(random.choices(chars, k=8))
+    return "".join(random.choices(chars, k=8))
 
 
 async def seed_appointments():
     """Seed realistic appointment history for all patients."""
     print("Seeding appointment history...")
-    
+
     async with async_session_maker() as session:
         # Get all patients
-        result = await session.execute(
-            select(User).where(User.role == UserRole.PATIENT)
-        )
+        result = await session.execute(select(User).where(User.role == UserRole.PATIENT))
         patients = result.scalars().all()
-        
+
         # Get all providers
         result = await session.execute(select(Provider))
         providers = result.scalars().all()
-        
+
         if not patients or not providers:
             print("⚠ No patients or providers found, skipping appointments")
             return
-        
+
         # Group providers by department for realistic booking
         providers_by_dept = {}
         for p in providers:
             if p.department not in providers_by_dept:
                 providers_by_dept[p.department] = []
             providers_by_dept[p.department].append(p)
-        
+
         appointments = []
         now = datetime.now(timezone.utc)
-        
+
         # Appointment reasons by department
         reasons = {
-            "Cardiology": ["Annual heart checkup", "Follow-up for blood pressure", "Chest discomfort evaluation", "ECG review"],
-            "Dermatology": ["Skin rash examination", "Mole check", "Acne treatment follow-up", "Annual skin screening"],
-            "Orthopedics": ["Knee pain consultation", "Back pain evaluation", "Sports injury follow-up", "Joint stiffness"],
-            "Internal Medicine": ["Annual physical", "Flu symptoms", "General checkup", "Fatigue evaluation"],
-            "Neurology": ["Headache consultation", "Migraine follow-up", "Numbness evaluation", "Sleep issues"],
-            "Gastroenterology": ["Stomach pain", "Digestive issues", "GERD follow-up", "Colonoscopy prep"],
+            "Cardiology": [
+                "Annual heart checkup",
+                "Follow-up for blood pressure",
+                "Chest discomfort evaluation",
+                "ECG review",
+            ],
+            "Dermatology": [
+                "Skin rash examination",
+                "Mole check",
+                "Acne treatment follow-up",
+                "Annual skin screening",
+            ],
+            "Orthopedics": [
+                "Knee pain consultation",
+                "Back pain evaluation",
+                "Sports injury follow-up",
+                "Joint stiffness",
+            ],
+            "Internal Medicine": [
+                "Annual physical",
+                "Flu symptoms",
+                "General checkup",
+                "Fatigue evaluation",
+            ],
+            "Neurology": [
+                "Headache consultation",
+                "Migraine follow-up",
+                "Numbness evaluation",
+                "Sleep issues",
+            ],
+            "Gastroenterology": [
+                "Stomach pain",
+                "Digestive issues",
+                "GERD follow-up",
+                "Colonoscopy prep",
+            ],
             "Ophthalmology": ["Eye exam", "Vision check", "Glasses prescription", "Eye strain"],
-            "Pulmonology": ["Breathing difficulty", "Asthma follow-up", "Cough evaluation", "Sleep apnea check"],
-            "Endocrinology": ["Diabetes management", "Thyroid follow-up", "Hormone evaluation", "Weight management"],
+            "Pulmonology": [
+                "Breathing difficulty",
+                "Asthma follow-up",
+                "Cough evaluation",
+                "Sleep apnea check",
+            ],
+            "Endocrinology": [
+                "Diabetes management",
+                "Thyroid follow-up",
+                "Hormone evaluation",
+                "Weight management",
+            ],
             "Laboratory": ["Blood work", "Annual lab tests", "Lipid panel", "CBC test"],
         }
-        
+
         # Create appointments for each patient
         for patient in patients:
             # Main demo patient (patient@gmail.com) gets more appointments
             is_main_patient = patient.email == "patient@gmail.com"
             num_past = random.randint(5, 8) if is_main_patient else random.randint(1, 4)
             num_upcoming = random.randint(2, 4) if is_main_patient else random.randint(0, 2)
-            
+
             # Past appointments (completed, cancelled, no_show)
             for i in range(num_past):
                 days_ago = random.randint(7, 180)
                 dept = random.choice(list(providers_by_dept.keys()))
                 provider = random.choice(providers_by_dept[dept])
-                
+
                 start_time = now - timedelta(days=days_ago, hours=random.randint(-4, 4))
-                start_time = start_time.replace(hour=random.choice([9, 10, 11, 14, 15, 16]), minute=random.choice([0, 30]), second=0, microsecond=0)
-                
-                status_weights = [AppointmentStatus.COMPLETED] * 8 + [AppointmentStatus.CANCELLED] * 1 + [AppointmentStatus.NO_SHOW] * 1
+                start_time = start_time.replace(
+                    hour=random.choice([9, 10, 11, 14, 15, 16]),
+                    minute=random.choice([0, 30]),
+                    second=0,
+                    microsecond=0,
+                )
+
+                status_weights = (
+                    [AppointmentStatus.COMPLETED] * 8
+                    + [AppointmentStatus.CANCELLED] * 1
+                    + [AppointmentStatus.NO_SHOW] * 1
+                )
                 status = random.choice(status_weights)
-                
+
                 reason_list = reasons.get(dept, ["General consultation"])
-                
-                appointments.append(Appointment(
-                    user_id=patient.id,
-                    provider_id=provider.id,
-                    time_start=start_time,
-                    time_end=start_time + timedelta(minutes=30),
-                    status=status,
-                    channel=random.choice([AppointmentChannel.WEB, AppointmentChannel.AGENT, AppointmentChannel.PHONE]),
-                    reason=random.choice(reason_list),
-                    confirmation_code=generate_confirmation_code(),
-                    created_at=start_time - timedelta(days=random.randint(1, 14)),
-                ))
-            
+
+                appointments.append(
+                    Appointment(
+                        user_id=patient.id,
+                        provider_id=provider.id,
+                        time_start=start_time,
+                        time_end=start_time + timedelta(minutes=30),
+                        status=status,
+                        channel=random.choice(
+                            [
+                                AppointmentChannel.WEB,
+                                AppointmentChannel.AGENT,
+                                AppointmentChannel.PHONE,
+                            ]
+                        ),
+                        reason=random.choice(reason_list),
+                        confirmation_code=generate_confirmation_code(),
+                        created_at=start_time - timedelta(days=random.randint(1, 14)),
+                    )
+                )
+
             # Upcoming appointments (confirmed)
             for i in range(num_upcoming):
                 days_ahead = random.randint(1, 30)
                 dept = random.choice(list(providers_by_dept.keys()))
                 provider = random.choice(providers_by_dept[dept])
-                
+
                 start_time = now + timedelta(days=days_ahead)
-                start_time = start_time.replace(hour=random.choice([9, 10, 11, 14, 15, 16]), minute=random.choice([0, 30]), second=0, microsecond=0)
-                
+                start_time = start_time.replace(
+                    hour=random.choice([9, 10, 11, 14, 15, 16]),
+                    minute=random.choice([0, 30]),
+                    second=0,
+                    microsecond=0,
+                )
+
                 status = AppointmentStatus.CONFIRMED
                 reason_list = reasons.get(dept, ["General consultation"])
-                
-                appointments.append(Appointment(
-                    user_id=patient.id,
-                    provider_id=provider.id,
-                    time_start=start_time,
-                    time_end=start_time + timedelta(minutes=30),
-                    status=status,
-                    channel=random.choice([AppointmentChannel.WEB, AppointmentChannel.AGENT]),
-                    reason=random.choice(reason_list),
-                    confirmation_code=generate_confirmation_code(),
-                    created_at=now - timedelta(days=random.randint(0, 7)),
-                ))
-        
+
+                appointments.append(
+                    Appointment(
+                        user_id=patient.id,
+                        provider_id=provider.id,
+                        time_start=start_time,
+                        time_end=start_time + timedelta(minutes=30),
+                        status=status,
+                        channel=random.choice([AppointmentChannel.WEB, AppointmentChannel.AGENT]),
+                        reason=random.choice(reason_list),
+                        confirmation_code=generate_confirmation_code(),
+                        created_at=now - timedelta(days=random.randint(0, 7)),
+                    )
+                )
+
         session.add_all(appointments)
         await session.commit()
         print(f"✓ Seeded {len(appointments)} appointments across {len(patients)} patients")
@@ -1392,42 +1457,60 @@ async def seed_appointments():
 async def seed_incidents():
     """Seed realistic handover incidents."""
     print("Seeding handover incidents...")
-    
+
     async with async_session_maker() as session:
         # Get patients (excluding main demo patient)
         result = await session.execute(
             select(User).where(User.role == UserRole.PATIENT, User.email != "patient@gmail.com")
         )
         patients = result.scalars().all()
-        
+
         if not patients:
             print("⚠ No patients found for incidents")
             return
-        
+
         now = datetime.now(timezone.utc)
-        
+
         # Realistic incident scenarios
         incident_scenarios = [
             {
                 "subject": "Emergency symptoms reported - chest pain",
                 "chat_summary": "Patient reported severe chest pain during booking conversation. Agent correctly identified emergency and directed to 911. Logging for records.",
                 "conversation": [
-                    {"role": "user", "content": "I need to see a doctor urgently, I have really bad chest pain"},
-                    {"role": "assistant", "content": "This sounds like a medical emergency. Please call 911 or go to the nearest emergency room immediately."},
+                    {
+                        "role": "user",
+                        "content": "I need to see a doctor urgently, I have really bad chest pain",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "This sounds like a medical emergency. Please call 911 or go to the nearest emergency room immediately.",
+                    },
                     {"role": "user", "content": "OK I will go now"},
                 ],
                 "priority": IncidentPriority.URGENT,
                 "status": IncidentStatus.RESOLVED,
-                "resolution": "Patient was directed to ER. Follow-up confirmed patient received care at AUBMC ER.",
+                "resolution": "Patient was directed to ER. Follow-up confirmed patient received care at the emergency room.",
             },
             {
                 "subject": "Patient frustrated with appointment availability",
                 "chat_summary": "Patient expressed frustration that no cardiology appointments were available for 2 weeks. Requested human assistance to find earlier slot.",
                 "conversation": [
-                    {"role": "user", "content": "I need to see a cardiologist this week, it's urgent"},
-                    {"role": "assistant", "content": "I checked availability and the earliest cardiology appointment is in 2 weeks on December 10th. Would you like me to book that?"},
-                    {"role": "user", "content": "That's too late! I need to speak to someone who can help me get an earlier appointment"},
-                    {"role": "assistant", "content": "I understand your concern. Let me connect you with our patient services team who may be able to help with urgent scheduling."},
+                    {
+                        "role": "user",
+                        "content": "I need to see a cardiologist this week, it's urgent",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "I checked availability and the earliest cardiology appointment is in 2 weeks on December 10th. Would you like me to book that?",
+                    },
+                    {
+                        "role": "user",
+                        "content": "That's too late! I need to speak to someone who can help me get an earlier appointment",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "I understand your concern. Let me connect you with our patient services team who may be able to help with urgent scheduling.",
+                    },
                 ],
                 "priority": IncidentPriority.HIGH,
                 "status": IncidentStatus.RESOLVED,
@@ -1438,7 +1521,10 @@ async def seed_incidents():
                 "chat_summary": "Patient asked about insurance coverage and billing for upcoming procedure. Agent correctly identified this as outside scope and flagged for billing department.",
                 "conversation": [
                     {"role": "user", "content": "How much will my MRI cost with my insurance?"},
-                    {"role": "assistant", "content": "I can help with scheduling appointments, but for billing and insurance questions, I'll need to connect you with our billing department."},
+                    {
+                        "role": "assistant",
+                        "content": "I can help with scheduling appointments, but for billing and insurance questions, I'll need to connect you with our billing department.",
+                    },
                     {"role": "user", "content": "Can you transfer me to billing?"},
                 ],
                 "priority": IncidentPriority.LOW,
@@ -1450,8 +1536,14 @@ async def seed_incidents():
                 "chat_summary": "Patient requested medication refill through chat. Agent correctly declined and advised scheduling follow-up with prescribing physician.",
                 "conversation": [
                     {"role": "user", "content": "I need a refill on my blood pressure medication"},
-                    {"role": "assistant", "content": "I cannot process medication refills. Please contact your physician's office directly or schedule a follow-up appointment."},
-                    {"role": "user", "content": "But I'm running out, can someone call in a refill?"},
+                    {
+                        "role": "assistant",
+                        "content": "I cannot process medication refills. Please contact your physician's office directly or schedule a follow-up appointment.",
+                    },
+                    {
+                        "role": "user",
+                        "content": "But I'm running out, can someone call in a refill?",
+                    },
                 ],
                 "priority": IncidentPriority.MEDIUM,
                 "status": IncidentStatus.RESOLVED,
@@ -1461,10 +1553,22 @@ async def seed_incidents():
                 "subject": "Technical issue - appointment not showing",
                 "chat_summary": "Patient claims they booked an appointment but it's not showing in system. Needs investigation.",
                 "conversation": [
-                    {"role": "user", "content": "I booked an appointment last week but I don't see it anywhere"},
-                    {"role": "assistant", "content": "I can see your upcoming appointments. You have an appointment on December 5th with Dr. Chen in Cardiology."},
-                    {"role": "user", "content": "No that's wrong, I booked with a dermatologist for tomorrow"},
-                    {"role": "assistant", "content": "I don't see a dermatology appointment in your records. Let me flag this for our support team to investigate."},
+                    {
+                        "role": "user",
+                        "content": "I booked an appointment last week but I don't see it anywhere",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "I can see your upcoming appointments. You have an appointment on December 5th with Dr. Chen in Cardiology.",
+                    },
+                    {
+                        "role": "user",
+                        "content": "No that's wrong, I booked with a dermatologist for tomorrow",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "I don't see a dermatology appointment in your records. Let me flag this for our support team to investigate.",
+                    },
                 ],
                 "priority": IncidentPriority.MEDIUM,
                 "status": IncidentStatus.IN_PROGRESS,
@@ -1475,9 +1579,18 @@ async def seed_incidents():
                 "chat_summary": "Patient needs wheelchair assistance and sign language interpreter for upcoming appointment. Requires coordination with facilities.",
                 "conversation": [
                     {"role": "user", "content": "I need special accommodations for my appointment"},
-                    {"role": "assistant", "content": "I'd be happy to note any special accommodations. What do you need?"},
-                    {"role": "user", "content": "I use a wheelchair and I also need a sign language interpreter"},
-                    {"role": "assistant", "content": "I'll flag this for our patient services team to coordinate these accommodations for you."},
+                    {
+                        "role": "assistant",
+                        "content": "I'd be happy to note any special accommodations. What do you need?",
+                    },
+                    {
+                        "role": "user",
+                        "content": "I use a wheelchair and I also need a sign language interpreter",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "I'll flag this for our patient services team to coordinate these accommodations for you.",
+                    },
                 ],
                 "priority": IncidentPriority.MEDIUM,
                 "status": IncidentStatus.RESOLVED,
@@ -1488,9 +1601,18 @@ async def seed_incidents():
                 "chat_summary": "Patient complained about 45-minute wait at last appointment. Wants to file formal complaint.",
                 "conversation": [
                     {"role": "user", "content": "I want to file a complaint about my last visit"},
-                    {"role": "assistant", "content": "I'm sorry to hear about your experience. What happened during your visit?"},
-                    {"role": "user", "content": "I waited 45 minutes past my appointment time. This is unacceptable."},
-                    {"role": "assistant", "content": "I apologize for the long wait. I'll escalate this to our patient relations team who can address your complaint formally."},
+                    {
+                        "role": "assistant",
+                        "content": "I'm sorry to hear about your experience. What happened during your visit?",
+                    },
+                    {
+                        "role": "user",
+                        "content": "I waited 45 minutes past my appointment time. This is unacceptable.",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "I apologize for the long wait. I'll escalate this to our patient relations team who can address your complaint formally.",
+                    },
                 ],
                 "priority": IncidentPriority.LOW,
                 "status": IncidentStatus.PENDING,
@@ -1500,21 +1622,30 @@ async def seed_incidents():
                 "chat_summary": "Patient mentioned shortness of breath but clarified it was mild and ongoing for weeks. Not emergency but flagged for awareness.",
                 "conversation": [
                     {"role": "user", "content": "I've been having some trouble breathing lately"},
-                    {"role": "assistant", "content": "I want to make sure you're safe. Is this severe or sudden? Are you having chest pain?"},
-                    {"role": "user", "content": "No no, it's mild. Been happening for a few weeks when I exercise"},
-                    {"role": "assistant", "content": "Thank you for clarifying. I'd recommend scheduling with a pulmonologist to evaluate this. Would you like me to find available appointments?"},
+                    {
+                        "role": "assistant",
+                        "content": "I want to make sure you're safe. Is this severe or sudden? Are you having chest pain?",
+                    },
+                    {
+                        "role": "user",
+                        "content": "No no, it's mild. Been happening for a few weeks when I exercise",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "Thank you for clarifying. I'd recommend scheduling with a pulmonologist to evaluate this. Would you like me to find available appointments?",
+                    },
                 ],
                 "priority": IncidentPriority.MEDIUM,
                 "status": IncidentStatus.CLOSED,
                 "resolution": "Patient booked with pulmonology. Not an emergency case.",
             },
         ]
-        
+
         incidents = []
         for i, scenario in enumerate(incident_scenarios):
             patient = patients[i % len(patients)]
             days_ago = random.randint(1, 60)
-            
+
             incident = HandoverIncident(
                 user_id=patient.id,
                 patient_name=patient.name,
@@ -1528,10 +1659,14 @@ async def seed_incidents():
                 admin_notes=scenario.get("admin_notes"),
                 resolution=scenario.get("resolution"),
                 created_at=now - timedelta(days=days_ago),
-                resolved_at=(now - timedelta(days=days_ago - random.randint(1, 3))) if scenario["status"] in [IncidentStatus.RESOLVED, IncidentStatus.CLOSED] else None,
+                resolved_at=(
+                    (now - timedelta(days=days_ago - random.randint(1, 3)))
+                    if scenario["status"] in [IncidentStatus.RESOLVED, IncidentStatus.CLOSED]
+                    else None
+                ),
             )
             incidents.append(incident)
-        
+
         session.add_all(incidents)
         await session.commit()
         print(f"✓ Seeded {len(incidents)} handover incidents")
@@ -1565,7 +1700,7 @@ async def main():
     print()
     print("Demo credentials:")
     print("  Patient: patient@gmail.com / password123")
-    print("  Admin:   admin@aub.com / Admin@123")
+    print("  Admin:   admin@admin.com / Admin@123")
 
 
 if __name__ == "__main__":

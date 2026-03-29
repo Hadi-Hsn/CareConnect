@@ -1,4 +1,5 @@
 """Create or update admin user - Quick script for production setup."""
+
 import asyncio
 import sys
 from pathlib import Path
@@ -17,11 +18,9 @@ async def create_or_update_admin():
     """Ensure admin user exists with correct credentials."""
     async with async_session_maker() as session:
         # Check if admin exists
-        result = await session.execute(
-            select(User).where(User.email == "admin@aub.com")
-        )
+        result = await session.execute(select(User).where(User.email == "admin@admin.com"))
         admin = result.scalar_one_or_none()
-        
+
         if admin:
             # Update existing admin
             admin.hashed_password = get_password_hash("Admin@123")
@@ -31,18 +30,18 @@ async def create_or_update_admin():
         else:
             # Create new admin
             admin = User(
-                email="admin@aub.com",
+                email="admin@admin.com",
                 name="Admin User",
                 role=UserRole.ADMIN,
                 hashed_password=get_password_hash("Admin@123"),
             )
             session.add(admin)
             print("✓ Admin user created")
-        
+
         await session.commit()
         print()
         print("Admin credentials:")
-        print("  Email: admin@aub.com")
+        print("  Email: admin@admin.com")
         print("  Password: Admin@123")
         print()
 
@@ -51,13 +50,13 @@ async def main():
     """Run admin creation."""
     print("🔧 Setting up admin user...")
     print()
-    
+
     # Initialize database
     await init_db()
-    
+
     # Create/update admin
     await create_or_update_admin()
-    
+
     print("✅ Admin setup complete!")
 
 

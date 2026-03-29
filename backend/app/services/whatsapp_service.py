@@ -1,4 +1,5 @@
 """WhatsApp service using Twilio API."""
+
 import os
 from typing import Any
 
@@ -22,7 +23,7 @@ class WhatsAppService:
         self.auth_token = settings.twilio_auth_token
         self.whatsapp_number = settings.twilio_whatsapp_number
         self.enabled = bool(self.account_sid and self.auth_token and self.whatsapp_number)
-        
+
         if self.enabled:
             self.client = Client(self.account_sid, self.auth_token)
             logger.info("whatsapp_service_initialized", whatsapp_number=self.whatsapp_number)
@@ -32,59 +33,44 @@ class WhatsAppService:
     async def send_message(self, to_phone: str, message: str) -> dict[str, Any]:
         """
         Send a WhatsApp message to a phone number.
-        
+
         Args:
             to_phone: Full international phone number (e.g., +9611234567)
             message: Message content to send
-            
+
         Returns:
             Dict with status and message SID or error
         """
         if not self.enabled:
             logger.warning("whatsapp_send_skipped", reason="Service not enabled")
             return {"success": False, "error": "WhatsApp service not configured"}
-        
+
         try:
             # Ensure phone number has whatsapp: prefix for Twilio
             if not to_phone.startswith("whatsapp:"):
                 to_phone = f"whatsapp:{to_phone}"
-            
+
             from_number = f"whatsapp:{self.whatsapp_number}"
-            
+
             # Add CareConnect branding header to all messages
-            branded_message = f"🏥 *CareConnect - AUB Medical Center*\n\n{message}"
-            
+            branded_message = f"🏥 *CareConnect Medical Center*\n\n{message}"
+
             message_obj = self.client.messages.create(
-                body=branded_message,
-                from_=from_number,
-                to=to_phone
+                body=branded_message, from_=from_number, to=to_phone
             )
-            
+
             logger.info(
                 "whatsapp_message_sent",
                 to=to_phone,
                 message_sid=message_obj.sid,
-                status=message_obj.status
+                status=message_obj.status,
             )
-            
-            return {
-                "success": True,
-                "message_sid": message_obj.sid,
-                "status": message_obj.status
-            }
-            
+
+            return {"success": True, "message_sid": message_obj.sid, "status": message_obj.status}
+
         except TwilioRestException as e:
-            logger.error(
-                "whatsapp_send_failed",
-                error=str(e),
-                error_code=e.code,
-                to_phone=to_phone
-            )
-            return {
-                "success": False,
-                "error": str(e),
-                "error_code": e.code
-            }
+            logger.error("whatsapp_send_failed", error=str(e), error_code=e.code, to_phone=to_phone)
+            return {"success": False, "error": str(e), "error_code": e.code}
         except Exception as e:
             logger.error("whatsapp_send_error", error=str(e), to_phone=to_phone)
             return {"success": False, "error": str(e)}
@@ -100,12 +86,12 @@ class WhatsAppService:
             f"🏢 Department: {appointment_details.get('department')}\n"
             f"📅 Date & Time: {appointment_details.get('datetime')}\n"
         )
-        
-        if appointment_details.get('reason'):
+
+        if appointment_details.get("reason"):
             message += f"📋 Reason: {appointment_details.get('reason')}\n"
-        
+
         message += "\nNeed to reschedule? Just reply to this message!"
-        
+
         return await self.send_message(to_phone, message)
 
     async def send_appointment_reminder(
@@ -121,7 +107,7 @@ class WhatsAppService:
             f"Confirmation Code: *{appointment_details.get('confirmation_code')}*\n\n"
             f"Reply 'CONFIRM' to confirm or 'RESCHEDULE' to change your appointment."
         )
-        
+
         return await self.send_message(to_phone, message)
 
     async def send_welcome_message(self, to_phone: str, user_name: str) -> dict[str, Any]:
@@ -135,7 +121,7 @@ class WhatsAppService:
             f"🏥 Find doctors and departments\n\n"
             f"Just send me a message anytime!"
         )
-        
+
         return await self.send_message(to_phone, message)
 
     async def send_portal_link(self, to_phone: str) -> dict[str, Any]:
@@ -149,7 +135,7 @@ class WhatsAppService:
             f"you'll be able to chat with me here on WhatsApp!\n\n"
             f"Looking forward to helping you manage your healthcare! 🏥"
         )
-        
+
         return await self.send_message(to_phone, message)
 
 

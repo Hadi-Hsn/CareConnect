@@ -1,4 +1,5 @@
 """Email client for sending notifications via SendGrid."""
+
 from typing import Any
 
 import httpx
@@ -24,41 +25,24 @@ class SendGridEmailClient:
         """Send email via SendGrid API."""
         try:
             payload = {
-                "personalizations": [
-                    {
-                        "to": [{"email": to_email}],
-                        "subject": subject
-                    }
-                ],
-                "from": {
-                    "email": settings.email_from,
-                    "name": settings.email_from_name
-                },
-                "content": []
+                "personalizations": [{"to": [{"email": to_email}], "subject": subject}],
+                "from": {"email": settings.email_from, "name": settings.email_from_name},
+                "content": [],
             }
 
             if text_content:
-                payload["content"].append({
-                    "type": "text/plain",
-                    "value": text_content
-                })
+                payload["content"].append({"type": "text/plain", "value": text_content})
 
-            payload["content"].append({
-                "type": "text/html",
-                "value": html_content
-            })
+            payload["content"].append({"type": "text/html", "value": html_content})
 
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    self.api_url,
-                    json=payload,
-                    headers=headers,
-                    timeout=30.0
+                    self.api_url, json=payload, headers=headers, timeout=30.0
                 )
 
                 if response.status_code in (200, 202):
@@ -70,7 +54,7 @@ class SendGridEmailClient:
                         to=to_email,
                         status_code=response.status_code,
                         response=response.text,
-                        provider="sendgrid"
+                        provider="sendgrid",
                     )
                     return False
 
@@ -92,10 +76,12 @@ class MockEmailClient:
             subject=subject,
             provider="mock",
             html_length=len(html_content),
-            text_length=len(text_content) if text_content else 0
+            text_length=len(text_content) if text_content else 0,
         )
         # Log the text content so you can see what would have been sent
-        logger.info("email_content", to=to_email, content=text_content[:500] if text_content else "")
+        logger.info(
+            "email_content", to=to_email, content=text_content[:500] if text_content else ""
+        )
         return True
 
 
@@ -105,11 +91,12 @@ class EmailService:
     def __init__(self) -> None:
         """Initialize email service."""
         settings = get_settings()
-        
-        # Use mock client if SendGrid API key is not configured
+
         if not settings.sendgrid_api_key or settings.sendgrid_api_key == "":
             self.client = MockEmailClient()
-            logger.info("email_service_initialized", provider="mock", note="SendGrid API key not configured")
+            logger.info(
+                "email_service_initialized", provider="mock", note="SendGrid API key not configured"
+            )
         else:
             self.client = SendGridEmailClient()
             logger.info("email_service_initialized", provider="sendgrid")
@@ -193,20 +180,13 @@ class EmailService:
         return await self.client.send_email(user_email, subject, html_content, text_content)
 
     async def send_handover_notification(
-        self, 
-        admin_emails: list[str], 
-        incident_details: dict[str, Any]
+        self, admin_emails: list[str], incident_details: dict[str, Any]
     ) -> bool:
         """Send handover notification to admin team."""
         subject = f"🚨 Patient Handover Request - {incident_details.get('subject', 'N/A')}"
 
-        priority_emoji = {
-            "low": "🟢",
-            "medium": "🟡",
-            "high": "🟠",
-            "urgent": "🔴"
-        }
-        priority = incident_details.get('priority', 'medium')
+        priority_emoji = {"low": "🟢", "medium": "🟡", "high": "🟠", "urgent": "🔴"}
+        priority = incident_details.get("priority", "medium")
         priority_display = f"{priority_emoji.get(priority, '🟡')} {priority.upper()}"
 
         html_content = f"""
@@ -284,9 +264,7 @@ class EmailService:
         return success_count > 0
 
     async def send_handover_confirmation_to_patient(
-        self,
-        patient_email: str,
-        incident_details: dict[str, Any]
+        self, patient_email: str, incident_details: dict[str, Any]
     ) -> bool:
         """Send confirmation to patient that handover was received."""
         subject = "Your Request for Human Assistance - CareConnect"

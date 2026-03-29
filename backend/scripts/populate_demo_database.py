@@ -1,4 +1,5 @@
 """Comprehensive database population script for CareConnect demo."""
+
 import asyncio
 import random
 import sys
@@ -33,12 +34,36 @@ from scripts.generate_provider_pdfs import generate_provider_pdf
 
 # Patient names for demo data
 PATIENT_NAMES = [
-    "Emma Johnson", "Liam Smith", "Olivia Brown", "Noah Davis", "Ava Wilson",
-    "Ethan Martinez", "Sophia Anderson", "Mason Taylor", "Isabella Thomas", "Lucas Moore",
-    "Mia Jackson", "Oliver White", "Charlotte Harris", "Elijah Martin", "Amelia Thompson",
-    "James Garcia", "Harper Rodriguez", "Benjamin Lee", "Evelyn Walker", "William Hall",
-    "Abigail Allen", "Alexander Young", "Emily King", "Michael Wright", "Elizabeth Lopez",
-    "Daniel Hill", "Sofia Scott", "Matthew Green", "Avery Adams", "Joseph Nelson"
+    "Emma Johnson",
+    "Liam Smith",
+    "Olivia Brown",
+    "Noah Davis",
+    "Ava Wilson",
+    "Ethan Martinez",
+    "Sophia Anderson",
+    "Mason Taylor",
+    "Isabella Thomas",
+    "Lucas Moore",
+    "Mia Jackson",
+    "Oliver White",
+    "Charlotte Harris",
+    "Elijah Martin",
+    "Amelia Thompson",
+    "James Garcia",
+    "Harper Rodriguez",
+    "Benjamin Lee",
+    "Evelyn Walker",
+    "William Hall",
+    "Abigail Allen",
+    "Alexander Young",
+    "Emily King",
+    "Michael Wright",
+    "Elizabeth Lopez",
+    "Daniel Hill",
+    "Sofia Scott",
+    "Matthew Green",
+    "Avery Adams",
+    "Joseph Nelson",
 ]
 
 # Appointment reasons by department
@@ -210,23 +235,21 @@ async def clear_existing_data():
     async with async_session_maker() as session:
         # Delete test results first (foreign key constraint)
         await session.execute(delete(PatientTestResult))
-        
+
         # Delete appointments (foreign key constraint)
         await session.execute(delete(Appointment))
-        
+
         # Delete patients (preserve admin and hadihacan@gmail.com)
         await session.execute(
-            delete(User).where(
-                User.email.not_in(["admin@aub.com", "hadihacan@gmail.com"])
-            )
+            delete(User).where(User.email.not_in(["admin@admin.com", "hadihacan@gmail.com"]))
         )
-        
+
         # Delete providers
         await session.execute(delete(Provider))
-        
+
         # Delete lab tests
         await session.execute(delete(LabTest))
-        
+
         await session.commit()
         print("✓ Cleared existing demo data (preserved admin and hadihacan@gmail.com)")
 
@@ -235,11 +258,9 @@ async def ensure_admin_user():
     """Ensure admin user exists with correct credentials."""
     async with async_session_maker() as session:
         # Check if admin exists
-        result = await session.execute(
-            select(User).where(User.email == "admin@aub.com")
-        )
+        result = await session.execute(select(User).where(User.email == "admin@admin.com"))
         admin = result.scalar_one_or_none()
-        
+
         if admin:
             # Update password to ensure it matches
             admin.hashed_password = get_password_hash("Admin@123")
@@ -248,28 +269,26 @@ async def ensure_admin_user():
         else:
             # Create new admin
             admin = User(
-                email="admin@aub.com",
+                email="admin@admin.com",
                 name="Admin User",
                 role=UserRole.ADMIN,
                 hashed_password=get_password_hash("Admin@123"),
             )
             session.add(admin)
-        
+
         await session.commit()
-        print("✓ Admin user ensured (admin@aub.com / Admin@123)")
+        print("✓ Admin user ensured (admin@admin.com / Admin@123)")
 
 
 async def seed_patients():
     """Seed 30 patient accounts."""
     async with async_session_maker() as session:
         # Check if hadihacan@gmail.com already exists
-        result = await session.execute(
-            select(User).where(User.email == "hadihacan@gmail.com")
-        )
+        result = await session.execute(select(User).where(User.email == "hadihacan@gmail.com"))
         existing_hadi = result.scalar_one_or_none()
-        
+
         patients = []
-        
+
         # Only add Hadi if he doesn't exist
         if not existing_hadi:
             patients.append(
@@ -281,29 +300,27 @@ async def seed_patients():
                     hashed_password=get_password_hash("patient123"),
                 )
             )
-        
+
         # Add demo patients (check for duplicates)
         existing_emails = set()
         if existing_hadi:
             existing_emails.add("hadihacan@gmail.com")
-        
+
         # Get existing patient emails
-        result = await session.execute(
-            select(User.email).where(User.role == UserRole.PATIENT)
-        )
+        result = await session.execute(select(User.email).where(User.role == UserRole.PATIENT))
         existing_emails.update(result.scalars().all())
-        
+
         for i, name in enumerate(PATIENT_NAMES):
             # Generate email from name
             email = name.lower().replace(" ", ".") + f"@patient.com"
-            
+
             # Skip if already exists
             if email in existing_emails:
                 continue
-            
+
             # Generate phone number
             phone = f"+961 {random.randint(70, 79)} {random.randint(100000, 999999)}"
-            
+
             patients.append(
                 User(
                     email=email,
@@ -313,18 +330,18 @@ async def seed_patients():
                     hashed_password=get_password_hash("patient123"),
                 )
             )
-        
+
         if patients:
             session.add_all(patients)
             await session.commit()
-            print(f"✓ Seeded {len(patients)} patient accounts (including hadihacan@gmail.com if new)")
+            print(
+                f"✓ Seeded {len(patients)} patient accounts (including hadihacan@gmail.com if new)"
+            )
         else:
             print("✓ All patient accounts already exist, skipped seeding")
-        
+
         # Return all patients (existing + new)
-        result = await session.execute(
-            select(User).where(User.role == UserRole.PATIENT)
-        )
+        result = await session.execute(select(User).where(User.role == UserRole.PATIENT))
         return result.scalars().all()
 
 
@@ -354,7 +371,6 @@ async def seed_providers():
                 specialty="Heart Failure",
                 bio="Heart failure specialist with expertise in advanced cardiac care",
             ),
-            
             # Dermatology (3 providers)
             Provider(
                 name="Dr. Jennifer Wong",
@@ -377,7 +393,6 @@ async def seed_providers():
                 specialty="Pediatric Dermatology",
                 bio="Pediatric dermatologist focused on children's skin health",
             ),
-            
             # Emergency Medicine (3 providers)
             Provider(
                 name="Dr. Robert Thompson",
@@ -400,7 +415,6 @@ async def seed_providers():
                 specialty="Emergency Medicine",
                 bio="ER physician with expertise in pediatric emergencies",
             ),
-            
             # Endocrinology (3 providers)
             Provider(
                 name="Dr. Patricia Singh",
@@ -423,7 +437,6 @@ async def seed_providers():
                 specialty="Metabolic Disorders",
                 bio="Endocrinologist focused on metabolic syndrome and hormonal imbalances",
             ),
-            
             # Gastroenterology (3 providers)
             Provider(
                 name="Dr. James Wilson",
@@ -446,7 +459,6 @@ async def seed_providers():
                 specialty="Endoscopy",
                 bio="Expert in colonoscopy and upper endoscopy procedures",
             ),
-            
             # Internal Medicine (3 providers)
             Provider(
                 name="Dr. Maria Rodriguez",
@@ -469,7 +481,6 @@ async def seed_providers():
                 specialty="Adult Primary Care",
                 bio="Nurse practitioner focused on preventive care and chronic disease management",
             ),
-            
             # Neurology (3 providers)
             Provider(
                 name="Dr. Ahmed Hassan",
@@ -492,7 +503,6 @@ async def seed_providers():
                 specialty="Movement Disorders",
                 bio="Expert in Parkinson's disease and other movement disorders",
             ),
-            
             # Oncology (3 providers)
             Provider(
                 name="Dr. David Kim",
@@ -515,7 +525,6 @@ async def seed_providers():
                 specialty="Hematologic Oncology",
                 bio="Specialist in leukemia, lymphoma, and blood cancers",
             ),
-            
             # Orthopedics (3 providers)
             Provider(
                 name="Dr. James Chen",
@@ -538,7 +547,6 @@ async def seed_providers():
                 specialty="Pediatric Orthopedics",
                 bio="Pediatric orthopedist treating childhood bone and joint conditions",
             ),
-            
             # Pediatrics (3 providers)
             Provider(
                 name="Dr. Emily Taylor",
@@ -561,7 +569,6 @@ async def seed_providers():
                 specialty="Developmental Pediatrics",
                 bio="Developmental pediatrician supporting children with special needs",
             ),
-            
             # Psychiatry (3 providers)
             Provider(
                 name="Dr. Sophia Anderson",
@@ -622,7 +629,6 @@ async def seed_lab_tests():
                 prep_instructions="No special preparation required",
                 estimated_duration_minutes=20,
             ),
-            
             # Cardiology Tests
             LabTest(
                 name="Lipid Panel",
@@ -649,7 +655,6 @@ async def seed_lab_tests():
                 prep_instructions="No special preparation required",
                 estimated_duration_minutes=20,
             ),
-            
             # Endocrinology Tests
             LabTest(
                 name="Thyroid Function Test (TSH, T3, T4)",
@@ -685,7 +690,6 @@ async def seed_lab_tests():
                 fasting_hours=8,
                 estimated_duration_minutes=20,
             ),
-            
             # Nephrology Tests
             LabTest(
                 name="Comprehensive Metabolic Panel (CMP)",
@@ -712,7 +716,6 @@ async def seed_lab_tests():
                 prep_instructions="No special preparation required",
                 estimated_duration_minutes=15,
             ),
-            
             # Gastroenterology Tests
             LabTest(
                 name="Liver Function Test (LFT)",
@@ -738,7 +741,6 @@ async def seed_lab_tests():
                 prep_instructions="No special preparation required",
                 estimated_duration_minutes=20,
             ),
-            
             # Radiology Imaging
             LabTest(
                 name="X-Ray",
@@ -772,7 +774,6 @@ async def seed_lab_tests():
                 prep_instructions="Varies by exam type; follow specific instructions",
                 estimated_duration_minutes=30,
             ),
-            
             # Oncology Tests
             LabTest(
                 name="Tumor Marker Panel",
@@ -806,57 +807,59 @@ async def seed_appointments(patients, providers):
     async with async_session_maker() as session:
         appointments = []
         now = datetime.now(timezone.utc)
-        
+
         statuses = [
             AppointmentStatus.CONFIRMED,
             AppointmentStatus.COMPLETED,
         ]
-        
+
         channels = [
             AppointmentChannel.WEB,
             AppointmentChannel.PHONE,
             AppointmentChannel.AGENT,
         ]
-        
+
         # Create appointments for each patient
         for patient in patients:
             # Each patient gets 2-5 appointments
             num_appointments = random.randint(2, 5)
-            
+
             for _ in range(num_appointments):
                 # Random provider
                 provider = random.choice(providers)
                 department = provider.department
-                
+
                 # Random time between 60 days ago and 30 days in future
                 days_offset = random.randint(-60, 30)
                 appointment_date = now + timedelta(days=days_offset)
-                
+
                 # Random time during business hours (8 AM - 5 PM)
                 hour = random.randint(8, 16)
                 appointment_date = appointment_date.replace(
                     hour=hour, minute=random.choice([0, 15, 30, 45]), second=0, microsecond=0
                 )
-                
+
                 # Duration: 15, 30, 45, or 60 minutes
                 duration = random.choice([15, 30, 45, 60])
                 end_time = appointment_date + timedelta(minutes=duration)
-                
+
                 # Status based on date
                 if days_offset < -7:
                     status = AppointmentStatus.COMPLETED
                 elif days_offset < 0:
-                    status = random.choice([AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED])
+                    status = random.choice(
+                        [AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED]
+                    )
                 else:
                     status = AppointmentStatus.CONFIRMED
-                
+
                 # Get appropriate reason for department
                 reasons = APPOINTMENT_REASONS.get(department, ["General consultation"])
                 reason = random.choice(reasons)
-                
+
                 # Channel
                 channel = random.choice(channels)
-                
+
                 # Notes for completed appointments
                 notes = None
                 if status == AppointmentStatus.COMPLETED:
@@ -868,7 +871,7 @@ async def seed_appointments(patients, providers):
                         "Symptoms improving. Continue current medication.",
                     ]
                     notes = random.choice(notes_options)
-                
+
                 appointments.append(
                     Appointment(
                         user_id=patient.id,
@@ -882,7 +885,7 @@ async def seed_appointments(patients, providers):
                         confirmation_code=f"CONF-{random.randint(100000, 999999)}",
                     )
                 )
-        
+
         session.add_all(appointments)
         await session.commit()
         print(f"✓ Seeded {len(appointments)} appointments")
@@ -894,40 +897,48 @@ async def seed_patient_test_results(patients, providers):
         # Get all lab tests
         result = await session.execute(select(LabTest))
         lab_tests = list(result.scalars().all())
-        
+
         test_results = []
         now = datetime.now(timezone.utc)
-        
+
         # Create test results for random patients
         num_patients_with_tests = min(15, len(patients))  # 15 patients get test results
         selected_patients = random.sample(patients, num_patients_with_tests)
-        
+
         for patient in selected_patients:
             # Each patient gets 1-4 test results
             num_tests = random.randint(1, 4)
             patient_tests = random.sample(lab_tests, min(num_tests, len(lab_tests)))
-            
+
             for lab_test in patient_tests:
                 # Random provider from cardiology, internal medicine, or endocrinology
                 appropriate_providers = [
-                    p for p in providers 
-                    if p.department in ["Cardiology", "Internal Medicine", "Endocrinology", lab_test.department]
+                    p
+                    for p in providers
+                    if p.department
+                    in ["Cardiology", "Internal Medicine", "Endocrinology", lab_test.department]
                 ]
-                ordered_by = random.choice(appropriate_providers) if appropriate_providers else random.choice(providers)
-                
+                ordered_by = (
+                    random.choice(appropriate_providers)
+                    if appropriate_providers
+                    else random.choice(providers)
+                )
+
                 # Test date between 90 days ago and 7 days ago
                 days_ago = random.randint(7, 90)
                 test_date = now - timedelta(days=days_ago)
-                
+
                 # Status
-                status = random.choice(["completed", "completed", "completed", "pending"])  # 75% completed
-                
+                status = random.choice(
+                    ["completed", "completed", "completed", "pending"]
+                )  # 75% completed
+
                 # Generate realistic results based on test type
                 result_value = None
                 result_unit = None
                 reference_range = None
                 notes = None
-                
+
                 if status == "completed":
                     if "CBC" in lab_test.name:
                         result_value = f"WBC: {random.uniform(4.5, 11.0):.1f}, RBC: {random.uniform(4.2, 5.9):.1f}"
@@ -943,7 +954,11 @@ async def seed_patient_test_results(patients, providers):
                             result_value = f"{random.uniform(70, 140):.0f}"
                             result_unit = "mg/dL"
                             reference_range = "70-100 mg/dL"
-                        if float(result_value) > 120 if "Glucose" in lab_test.name else float(result_value) > 5.7:
+                        if (
+                            float(result_value) > 120
+                            if "Glucose" in lab_test.name
+                            else float(result_value) > 5.7
+                        ):
                             notes = "Elevated - recommend follow-up"
                         else:
                             notes = "Normal range"
@@ -964,7 +979,7 @@ async def seed_patient_test_results(patients, providers):
                     else:
                         result_value = "See detailed report"
                         notes = "All values within normal limits"
-                
+
                 test_results.append(
                     PatientTestResult(
                         user_id=patient.id,
@@ -978,10 +993,12 @@ async def seed_patient_test_results(patients, providers):
                         notes=notes,
                     )
                 )
-        
+
         session.add_all(test_results)
         await session.commit()
-        print(f"✓ Seeded {len(test_results)} patient test results for {num_patients_with_tests} patients")
+        print(
+            f"✓ Seeded {len(test_results)} patient test results for {num_patients_with_tests} patients"
+        )
 
 
 async def seed_rag_documents(providers):
@@ -1060,22 +1077,22 @@ async def seed_rag_documents(providers):
             metadata={"type": "preparation", "department": "laboratory"},
         ),
     ]
-    
+
     # Generate and add doctor PDF profiles
     print("Generating PDF profiles for providers...")
     pdf_parser = PDFParser()
-    
+
     for i, provider in enumerate(providers, 1):
         try:
             # Generate PDF
             pdf_bytes = generate_provider_pdf(provider)
-            
+
             # Extract text from PDF
             pdf_text = pdf_parser.extract_text_from_bytes(pdf_bytes)
-            
+
             # Create document with PDF content
-            provider_type = provider.type if hasattr(provider.type, 'value') else provider.type
-            
+            provider_type = provider.type if hasattr(provider.type, "value") else provider.type
+
             documents.append(
                 Document(
                     title=f"Dr. {provider.name} - Complete Profile",
@@ -1092,13 +1109,13 @@ async def seed_rag_documents(providers):
                     doc_type="pdf",
                 )
             )
-            
+
             print(f"  ✓ Generated PDF for {provider.name} ({i}/{len(providers)})")
-            
+
         except Exception as e:
             print(f"  ✗ Failed to generate PDF for {provider.name}: {str(e)}")
             continue
-    
+
     # Index all documents
     rag_service = RAGService()
     result = await rag_service.index_documents(documents, replace=True)
@@ -1110,39 +1127,39 @@ async def populate_database():
     """Main function to populate entire database."""
     print("🌱 Starting comprehensive database population...")
     print()
-    
+
     # Initialize database
     await init_db()
     print("✓ Database initialized")
-    
+
     # Clear existing data
     await clear_existing_data()
-    
+
     # Ensure admin exists
     await ensure_admin_user()
-    
+
     # Seed all data
     patients = await seed_patients()
     providers = await seed_providers()
     await seed_lab_tests()
-    
+
     # Get actual patient and provider objects from database
     async with async_session_maker() as session:
         result = await session.execute(select(User).where(User.role == UserRole.PATIENT))
         patients = list(result.scalars().all())
-        
+
         result = await session.execute(select(Provider))
         providers = list(result.scalars().all())
-    
+
     await seed_appointments(patients, providers)
     await seed_patient_test_results(patients, providers)
     await seed_rag_documents(providers)
-    
+
     print()
     print("✅ Database population completed successfully!")
     print()
     print(f"Summary:")
-    print(f"  - 1 Admin user (admin@aub.com / Admin@123)")
+    print(f"  - 1 Admin user (admin@admin.com / Admin@123)")
     print(f"  - {len(patients)} Patient accounts (password: patient123)")
     print(f"    • Hadi Hasan (hadihacan@gmail.com)")
     print(f"    • 30 demo patients")
@@ -1153,7 +1170,7 @@ async def populate_database():
     print(f"  - PDF profiles generated for all providers and indexed in RAG")
     print()
     print("🔑 Login credentials:")
-    print(f"  Admin: admin@aub.com / Admin@123")
+    print(f"  Admin: admin@admin.com / Admin@123")
     print(f"  Patient (Hadi): hadihacan@gmail.com / patient123")
     print()
 

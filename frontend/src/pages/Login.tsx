@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -17,12 +17,12 @@ import {
   FormControl,
   InputLabel,
   Grid,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Login as LoginIcon,
   PersonAdd as RegisterIcon,
-} from '@mui/icons-material';
-import { api } from '@/lib/api';
+} from "@mui/icons-material";
+import { api } from "@/lib/api";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -41,71 +41,73 @@ function TabPanel(props: TabPanelProps) {
 
 // Common country codes with names
 const COUNTRY_CODES = [
-  { code: '+1', name: 'USA/Canada' },
-  { code: '+44', name: 'United Kingdom' },
-  { code: '+961', name: 'Lebanon' },
-  { code: '+971', name: 'UAE' },
-  { code: '+966', name: 'Saudi Arabia' },
-  { code: '+20', name: 'Egypt' },
-  { code: '+962', name: 'Jordan' },
-  { code: '+91', name: 'India' },
-  { code: '+86', name: 'China' },
-  { code: '+33', name: 'France' },
-  { code: '+49', name: 'Germany' },
-  { code: '+39', name: 'Italy' },
-  { code: '+34', name: 'Spain' },
-  { code: '+81', name: 'Japan' },
-  { code: '+82', name: 'South Korea' },
+  { code: "+1", name: "USA/Canada" },
+  { code: "+44", name: "United Kingdom" },
+  { code: "+961", name: "Lebanon" },
+  { code: "+971", name: "UAE" },
+  { code: "+966", name: "Saudi Arabia" },
+  { code: "+20", name: "Egypt" },
+  { code: "+962", name: "Jordan" },
+  { code: "+91", name: "India" },
+  { code: "+86", name: "China" },
+  { code: "+33", name: "France" },
+  { code: "+49", name: "Germany" },
+  { code: "+39", name: "Italy" },
+  { code: "+34", name: "Spain" },
+  { code: "+81", name: "Japan" },
+  { code: "+82", name: "South Korea" },
 ];
 
 export default function LoginPage() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [tabValue, setTabValue] = useState(0);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [countryCode, setCountryCode] = useState('+961');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+961");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
       await api.login(email, password);
       // Force a page reload to update authentication state
-      window.location.href = '/chat';
+      window.location.href = "/chat";
     } catch (err: any) {
-      console.error('Login error:', err);
-      
+      console.error("Login error:", err);
+
       // Handle different types of errors
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail;
-        
+
         // Handle array of validation errors (Pydantic format)
         if (Array.isArray(detail)) {
-          const errorMessages = detail.map((error: any) => {
-            const field = error.loc?.[1] || error.loc?.[0] || 'field';
-            return `${field}: ${error.msg}`;
-          }).join(', ');
+          const errorMessages = detail
+            .map((error: any) => {
+              const field = error.loc?.[1] || error.loc?.[0] || "field";
+              return `${field}: ${error.msg}`;
+            })
+            .join(", ");
           setError(errorMessages);
-        } else if (typeof detail === 'string') {
+        } else if (typeof detail === "string") {
           setError(detail);
         } else {
-          setError('Invalid email or password');
+          setError("Invalid email or password");
         }
       } else if (err.response?.status === 401) {
-        setError('Invalid email or password');
+        setError("Invalid email or password");
       } else if (err.response?.status === 429) {
-        setError('Too many login attempts. Please try again later.');
+        setError("Too many login attempts. Please try again later.");
       } else if (err.message) {
         setError(err.message);
       } else {
-        setError('Login failed. Please try again later.');
+        setError("Login failed. Please try again later.");
       }
     } finally {
       setLoading(false);
@@ -114,74 +116,85 @@ export default function LoginPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    
+    setError("");
+
     // Validate passwords match
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
-    
+
     // Validate password length
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError("Password must be at least 8 characters");
       return;
     }
 
     // Validate phone number is provided
-    if (!phone || phone.trim() === '') {
-      setError('Phone number is required');
+    if (!phone || phone.trim() === "") {
+      setError("Phone number is required");
       return;
     }
 
     // Validate phone number length
     const trimmedPhone = phone.trim();
     if (trimmedPhone.length < 7) {
-      setError('Phone number must be at least 7 digits long');
+      setError("Phone number must be at least 7 digits long");
       return;
     }
-    
+
     // Check that it has at least 7 digits
-    const digitsOnly = trimmedPhone.replace(/\D/g, '');
+    const digitsOnly = trimmedPhone.replace(/\D/g, "");
     if (digitsOnly.length < 7) {
-      setError('Phone number must contain at least 7 digits');
+      setError("Phone number must contain at least 7 digits");
       return;
     }
-    
+
     setLoading(true);
     try {
-      await api.register(email, name, password, confirmPassword, phone, countryCode);
+      await api.register(
+        email,
+        name,
+        password,
+        confirmPassword,
+        phone,
+        countryCode,
+      );
       // Force a page reload to update authentication state
-      window.location.href = '/chat';
+      window.location.href = "/chat";
     } catch (err: any) {
-      console.error('Registration error:', err);
-      
+      console.error("Registration error:", err);
+
       // Handle different types of errors
       if (err.response?.data?.detail) {
         // Backend validation error
         const detail = err.response.data.detail;
-        
+
         // Handle array of validation errors (Pydantic format)
         if (Array.isArray(detail)) {
-          const errorMessages = detail.map((error: any) => {
-            const field = error.loc?.[1] || error.loc?.[0] || 'field';
-            return `${field}: ${error.msg}`;
-          }).join(', ');
+          const errorMessages = detail
+            .map((error: any) => {
+              const field = error.loc?.[1] || error.loc?.[0] || "field";
+              return `${field}: ${error.msg}`;
+            })
+            .join(", ");
           setError(errorMessages);
-        } else if (typeof detail === 'string') {
+        } else if (typeof detail === "string") {
           // Simple string error message
           setError(detail);
         } else {
-          setError('Registration failed. Please check your inputs and try again.');
+          setError(
+            "Registration failed. Please check your inputs and try again.",
+          );
         }
       } else if (err.response?.status === 400) {
-        setError('Invalid registration data. Please check all fields.');
+        setError("Invalid registration data. Please check all fields.");
       } else if (err.response?.status === 409) {
-        setError('An account with this email or phone number already exists.');
+        setError("An account with this email or phone number already exists.");
       } else if (err.message) {
         setError(err.message);
       } else {
-        setError('Registration failed. Please try again later.');
+        setError("Registration failed. Please try again later.");
       }
     } finally {
       setLoading(false);
@@ -191,63 +204,69 @@ export default function LoginPage() {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
-        width: '100%',
-        background: 'linear-gradient(135deg, #840132 0%, #5e0124 40%, #000000 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        minHeight: "100vh",
+        width: "100%",
+        background:
+          "linear-gradient(135deg, #840132 0%, #5e0124 40%, #000000 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         py: { xs: 3, sm: 4 },
         px: { xs: 2, sm: 3 },
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
+        position: "relative",
+        overflow: "hidden",
+        "&::before": {
           content: '""',
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0, 90, 67, 0.15) 0%, transparent 50%)',
-          pointerEvents: 'none',
+          background:
+            "radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0, 90, 67, 0.15) 0%, transparent 50%)",
+          pointerEvents: "none",
         },
       }}
     >
-      <Box sx={{ width: '100%', maxWidth: '500px', position: 'relative', zIndex: 1, px: { xs: 2, sm: 3 } }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: "500px",
+          position: "relative",
+          zIndex: 1,
+          px: { xs: 2, sm: 3 },
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
           {/* Logo and Title */}
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
               gap: 2.5,
               mb: 2,
-              animation: 'fadeInDown 0.6s ease-out',
-              '@keyframes fadeInDown': {
-                '0%': { opacity: 0, transform: 'translateY(-30px)' },
-                '100%': { opacity: 1, transform: 'translateY(0)' },
+              animation: "fadeInDown 0.6s ease-out",
+              "@keyframes fadeInDown": {
+                "0%": { opacity: 0, transform: "translateY(-30px)" },
+                "100%": { opacity: 1, transform: "translateY(0)" },
               },
             }}
           >
-            <Box
-              component="img"
-              src="/images/aub-logo.png"
-              alt="AUB Logo"
-              sx={{
-                width: { xs: '100px', sm: '150px' },
-                height: { xs: '37px', sm: '50px' },
-                filter: 'brightness(0) invert(1) drop-shadow(0 4px 12px rgba(255, 255, 255, 0.3))',
-              }}
-            />
             <Typography
               component="h1"
               variant="h2"
               sx={{
-                color: 'white',
+                color: "white",
                 fontWeight: 800,
-                fontSize: { xs: '2.25rem', sm: '3rem' },
-                textShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
-                letterSpacing: '1px',
+                fontSize: { xs: "2.25rem", sm: "3rem" },
+                textShadow: "0 4px 16px rgba(0, 0, 0, 0.4)",
+                letterSpacing: "1px",
               }}
             >
               CareConnect
@@ -257,47 +276,47 @@ export default function LoginPage() {
           <Typography
             variant="h6"
             sx={{
-              color: 'rgba(255, 255, 255, 0.95)',
-              textAlign: 'center',
+              color: "rgba(255, 255, 255, 0.95)",
+              textAlign: "center",
               mb: 1,
-              fontSize: { xs: '1.125rem', sm: '1.375rem' },
+              fontSize: { xs: "1.125rem", sm: "1.375rem" },
               fontWeight: 600,
-              textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+              textShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
             }}
           >
-            AUB Medical Center
+            Smart Health Assistant
           </Typography>
 
           <Typography
             variant="body1"
             sx={{
-              color: 'rgba(255, 255, 255, 0.8)',
-              textAlign: 'center',
+              color: "rgba(255, 255, 255, 0.8)",
+              textAlign: "center",
               mb: 4,
-              fontSize: { xs: '0.9375rem', sm: '1.0625rem' },
+              fontSize: { xs: "0.9375rem", sm: "1.0625rem" },
               fontWeight: 500,
-              animation: 'fadeIn 0.8s ease-out 0.3s both',
-              '@keyframes fadeIn': {
-                '0%': { opacity: 0 },
-                '100%': { opacity: 1 },
+              animation: "fadeIn 0.8s ease-out 0.3s both",
+              "@keyframes fadeIn": {
+                "0%": { opacity: 0 },
+                "100%": { opacity: 1 },
               },
             }}
           >
-            Your Smart Health Assistant 💬 Now on WhatsApp!
+            Your Smart Health Assistant
           </Typography>
 
           {/* Main Card */}
           <Card
             sx={{
-              width: '100%',
-              boxShadow: '0 16px 48px rgba(0, 0, 0, 0.4)',
+              width: "100%",
+              boxShadow: "0 16px 48px rgba(0, 0, 0, 0.4)",
               borderRadius: { xs: 3, sm: 5 },
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              animation: 'fadeInUp 0.6s ease-out 0.2s both',
-              '@keyframes fadeInUp': {
-                '0%': { opacity: 0, transform: 'translateY(30px)' },
-                '100%': { opacity: 1, transform: 'translateY(0)' },
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(20px)",
+              animation: "fadeInUp 0.6s ease-out 0.2s both",
+              "@keyframes fadeInUp": {
+                "0%": { opacity: 0, transform: "translateY(30px)" },
+                "100%": { opacity: 1, transform: "translateY(0)" },
               },
             }}
           >
@@ -306,22 +325,26 @@ export default function LoginPage() {
                 value={tabValue}
                 onChange={(_, v) => {
                   setTabValue(v);
-                  setError('');
+                  setError("");
                 }}
                 variant="fullWidth"
                 sx={{
                   mb: 2,
-                  '& .MuiTab-root': {
+                  "& .MuiTab-root": {
                     fontWeight: 600,
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    fontSize: { xs: "0.875rem", sm: "1rem" },
                   },
-                  '& .Mui-selected': {
+                  "& .Mui-selected": {
                     color: theme.palette.primary.main,
                   },
                 }}
               >
                 <Tab icon={<LoginIcon />} iconPosition="start" label="Login" />
-                <Tab icon={<RegisterIcon />} iconPosition="start" label="Register" />
+                <Tab
+                  icon={<RegisterIcon />}
+                  iconPosition="start"
+                  label="Register"
+                />
               </Tabs>
 
               {error && (
@@ -342,7 +365,7 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
                     autoComplete="email"
-                    size={isMobile ? 'small' : 'medium'}
+                    size={isMobile ? "small" : "medium"}
                   />
                   <TextField
                     margin="normal"
@@ -354,24 +377,24 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     autoComplete="current-password"
-                    size={isMobile ? 'small' : 'medium'}
+                    size={isMobile ? "small" : "medium"}
                   />
                   <Button
                     type="submit"
                     fullWidth
                     variant="contained"
-                    size={isMobile ? 'medium' : 'large'}
+                    size={isMobile ? "medium" : "large"}
                     disabled={loading}
                     sx={{
                       mt: 3,
                       mb: 2,
                       py: { xs: 1.5, sm: 2 },
-                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
                     }}
                   >
-                    {loading ? 'Logging in...' : 'Login'}
+                    {loading ? "Logging in..." : "Login"}
                   </Button>
-                  <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{ textAlign: "center" }}>
                     <Link
                       component="button"
                       variant="body2"
@@ -395,7 +418,7 @@ export default function LoginPage() {
                     onChange={(e) => setName(e.target.value)}
                     disabled={loading}
                     autoComplete="name"
-                    size={isMobile ? 'small' : 'medium'}
+                    size={isMobile ? "small" : "medium"}
                   />
                   <TextField
                     margin="normal"
@@ -407,16 +430,23 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
                     autoComplete="email"
-                    size={isMobile ? 'small' : 'medium'}
+                    size={isMobile ? "small" : "medium"}
                   />
-                  
+
                   <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
                       Phone Number (Required for WhatsApp) *
                     </Typography>
                     <Grid container spacing={1}>
                       <Grid item xs={4}>
-                        <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+                        <FormControl
+                          fullWidth
+                          size={isMobile ? "small" : "medium"}
+                        >
                           <InputLabel>Code</InputLabel>
                           <Select
                             value={countryCode}
@@ -443,12 +473,17 @@ export default function LoginPage() {
                           disabled={loading}
                           autoComplete="tel"
                           placeholder="1234567"
-                          size={isMobile ? 'small' : 'medium'}
+                          size={isMobile ? "small" : "medium"}
                         />
                       </Grid>
                     </Grid>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      📱 You'll be able to chat with our AI assistant on WhatsApp!
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 0.5, display: "block" }}
+                    >
+                      📱 You'll be able to chat with our AI assistant on
+                      WhatsApp!
                     </Typography>
                   </Box>
 
@@ -463,7 +498,7 @@ export default function LoginPage() {
                     disabled={loading}
                     autoComplete="new-password"
                     helperText="Minimum 8 characters"
-                    size={isMobile ? 'small' : 'medium'}
+                    size={isMobile ? "small" : "medium"}
                   />
                   <TextField
                     margin="normal"
@@ -475,27 +510,29 @@ export default function LoginPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={loading}
                     autoComplete="new-password"
-                    error={confirmPassword !== '' && password !== confirmPassword}
-                    helperText={
-                      confirmPassword !== '' && password !== confirmPassword
-                        ? 'Passwords do not match'
-                        : ''
+                    error={
+                      confirmPassword !== "" && password !== confirmPassword
                     }
-                    size={isMobile ? 'small' : 'medium'}
+                    helperText={
+                      confirmPassword !== "" && password !== confirmPassword
+                        ? "Passwords do not match"
+                        : ""
+                    }
+                    size={isMobile ? "small" : "medium"}
                   />
                   <Button
                     type="submit"
                     fullWidth
                     variant="contained"
-                    size={isMobile ? 'medium' : 'large'}
+                    size={isMobile ? "medium" : "large"}
                     disabled={loading}
                     sx={{
                       mt: 3,
                       py: { xs: 1.5, sm: 2 },
-                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
                     }}
                   >
-                    {loading ? 'Creating Account...' : 'Create Account'}
+                    {loading ? "Creating Account..." : "Create Account"}
                   </Button>
                 </form>
               </TabPanel>
@@ -506,29 +543,29 @@ export default function LoginPage() {
           <Box
             sx={{
               mt: 4,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
               gap: 2,
-              animation: 'fadeIn 1s ease-out 0.5s both',
+              animation: "fadeIn 1s ease-out 0.5s both",
             }}
           >
             <Typography
               variant="body2"
               sx={{
-                color: 'rgba(255, 255, 255, 0.7)',
-                textAlign: 'center',
-                fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                color: "rgba(255, 255, 255, 0.7)",
+                textAlign: "center",
+                fontSize: { xs: "0.8125rem", sm: "0.875rem" },
               }}
             >
-              © 2025 American University of Beirut Medical Center
+              © 2025 CareConnect. All rights reserved.
             </Typography>
             <Typography
               variant="caption"
               sx={{
-                color: 'rgba(255, 255, 255, 0.5)',
-                textAlign: 'center',
-                fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                color: "rgba(255, 255, 255, 0.5)",
+                textAlign: "center",
+                fontSize: { xs: "0.75rem", sm: "0.8125rem" },
               }}
             >
               Powered by AI • Designed with Care

@@ -1,4 +1,5 @@
 """Admin endpoints for managing doctors, appointments, and schedules."""
+
 import asyncio
 import json
 import sys
@@ -51,7 +52,7 @@ async def create_doctor(
 ) -> ProviderResponse:
     """
     Create a new doctor/provider.
-    
+
     **Admin only.**
     """
     doctor = Provider(
@@ -88,7 +89,7 @@ async def list_all_doctors(
 ) -> list[ProviderResponse]:
     """
     List all doctors with optional filters.
-    
+
     **Admin only.**
     """
     query = select(Provider)
@@ -114,7 +115,7 @@ async def get_doctor(
 ) -> ProviderResponse:
     """
     Get doctor details by ID.
-    
+
     **Admin only.**
     """
     result = await db.execute(select(Provider).where(Provider.id == doctor_id))
@@ -135,7 +136,7 @@ async def update_doctor(
 ) -> ProviderResponse:
     """
     Update doctor information.
-    
+
     **Admin only.**
     """
     result = await db.execute(select(Provider).where(Provider.id == doctor_id))
@@ -176,7 +177,7 @@ async def delete_doctor(
 ) -> None:
     """
     Delete a doctor.
-    
+
     **Admin only.** This will also cancel all associated appointments.
     """
     result = await db.execute(select(Provider).where(Provider.id == doctor_id))
@@ -212,7 +213,7 @@ async def upload_doctor_profile(
 ) -> IndexResponse:
     """
     Upload and index a PDF profile for a doctor.
-    
+
     **Admin only.** The PDF will be parsed, embedded, and made searchable via RAG.
     """
     # Verify doctor exists
@@ -223,26 +224,25 @@ async def upload_doctor_profile(
         raise HTTPException(status_code=404, detail="Doctor not found")
 
     # Validate file type
-    if not file.filename or not file.filename.lower().endswith('.pdf'):
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are allowed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Only PDF files are allowed"
         )
 
     try:
         # Read file content
         content = await file.read()
-        
+
         # Parse PDF
         pdf_parser = PDFParser()
         text = pdf_parser.extract_text_from_bytes(content)
-        
+
         if not text.strip():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="PDF appears to be empty or could not be parsed"
+                detail="PDF appears to be empty or could not be parsed",
             )
-        
+
         # Create document with doctor metadata
         document = Document(
             title=f"Dr. {doctor.name}",
@@ -256,30 +256,30 @@ async def upload_doctor_profile(
                 "source": file.filename,
                 "upload_type": "admin",
             },
-            doc_type="pdf"
+            doc_type="pdf",
         )
-        
+
         # Index document
         rag_service = RAGService()
         response = await rag_service.index_documents([document], replace=False)
-        
+
         logger.info(
             "doctor_profile_uploaded",
             doctor_id=doctor_id,
             filename=file.filename,
             admin_id=admin.id,
-            chunks=response.total_chunks
+            chunks=response.total_chunks,
         )
-        
+
         return response
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error("doctor_profile_upload_failed", doctor_id=doctor_id, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process PDF: {str(e)}"
+            detail=f"Failed to process PDF: {str(e)}",
         )
 
 
@@ -291,7 +291,7 @@ async def download_doctor_profile(
 ) -> Response:
     """
     Download the generated PDF profile for a doctor.
-    
+
     **Admin only.** Generates a professional 2-page PDF profile on-the-fly.
     """
     # Verify doctor exists
@@ -304,30 +304,28 @@ async def download_doctor_profile(
     try:
         # Generate PDF
         pdf_bytes = generate_provider_pdf(doctor)
-        
+
         # Sanitize doctor name for filename
         safe_name = doctor.name.replace(" ", "_").replace(".", "")
         filename = f"{safe_name}_Profile.pdf"
-        
+
         logger.info(
             "doctor_profile_downloaded",
             doctor_id=doctor_id,
             admin_id=admin.id,
         )
-        
+
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"'
-            }
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
-        
+
     except Exception as e:
         logger.error("doctor_profile_download_failed", doctor_id=doctor_id, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate PDF: {str(e)}"
+            detail=f"Failed to generate PDF: {str(e)}",
         )
 
 
@@ -350,7 +348,7 @@ async def list_all_appointments(
 ) -> list[AppointmentWithDetails]:
     """
     List all appointments with filters.
-    
+
     **Admin only.** Can filter by user, provider, status, and date range.
     """
     query = select(Appointment, User, Provider).join(User).join(Provider)
@@ -387,7 +385,9 @@ async def list_all_appointments(
     return appointments
 
 
-@router.post("/appointments", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/appointments", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_appointment_admin(
     appointment_data: AppointmentCreate,
     db: AsyncSession = Depends(get_db),
@@ -395,7 +395,7 @@ async def create_appointment_admin(
 ) -> AppointmentResponse:
     """
     Create an appointment on behalf of a user.
-    
+
     **Admin only.**
     """
     # Verify user exists
@@ -441,7 +441,7 @@ async def update_appointment_admin(
 ) -> AppointmentResponse:
     """
     Update any appointment.
-    
+
     **Admin only.**
     """
     result = await db.execute(select(Appointment).where(Appointment.id == appointment_id))
@@ -482,7 +482,7 @@ async def delete_appointment_admin(
 ) -> None:
     """
     Delete any appointment.
-    
+
     **Admin only.**
     """
     result = await db.execute(select(Appointment).where(Appointment.id == appointment_id))
@@ -510,7 +510,7 @@ async def update_appointment_status(
 ) -> AppointmentResponse:
     """
     Update appointment status.
-    
+
     **Admin only.** Quick endpoint for changing appointment status.
     """
     result = await db.execute(select(Appointment).where(Appointment.id == appointment_id))
@@ -549,7 +549,7 @@ async def get_doctor_schedule(
 ) -> dict:
     """
     Get doctor's schedule for a date range.
-    
+
     **Admin only.** Shows all appointments and available slots.
     """
     # Verify doctor exists
@@ -573,17 +573,19 @@ async def get_doctor_schedule(
 
     result = await db.execute(query)
     appointments = []
-    
+
     for appt, user in result.all():
-        appointments.append({
-            "id": appt.id,
-            "user_name": user.name,
-            "user_email": user.email,
-            "time_start": appt.time_start,
-            "time_end": appt.time_end,
-            "status": appt.status,
-            "reason": appt.reason,
-        })
+        appointments.append(
+            {
+                "id": appt.id,
+                "user_name": user.name,
+                "user_email": user.email,
+                "time_start": appt.time_start,
+                "time_end": appt.time_end,
+                "status": appt.status,
+                "reason": appt.reason,
+            }
+        )
 
     return {
         "doctor_id": doctor_id,
@@ -604,7 +606,7 @@ async def update_doctor_availability(
 ) -> ProviderResponse:
     """
     Update doctor's availability calendar ID.
-    
+
     **Admin only.** Used to link doctor with external scheduling system.
     """
     result = await db.execute(select(Provider).where(Provider.id == doctor_id))
@@ -638,7 +640,7 @@ async def block_doctor_time(
 ) -> AppointmentResponse:
     """
     Block a time slot for a doctor.
-    
+
     **Admin only.** Creates a special "blocked" appointment.
     """
     # Verify doctor exists
@@ -688,16 +690,14 @@ async def list_all_patients(
 ) -> list[dict]:
     """
     List all patients with optional search.
-    
+
     **Admin only.**
     """
     query = select(User).where(User.role == UserRole.PATIENT)
 
     if search:
         search_term = f"%{search}%"
-        query = query.where(
-            (User.name.ilike(search_term)) | (User.email.ilike(search_term))
-        )
+        query = query.where((User.name.ilike(search_term)) | (User.email.ilike(search_term)))
 
     query = query.offset(skip).limit(limit).order_by(User.name)
 
@@ -707,38 +707,42 @@ async def list_all_patients(
     # Get appointment counts for each patient
     patient_list = []
     now_lebanon = datetime.now(LEBANON_TZ)
-    
+
     for patient in patients:
-        appt_result = await db.execute(
-            select(Appointment).where(Appointment.user_id == patient.id)
-        )
+        appt_result = await db.execute(select(Appointment).where(Appointment.user_id == patient.id))
         appointments = appt_result.scalars().all()
-        
+
         # Count upcoming appointments (check time_start exists and compare with aware datetime)
         upcoming_count = 0
         for appt in appointments:
             if appt.time_start:
                 # Make sure time_start is timezone-aware
-                appt_time = appt.time_start if appt.time_start.tzinfo else appt.time_start.replace(tzinfo=LEBANON_TZ)
+                appt_time = (
+                    appt.time_start
+                    if appt.time_start.tzinfo
+                    else appt.time_start.replace(tzinfo=LEBANON_TZ)
+                )
                 if appt_time > now_lebanon:
                     upcoming_count += 1
-        
+
         # Get test result counts
         test_result = await db.execute(
             select(PatientTestResult).where(PatientTestResult.user_id == patient.id)
         )
         test_results = test_result.scalars().all()
-        
-        patient_list.append({
-            "id": patient.id,
-            "name": patient.name,
-            "email": patient.email,
-            "phone": patient.phone,
-            "created_at": patient.created_at,
-            "total_appointments": len(appointments),
-            "upcoming_appointments": upcoming_count,
-            "total_test_results": len(test_results),
-        })
+
+        patient_list.append(
+            {
+                "id": patient.id,
+                "name": patient.name,
+                "email": patient.email,
+                "phone": patient.phone,
+                "created_at": patient.created_at,
+                "total_appointments": len(appointments),
+                "upcoming_appointments": upcoming_count,
+                "total_test_results": len(test_results),
+            }
+        )
 
     return patient_list
 
@@ -751,7 +755,7 @@ async def get_patient_details(
 ) -> dict:
     """
     Get detailed patient information including appointments and test results.
-    
+
     **Admin only.**
     """
     # Get patient
@@ -771,24 +775,26 @@ async def get_patient_details(
         .order_by(Appointment.time_start.desc())
     )
     appt_result = await db.execute(appt_query)
-    
+
     appointments = []
     for appt, provider in appt_result.all():
-        appointments.append({
-            "id": appt.id,
-            "provider_name": provider.name,
-            "provider_department": provider.department,
-            "time_start": appt.time_start,
-            "time_end": appt.time_end,
-            "status": appt.status,
-            "reason": appt.reason,
-            "notes": appt.notes,
-            "confirmation_code": appt.confirmation_code,
-        })
+        appointments.append(
+            {
+                "id": appt.id,
+                "provider_name": provider.name,
+                "provider_department": provider.department,
+                "time_start": appt.time_start,
+                "time_end": appt.time_end,
+                "status": appt.status,
+                "reason": appt.reason,
+                "notes": appt.notes,
+                "confirmation_code": appt.confirmation_code,
+            }
+        )
 
     # Get test results
     from app.models.lab import LabTest
-    
+
     test_query = (
         select(PatientTestResult, LabTest, Provider)
         .join(LabTest, PatientTestResult.lab_test_id == LabTest.id)
@@ -797,21 +803,23 @@ async def get_patient_details(
         .order_by(PatientTestResult.test_date.desc())
     )
     test_result = await db.execute(test_query)
-    
+
     test_results = []
     for test, lab_test, provider in test_result.all():
-        test_results.append({
-            "id": test.id,
-            "test_name": lab_test.name,
-            "test_code": lab_test.code,
-            "test_date": test.test_date,
-            "result_value": test.result_value,
-            "result_unit": test.result_unit,
-            "reference_range": test.reference_range,
-            "status": test.status,
-            "notes": test.notes,
-            "ordered_by": provider.name if provider else None,
-        })
+        test_results.append(
+            {
+                "id": test.id,
+                "test_name": lab_test.name,
+                "test_code": lab_test.code,
+                "test_date": test.test_date,
+                "result_value": test.result_value,
+                "result_unit": test.result_unit,
+                "reference_range": test.reference_range,
+                "status": test.status,
+                "notes": test.notes,
+                "ordered_by": provider.name if provider else None,
+            }
+        )
 
     return {
         "id": patient.id,
@@ -833,7 +841,7 @@ async def update_patient(
 ) -> dict:
     """
     Update patient information.
-    
+
     **Admin only.** Can update name, email, and phone.
     """
     # Get patient
@@ -885,7 +893,7 @@ async def delete_patient(
 ) -> None:
     """
     Delete a patient.
-    
+
     **Admin only.** This will also delete all associated appointments and test results.
     """
     # Get patient
@@ -920,7 +928,7 @@ async def get_admin_stats(
 ) -> dict:
     """
     Get overall system statistics.
-    
+
     **Admin only.**
     """
     # Count doctors
@@ -964,27 +972,29 @@ async def populate_database(
 ) -> dict:
     """
     Populate database with comprehensive demo data.
-    
+
     **Admin only.** This will:
-    - Ensure admin@aub.com exists with password Admin@123
+    - Ensure admin@admin.com exists with password Admin@123
     - Clear existing demo data (except admin)
     - Create 30 patient accounts
     - Create 3+ providers per department
     - Create 22 lab tests
     - Create diverse appointments
     - Index all documents for RAG
-    
+
     WARNING: This will delete existing data!
     """
     try:
         logger.info("database_population_started", admin_id=admin.id)
-        
+
         # Import and run the population script
         # We'll use subprocess to run the script to avoid module conflicts
         import subprocess
-        
-        script_path = Path(__file__).parent.parent.parent.parent / "scripts" / "populate_demo_database.py"
-        
+
+        script_path = (
+            Path(__file__).parent.parent.parent.parent / "scripts" / "populate_demo_database.py"
+        )
+
         # Run the script
         process = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -992,26 +1002,26 @@ async def populate_database(
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        
+
         stdout, stderr = await process.communicate()
-        
+
         if process.returncode != 0:
             error_msg = stderr.decode() if stderr else "Unknown error"
             logger.error("database_population_failed", error=error_msg, admin_id=admin.id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database population failed: {error_msg}"
+                detail=f"Database population failed: {error_msg}",
             )
-        
+
         output = stdout.decode() if stdout else ""
-        
+
         logger.info("database_population_completed", admin_id=admin.id)
-        
+
         return {
             "success": True,
             "message": "Database populated successfully with demo data",
             "details": {
-                "admin_email": "admin@aub.com",
+                "admin_email": "admin@admin.com",
                 "admin_password": "Admin@123",
                 "patients_created": 30,
                 "providers_created": "3+ per department",
@@ -1020,14 +1030,14 @@ async def populate_database(
             },
             "output": output,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error("database_population_error", error=str(e), admin_id=admin.id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to populate database: {str(e)}"
+            detail=f"Failed to populate database: {str(e)}",
         )
 
 
@@ -1037,16 +1047,18 @@ async def run_evaluation(
 ) -> dict:
     """
     Run the automated evaluation test suite.
-    
+
     **Admin only.** Executes 25+ test cases and returns comprehensive report.
     """
     try:
         logger.info("evaluation_started", admin_id=admin.id)
-        
+
         import subprocess
-        
-        script_path = Path(__file__).parent.parent.parent.parent / "tests" / "evaluation" / "run_eval.py"
-        
+
+        script_path = (
+            Path(__file__).parent.parent.parent.parent / "tests" / "evaluation" / "run_eval.py"
+        )
+
         # Run the evaluation script
         process = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -1054,19 +1066,19 @@ async def run_evaluation(
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        
+
         stdout, stderr = await process.communicate()
-        
+
         if process.returncode != 0:
             error_msg = stderr.decode() if stderr else "Unknown error"
             logger.error("evaluation_failed", error=error_msg, admin_id=admin.id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Evaluation failed: {error_msg}"
+                detail=f"Evaluation failed: {error_msg}",
             )
-        
+
         output = stdout.decode() if stdout else ""
-        
+
         # Try to load the evaluation report
         report_path = Path("/app/data/evaluation_report.json")
         if report_path.exists():
@@ -1074,21 +1086,21 @@ async def run_evaluation(
                 report = json.load(f)
         else:
             report = {"error": "Report file not found"}
-        
+
         logger.info("evaluation_completed", admin_id=admin.id)
-        
+
         return {
             "success": True,
             "message": "Evaluation completed successfully",
             "report": report,
-            "output": output
+            "output": output,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error("evaluation_error", error=str(e), admin_id=admin.id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to run evaluation: {str(e)}"
+            detail=f"Failed to run evaluation: {str(e)}",
         )

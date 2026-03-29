@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import React, { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Box,
   Card,
@@ -22,9 +22,9 @@ import {
   Divider,
   Tooltip,
   IconButton,
-} from '@mui/material';
-import { 
-  Storage as DatabaseIcon, 
+} from "@mui/material";
+import {
+  Storage as DatabaseIcon,
   Warning as WarningIcon,
   Download as DownloadIcon,
   Assessment as AssessmentIcon,
@@ -44,21 +44,21 @@ import {
   CloudDone as CloudIcon,
   HealthAndSafety as HealthIcon,
   DataObject as DataIcon,
-} from '@mui/icons-material';
-import { api } from '@/lib/api';
+} from "@mui/icons-material";
+import { api } from "@/lib/api";
 
 // Stat Card Component
-function StatCard({ 
-  icon, 
-  label, 
-  value, 
+function StatCard({
+  icon,
+  label,
+  value,
   subValue,
   color,
   trend,
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string | number; 
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
   subValue?: string;
   color: string;
   trend?: { value: string; positive: boolean };
@@ -68,19 +68,25 @@ function StatCard({
       elevation={0}
       sx={{
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        height: '100%',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          transform: 'translateY(-4px)',
+        border: "1px solid",
+        borderColor: "divider",
+        height: "100%",
+        transition: "all 0.3s ease",
+        "&:hover": {
+          transform: "translateY(-4px)",
           boxShadow: `0 12px 24px ${alpha(color, 0.15)}`,
-          borderColor: 'transparent',
+          borderColor: "transparent",
         },
       }}
     >
       <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+          }}
+        >
           <Avatar
             sx={{
               width: 56,
@@ -97,10 +103,12 @@ function StatCard({
               icon={<TrendingUpIcon sx={{ fontSize: 14 }} />}
               label={trend.value}
               sx={{
-                bgcolor: trend.positive ? alpha('#2e7d32', 0.1) : alpha('#d32f2f', 0.1),
-                color: trend.positive ? '#2e7d32' : '#d32f2f',
+                bgcolor: trend.positive
+                  ? alpha("#2e7d32", 0.1)
+                  : alpha("#d32f2f", 0.1),
+                color: trend.positive ? "#2e7d32" : "#d32f2f",
                 fontWeight: 600,
-                fontSize: '0.7rem',
+                fontSize: "0.7rem",
               }}
             />
           )}
@@ -108,11 +116,17 @@ function StatCard({
         <Typography variant="h3" sx={{ mt: 2, fontWeight: 800, color: color }}>
           {value}
         </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500, mt: 0.5 }}>
+        <Typography
+          variant="body2"
+          sx={{ color: "text.secondary", fontWeight: 500, mt: 0.5 }}
+        >
           {label}
         </Typography>
         {subValue && (
-          <Typography variant="caption" sx={{ color: 'text.disabled', mt: 0.5, display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{ color: "text.disabled", mt: 0.5, display: "block" }}
+          >
             {subValue}
           </Typography>
         )}
@@ -122,13 +136,13 @@ function StatCard({
 }
 
 // Info Card Component
-function InfoCard({ 
-  title, 
-  items, 
+function InfoCard({
+  title,
+  items,
   color,
   icon,
-}: { 
-  title: string; 
+}: {
+  title: string;
   items: { label: string; check?: boolean }[];
   color: string;
   icon: React.ReactNode;
@@ -138,26 +152,48 @@ function InfoCard({
       elevation={0}
       sx={{
         borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider',
-        height: '100%',
+        border: "1px solid",
+        borderColor: "divider",
+        height: "100%",
       }}
     >
-      <Box sx={{ height: 4, background: `linear-gradient(90deg, ${color} 0%, ${alpha(color, 0.6)} 100%)` }} />
+      <Box
+        sx={{
+          height: 4,
+          background: `linear-gradient(90deg, ${color} 0%, ${alpha(color, 0.6)} 100%)`,
+        }}
+      />
       <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-          <Avatar sx={{ width: 40, height: 40, bgcolor: alpha(color, 0.1), color: color }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+          <Avatar
+            sx={{
+              width: 40,
+              height: 40,
+              bgcolor: alpha(color, 0.1),
+              color: color,
+            }}
+          >
             {icon}
           </Avatar>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{title}</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            {title}
+          </Typography>
         </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
           {items.map((item, index) => (
-            <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              key={index}
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
               {item.check !== undefined && (
-                <CheckIcon sx={{ fontSize: 16, color: item.check ? '#2e7d32' : 'text.disabled' }} />
+                <CheckIcon
+                  sx={{
+                    fontSize: 16,
+                    color: item.check ? "#2e7d32" : "text.disabled",
+                  }}
+                />
               )}
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 {item.label}
               </Typography>
             </Box>
@@ -169,15 +205,15 @@ function InfoCard({
 }
 
 // Tab Button Component
-function TabButton({ 
-  label, 
-  icon, 
-  active, 
-  onClick 
-}: { 
-  label: string; 
-  icon: React.ReactNode; 
-  active: boolean; 
+function TabButton({
+  label,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
   onClick: () => void;
 }) {
   return (
@@ -188,14 +224,14 @@ function TabButton({
         px: 3,
         py: 1.5,
         borderRadius: 2,
-        textTransform: 'none',
+        textTransform: "none",
         fontWeight: 600,
-        bgcolor: active ? '#840132' : 'transparent',
-        color: active ? 'white' : 'text.secondary',
-        border: active ? 'none' : '1px solid',
-        borderColor: 'divider',
-        '&:hover': {
-          bgcolor: active ? '#5e0124' : alpha('#840132', 0.08),
+        bgcolor: active ? "#840132" : "transparent",
+        color: active ? "white" : "text.secondary",
+        border: active ? "none" : "1px solid",
+        borderColor: "divider",
+        "&:hover": {
+          bgcolor: active ? "#5e0124" : alpha("#840132", 0.08),
         },
       }}
     >
@@ -211,12 +247,12 @@ export default function AdminPage() {
   const [populateError, setPopulateError] = useState<string | null>(null);
 
   const { data: kpis, refetch: refetchKpis } = useQuery({
-    queryKey: ['kpis'],
+    queryKey: ["kpis"],
     queryFn: () => api.getKPIs(),
   });
 
   const { data: costSummary, refetch: refetchCost } = useQuery({
-    queryKey: ['costSummary'],
+    queryKey: ["costSummary"],
     queryFn: () => api.getCostSummary(),
     refetchInterval: 30000,
   });
@@ -224,9 +260,9 @@ export default function AdminPage() {
   const handleDownloadCostLog = async () => {
     const blob = await api.downloadCostLog();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'cost_log.csv';
+    a.download = "cost_log.csv";
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
@@ -235,19 +271,19 @@ export default function AdminPage() {
 
   const populateMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/v1/admin/populate-database', {
-        method: 'POST',
+      const response = await fetch("/api/v1/admin/populate-database", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          "Content-Type": "application/json",
         },
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || 'Failed to populate database');
+        throw new Error(error.detail || "Failed to populate database");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -271,7 +307,9 @@ export default function AdminPage() {
       return response;
     },
     onSuccess: (data) => {
-      alert(`Evaluation completed successfully!\n\nResults: ${JSON.stringify(data.report, null, 2)}`);
+      alert(
+        `Evaluation completed successfully!\n\nResults: ${JSON.stringify(data.report, null, 2)}`,
+      );
     },
     onError: (error: Error) => {
       alert(`Evaluation failed: ${error.message}`);
@@ -287,14 +325,22 @@ export default function AdminPage() {
     <Box sx={{ pb: 4 }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <Avatar
               sx={{
                 width: 56,
                 height: 56,
-                bgcolor: alpha('#840132', 0.1),
-                color: '#840132',
+                bgcolor: alpha("#840132", 0.1),
+                color: "#840132",
               }}
             >
               <AdminIcon sx={{ fontSize: 28 }} />
@@ -304,27 +350,28 @@ export default function AdminPage() {
                 variant="h4"
                 sx={{
                   fontWeight: 800,
-                  background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  background:
+                    "linear-gradient(135deg, #840132 0%, #5e0124 100%)",
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
                 }}
               >
                 Admin Dashboard
               </Typography>
-              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+              <Typography variant="body1" sx={{ color: "text.secondary" }}>
                 System analytics, performance metrics & management tools
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5 }}>
             <Tooltip title="Refresh Data">
-              <IconButton 
+              <IconButton
                 onClick={handleRefreshData}
-                sx={{ 
-                  bgcolor: alpha('#840132', 0.08),
-                  color: '#840132',
-                  '&:hover': { bgcolor: alpha('#840132', 0.15) },
+                sx={{
+                  bgcolor: alpha("#840132", 0.08),
+                  color: "#840132",
+                  "&:hover": { bgcolor: alpha("#840132", 0.15) },
                 }}
               >
                 <RefreshIcon />
@@ -332,17 +379,25 @@ export default function AdminPage() {
             </Tooltip>
             <Button
               variant="contained"
-              startIcon={populateMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <DatabaseIcon />}
+              startIcon={
+                populateMutation.isPending ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <DatabaseIcon />
+                )
+              }
               onClick={() => setConfirmDialogOpen(true)}
               disabled={populateMutation.isPending}
               sx={{
-                bgcolor: '#840132',
-                '&:hover': { bgcolor: '#5e0124' },
+                bgcolor: "#840132",
+                "&:hover": { bgcolor: "#5e0124" },
                 borderRadius: 2,
                 px: 3,
               }}
             >
-              {populateMutation.isPending ? 'Populating...' : 'Populate Database'}
+              {populateMutation.isPending
+                ? "Populating..."
+                : "Populate Database"}
             </Button>
           </Box>
         </Box>
@@ -350,9 +405,9 @@ export default function AdminPage() {
 
       {/* Alerts */}
       {populateSuccess && (
-        <Alert 
-          severity="success" 
-          sx={{ mb: 3, borderRadius: 2 }} 
+        <Alert
+          severity="success"
+          sx={{ mb: 3, borderRadius: 2 }}
           onClose={() => setPopulateSuccess(false)}
         >
           Database populated successfully! Page will reload shortly...
@@ -360,9 +415,9 @@ export default function AdminPage() {
       )}
 
       {populateError && (
-        <Alert 
-          severity="error" 
-          sx={{ mb: 3, borderRadius: 2 }} 
+        <Alert
+          severity="error"
+          sx={{ mb: 3, borderRadius: 2 }}
           onClose={() => setPopulateError(null)}
         >
           Failed to populate database: {populateError}
@@ -376,17 +431,37 @@ export default function AdminPage() {
           p: 1.5,
           mb: 4,
           borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
+          border: "1px solid",
+          borderColor: "divider",
+          display: "flex",
           gap: 1,
-          flexWrap: 'wrap',
+          flexWrap: "wrap",
         }}
       >
-        <TabButton label="Performance Metrics" icon={<SpeedIcon />} active={tabValue === 0} onClick={() => setTabValue(0)} />
-        <TabButton label="Cost Analytics" icon={<MoneyIcon />} active={tabValue === 1} onClick={() => setTabValue(1)} />
-        <TabButton label="Evaluation Suite" icon={<AssessmentIcon />} active={tabValue === 2} onClick={() => setTabValue(2)} />
-        <TabButton label="System Health" icon={<HealthIcon />} active={tabValue === 3} onClick={() => setTabValue(3)} />
+        <TabButton
+          label="Performance Metrics"
+          icon={<SpeedIcon />}
+          active={tabValue === 0}
+          onClick={() => setTabValue(0)}
+        />
+        <TabButton
+          label="Cost Analytics"
+          icon={<MoneyIcon />}
+          active={tabValue === 1}
+          onClick={() => setTabValue(1)}
+        />
+        <TabButton
+          label="Evaluation Suite"
+          icon={<AssessmentIcon />}
+          active={tabValue === 2}
+          onClick={() => setTabValue(2)}
+        />
+        <TabButton
+          label="System Health"
+          icon={<HealthIcon />}
+          active={tabValue === 3}
+          onClick={() => setTabValue(3)}
+        />
       </Paper>
 
       {/* Performance Metrics Tab */}
@@ -401,7 +476,7 @@ export default function AdminPage() {
                     label="Task Completion Rate"
                     value={`${(kpis.task_completion_rate * 100).toFixed(1)}%`}
                     color="#2e7d32"
-                    trend={{ value: '↑ 5%', positive: true }}
+                    trend={{ value: "↑ 5%", positive: true }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
@@ -432,9 +507,20 @@ export default function AdminPage() {
               </>
             ) : (
               <Grid item xs={12}>
-                <Paper elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-                  <CircularProgress sx={{ color: '#840132' }} />
-                  <Typography sx={{ mt: 2, color: 'text.secondary' }}>Loading metrics...</Typography>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 4,
+                    textAlign: "center",
+                    borderRadius: 3,
+                    border: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <CircularProgress sx={{ color: "#840132" }} />
+                  <Typography sx={{ mt: 2, color: "text.secondary" }}>
+                    Loading metrics...
+                  </Typography>
                 </Paper>
               </Grid>
             )}
@@ -446,11 +532,23 @@ export default function AdminPage() {
                 icon={<TrendingUpIcon />}
                 color="#2e7d32"
                 items={[
-                  { label: 'Task completion: ≥90%', check: kpis ? kpis.task_completion_rate >= 0.9 : false },
-                  { label: 'Response time (p50): <2s', check: kpis ? kpis.avg_response_time_p50 < 2 : false },
-                  { label: 'Response time (p90): <5s', check: kpis ? kpis.avg_response_time_p90 < 5 : false },
-                  { label: 'User satisfaction: ≥4/5', check: kpis ? kpis.avg_satisfaction_score >= 4 : false },
-                  { label: 'Ambiguity resolution: ≥80%', check: true },
+                  {
+                    label: "Task completion: ≥90%",
+                    check: kpis ? kpis.task_completion_rate >= 0.9 : false,
+                  },
+                  {
+                    label: "Response time (p50): <2s",
+                    check: kpis ? kpis.avg_response_time_p50 < 2 : false,
+                  },
+                  {
+                    label: "Response time (p90): <5s",
+                    check: kpis ? kpis.avg_response_time_p90 < 5 : false,
+                  },
+                  {
+                    label: "User satisfaction: ≥4/5",
+                    check: kpis ? kpis.avg_satisfaction_score >= 4 : false,
+                  },
+                  { label: "Ambiguity resolution: ≥80%", check: true },
                 ]}
               />
             </Grid>
@@ -461,40 +559,132 @@ export default function AdminPage() {
                 elevation={0}
                 sx={{
                   borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  height: '100%',
+                  border: "1px solid",
+                  borderColor: "divider",
+                  height: "100%",
                 }}
               >
-                <Box sx={{ height: 4, background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)' }} />
+                <Box
+                  sx={{
+                    height: 4,
+                    background:
+                      "linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)",
+                  }}
+                />
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: alpha('#1976d2', 0.1), color: '#1976d2' }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      mb: 2,
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        bgcolor: alpha("#1976d2", 0.1),
+                        color: "#1976d2",
+                      }}
+                    >
                       <BoltIcon />
                     </Avatar>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>AI vs Manual Comparison</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      AI vs Manual Comparison
+                    </Typography>
                   </Box>
                   <Grid container spacing={2}>
                     <Grid item xs={6}>
-                      <Paper sx={{ p: 2, bgcolor: alpha('#1976d2', 0.05), borderRadius: 2, textAlign: 'center' }}>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>AI Agent</Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#1976d2' }}>~2s</Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>response time</Typography>
+                      <Paper
+                        sx={{
+                          p: 2,
+                          bgcolor: alpha("#1976d2", 0.05),
+                          borderRadius: 2,
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          sx={{ color: "text.secondary" }}
+                        >
+                          AI Agent
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ fontWeight: 700, color: "#1976d2" }}
+                        >
+                          ~2s
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: "text.secondary" }}
+                        >
+                          response time
+                        </Typography>
                       </Paper>
                     </Grid>
                     <Grid item xs={6}>
-                      <Paper sx={{ p: 2, bgcolor: alpha('#757575', 0.05), borderRadius: 2, textAlign: 'center' }}>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>Manual</Typography>
-                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#757575' }}>~180s</Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>response time</Typography>
+                      <Paper
+                        sx={{
+                          p: 2,
+                          bgcolor: alpha("#757575", 0.05),
+                          borderRadius: 2,
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          sx={{ color: "text.secondary" }}
+                        >
+                          Manual
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ fontWeight: 700, color: "#757575" }}
+                        >
+                          ~180s
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: "text.secondary" }}
+                        >
+                          response time
+                        </Typography>
                       </Paper>
                     </Grid>
                   </Grid>
                   <Divider sx={{ my: 2 }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-                    <Chip label="90x Faster" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', fontWeight: 600 }} />
-                    <Chip label="24/7 Available" size="small" sx={{ bgcolor: alpha('#1976d2', 0.1), color: '#1976d2', fontWeight: 600 }} />
-                    <Chip label="99% Cost Savings" size="small" sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02', fontWeight: 600 }} />
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", gap: 2 }}
+                  >
+                    <Chip
+                      label="90x Faster"
+                      size="small"
+                      sx={{
+                        bgcolor: alpha("#2e7d32", 0.1),
+                        color: "#2e7d32",
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Chip
+                      label="24/7 Available"
+                      size="small"
+                      sx={{
+                        bgcolor: alpha("#1976d2", 0.1),
+                        color: "#1976d2",
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Chip
+                      label="99% Cost Savings"
+                      size="small"
+                      sx={{
+                        bgcolor: alpha("#ed6c02", 0.1),
+                        color: "#ed6c02",
+                        fontWeight: 600,
+                      }}
+                    />
                   </Box>
                 </CardContent>
               </Card>
@@ -506,17 +696,29 @@ export default function AdminPage() {
       {/* Cost Analytics Tab */}
       {tabValue === 1 && (
         <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>Cost Tracking & Budget</Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 3,
+            }}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+              Cost Tracking & Budget
+            </Typography>
             <Button
               variant="outlined"
               startIcon={<DownloadIcon />}
               onClick={handleDownloadCostLog}
               sx={{
-                borderColor: '#840132',
-                color: '#840132',
+                borderColor: "#840132",
+                color: "#840132",
                 borderRadius: 2,
-                '&:hover': { borderColor: '#5e0124', bgcolor: alpha('#840132', 0.05) },
+                "&:hover": {
+                  borderColor: "#5e0124",
+                  bgcolor: alpha("#840132", 0.05),
+                },
               }}
             >
               Download Cost Log CSV
@@ -566,47 +768,89 @@ export default function AdminPage() {
                   elevation={0}
                   sx={{
                     borderRadius: 3,
-                    border: '1px solid',
-                    borderColor: 'divider',
+                    border: "1px solid",
+                    borderColor: "divider",
                   }}
                 >
                   <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: alpha('#840132', 0.1), color: '#840132' }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        mb: 3,
+                      }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                      >
+                        <Avatar
+                          sx={{
+                            bgcolor: alpha("#840132", 0.1),
+                            color: "#840132",
+                          }}
+                        >
                           <DataIcon />
                         </Avatar>
                         <Box>
-                          <Typography variant="h6" sx={{ fontWeight: 700 }}>Cost Analysis</Typography>
-                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                            Cost Analysis
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: "text.secondary" }}
+                          >
                             Token usage and budget tracking
                           </Typography>
                         </Box>
                       </Box>
                       <Chip
-                        label={costSummary.data.avg_cost_per_task <= 0.10 ? 'Within Budget' : 'Above Budget'}
+                        label={
+                          costSummary.data.avg_cost_per_task <= 0.1
+                            ? "Within Budget"
+                            : "Above Budget"
+                        }
                         sx={{
-                          bgcolor: costSummary.data.avg_cost_per_task <= 0.10 ? alpha('#2e7d32', 0.1) : alpha('#d32f2f', 0.1),
-                          color: costSummary.data.avg_cost_per_task <= 0.10 ? '#2e7d32' : '#d32f2f',
+                          bgcolor:
+                            costSummary.data.avg_cost_per_task <= 0.1
+                              ? alpha("#2e7d32", 0.1)
+                              : alpha("#d32f2f", 0.1),
+                          color:
+                            costSummary.data.avg_cost_per_task <= 0.1
+                              ? "#2e7d32"
+                              : "#d32f2f",
                           fontWeight: 700,
                         }}
                       />
                     </Box>
-                    
+
                     <Grid container spacing={3}>
                       <Grid item xs={12} md={6}>
-                        <Paper sx={{ p: 2.5, bgcolor: 'grey.50', borderRadius: 2 }}>
-                          <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
+                        <Paper
+                          sx={{ p: 2.5, bgcolor: "grey.50", borderRadius: 2 }}
+                        >
+                          <Typography
+                            variant="subtitle2"
+                            sx={{ color: "text.secondary", mb: 1 }}
+                          >
                             Total Tokens Used
                           </Typography>
-                          <Typography variant="h4" sx={{ fontWeight: 700, color: '#840132' }}>
+                          <Typography
+                            variant="h4"
+                            sx={{ fontWeight: 700, color: "#840132" }}
+                          >
                             {costSummary.data.total_tokens.toLocaleString()}
                           </Typography>
                         </Paper>
                       </Grid>
                       <Grid item xs={12} md={6}>
-                        <Paper sx={{ p: 2.5, bgcolor: 'grey.50', borderRadius: 2 }}>
-                          <Typography variant="subtitle2" sx={{ color: 'text.secondary', mb: 1 }}>
+                        <Paper
+                          sx={{ p: 2.5, bgcolor: "grey.50", borderRadius: 2 }}
+                        >
+                          <Typography
+                            variant="subtitle2"
+                            sx={{ color: "text.secondary", mb: 1 }}
+                          >
                             Model Pricing
                           </Typography>
                           <Typography variant="body1" sx={{ fontWeight: 600 }}>
@@ -617,23 +861,38 @@ export default function AdminPage() {
                     </Grid>
 
                     <Box sx={{ mt: 3 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 1,
+                        }}
+                      >
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           Budget Usage
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "text.secondary" }}
+                        >
                           Target: $0.10/task
                         </Typography>
                       </Box>
                       <LinearProgress
                         variant="determinate"
-                        value={Math.min((costSummary.data.avg_cost_per_task / 0.10) * 100, 100)}
+                        value={Math.min(
+                          (costSummary.data.avg_cost_per_task / 0.1) * 100,
+                          100,
+                        )}
                         sx={{
                           height: 10,
                           borderRadius: 5,
-                          bgcolor: alpha('#840132', 0.1),
-                          '& .MuiLinearProgress-bar': {
-                            bgcolor: costSummary.data.avg_cost_per_task <= 0.10 ? '#2e7d32' : '#d32f2f',
+                          bgcolor: alpha("#840132", 0.1),
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor:
+                              costSummary.data.avg_cost_per_task <= 0.1
+                                ? "#2e7d32"
+                                : "#d32f2f",
                             borderRadius: 5,
                           },
                         }}
@@ -645,7 +904,8 @@ export default function AdminPage() {
             </Grid>
           ) : (
             <Alert severity="info" sx={{ borderRadius: 2 }}>
-              No cost data available yet. Cost tracking begins with your first chat interactions.
+              No cost data available yet. Cost tracking begins with your first
+              chat interactions.
             </Alert>
           )}
         </Box>
@@ -654,13 +914,13 @@ export default function AdminPage() {
       {/* Evaluation Suite Tab */}
       {tabValue === 2 && (
         <Box>
-          <Alert 
-            severity="info" 
+          <Alert
+            severity="info"
             sx={{ mb: 3, borderRadius: 2 }}
             icon={<BugIcon />}
           >
-            Automated evaluation suite with 25+ test cases covering booking, cancellation, 
-            information queries, safety, and security scenarios.
+            Automated evaluation suite with 25+ test cases covering booking,
+            cancellation, information queries, safety, and security scenarios.
           </Alert>
 
           <Grid container spacing={3}>
@@ -670,12 +930,12 @@ export default function AdminPage() {
                 icon={<BugIcon />}
                 color="#840132"
                 items={[
-                  { label: 'Booking flows' },
-                  { label: 'Cancellations' },
-                  { label: 'Information queries' },
-                  { label: 'Safety checks' },
-                  { label: 'Security tests' },
-                  { label: 'Prompt injection defense' },
+                  { label: "Booking flows" },
+                  { label: "Cancellations" },
+                  { label: "Information queries" },
+                  { label: "Safety checks" },
+                  { label: "Security tests" },
+                  { label: "Prompt injection defense" },
                 ]}
               />
             </Grid>
@@ -686,12 +946,12 @@ export default function AdminPage() {
                 icon={<TrendingUpIcon />}
                 color="#2e7d32"
                 items={[
-                  { label: 'Task completion: ≥90%', check: true },
-                  { label: 'Response time (p50): <2s', check: true },
-                  { label: 'Response time (p90): <5s', check: true },
-                  { label: 'Ambiguity resolution: ≥80%', check: true },
-                  { label: 'User satisfaction: ≥4/5', check: true },
-                  { label: 'Cost per task: <$0.10', check: true },
+                  { label: "Task completion: ≥90%", check: true },
+                  { label: "Response time (p50): <2s", check: true },
+                  { label: "Response time (p90): <5s", check: true },
+                  { label: "Ambiguity resolution: ≥80%", check: true },
+                  { label: "User satisfaction: ≥4/5", check: true },
+                  { label: "Cost per task: <$0.10", check: true },
                 ]}
               />
             </Grid>
@@ -702,11 +962,11 @@ export default function AdminPage() {
                 icon={<SecurityIcon />}
                 color="#d32f2f"
                 items={[
-                  { label: 'SQL injection prevention', check: true },
-                  { label: 'XSS protection', check: true },
-                  { label: 'Prompt injection defense', check: true },
-                  { label: 'Data leakage prevention', check: true },
-                  { label: 'Auth bypass attempts', check: true },
+                  { label: "SQL injection prevention", check: true },
+                  { label: "XSS protection", check: true },
+                  { label: "Prompt injection defense", check: true },
+                  { label: "Data leakage prevention", check: true },
+                  { label: "Auth bypass attempts", check: true },
                 ]}
               />
             </Grid>
@@ -716,43 +976,76 @@ export default function AdminPage() {
                 elevation={0}
                 sx={{
                   borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  overflow: 'hidden',
+                  border: "1px solid",
+                  borderColor: "divider",
+                  overflow: "hidden",
                 }}
               >
-                <Box sx={{ height: 4, background: 'linear-gradient(90deg, #840132 0%, #5e0124 100%)' }} />
+                <Box
+                  sx={{
+                    height: 4,
+                    background:
+                      "linear-gradient(90deg, #840132 0%, #5e0124 100%)",
+                  }}
+                />
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ width: 48, height: 48, bgcolor: alpha('#840132', 0.1), color: '#840132' }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 2,
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Avatar
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          bgcolor: alpha("#840132", 0.1),
+                          color: "#840132",
+                        }}
+                      >
                         <AssessmentIcon />
                       </Avatar>
                       <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                           Run Evaluation Suite
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          Execute the full test suite to validate system performance and security
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "text.secondary" }}
+                        >
+                          Execute the full test suite to validate system
+                          performance and security
                         </Typography>
                       </Box>
                     </Box>
                     <Button
                       variant="contained"
                       size="large"
-                      startIcon={evaluationMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <AssessmentIcon />}
+                      startIcon={
+                        evaluationMutation.isPending ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          <AssessmentIcon />
+                        )
+                      }
                       onClick={() => evaluationMutation.mutate()}
                       disabled={evaluationMutation.isPending}
                       sx={{
-                        bgcolor: '#840132',
-                        '&:hover': { bgcolor: '#5e0124' },
+                        bgcolor: "#840132",
+                        "&:hover": { bgcolor: "#5e0124" },
                         px: 4,
                         py: 1.5,
                         borderRadius: 2,
                         fontWeight: 700,
                       }}
                     >
-                      {evaluationMutation.isPending ? 'Running...' : 'Run Evaluation'}
+                      {evaluationMutation.isPending
+                        ? "Running..."
+                        : "Run Evaluation"}
                     </Button>
                   </Box>
                 </CardContent>
@@ -771,34 +1064,103 @@ export default function AdminPage() {
                 elevation={0}
                 sx={{
                   borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  border: "1px solid",
+                  borderColor: "divider",
                 }}
               >
-                <Box sx={{ height: 4, bgcolor: '#2e7d32' }} />
+                <Box sx={{ height: 4, bgcolor: "#2e7d32" }} />
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32' }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <Avatar
+                      sx={{ bgcolor: alpha("#2e7d32", 0.1), color: "#2e7d32" }}
+                    >
                       <CloudIcon />
                     </Avatar>
                     <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>API Status</Typography>
-                      <Chip label="Operational" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', fontWeight: 600 }} />
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        API Status
+                      </Typography>
+                      <Chip
+                        label="Operational"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          fontWeight: 600,
+                        }}
+                      />
                     </Box>
                   </Box>
                   <Divider sx={{ my: 2 }} />
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Backend</Typography>
-                      <Chip label="Online" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        Backend
+                      </Typography>
+                      <Chip
+                        label="Online"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Database</Typography>
-                      <Chip label="Connected" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        Database
+                      </Typography>
+                      <Chip
+                        label="Connected"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Vector DB</Typography>
-                      <Chip label="Ready" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        Vector DB
+                      </Typography>
+                      <Chip
+                        label="Ready"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
                   </Box>
                 </CardContent>
@@ -810,34 +1172,103 @@ export default function AdminPage() {
                 elevation={0}
                 sx={{
                   borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  border: "1px solid",
+                  borderColor: "divider",
                 }}
               >
-                <Box sx={{ height: 4, bgcolor: '#1976d2' }} />
+                <Box sx={{ height: 4, bgcolor: "#1976d2" }} />
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar sx={{ bgcolor: alpha('#1976d2', 0.1), color: '#1976d2' }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <Avatar
+                      sx={{ bgcolor: alpha("#1976d2", 0.1), color: "#1976d2" }}
+                    >
                       <MemoryIcon />
                     </Avatar>
                     <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>AI Services</Typography>
-                      <Chip label="Active" size="small" sx={{ bgcolor: alpha('#1976d2', 0.1), color: '#1976d2', fontWeight: 600 }} />
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        AI Services
+                      </Typography>
+                      <Chip
+                        label="Active"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#1976d2", 0.1),
+                          color: "#1976d2",
+                          fontWeight: 600,
+                        }}
+                      />
                     </Box>
                   </Box>
                   <Divider sx={{ my: 2 }} />
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>GPT-4o</Typography>
-                      <Chip label="Active" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        GPT-4o
+                      </Typography>
+                      <Chip
+                        label="Active"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>RAG Service</Typography>
-                      <Chip label="Indexed" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        RAG Service
+                      </Typography>
+                      <Chip
+                        label="Indexed"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Voice (TTS/STT)</Typography>
-                      <Chip label="Ready" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        Voice (TTS/STT)
+                      </Typography>
+                      <Chip
+                        label="Ready"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
                   </Box>
                 </CardContent>
@@ -849,34 +1280,103 @@ export default function AdminPage() {
                 elevation={0}
                 sx={{
                   borderRadius: 3,
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  border: "1px solid",
+                  borderColor: "divider",
                 }}
               >
-                <Box sx={{ height: 4, bgcolor: '#ed6c02' }} />
+                <Box sx={{ height: 4, bgcolor: "#ed6c02" }} />
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02' }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      mb: 2,
+                    }}
+                  >
+                    <Avatar
+                      sx={{ bgcolor: alpha("#ed6c02", 0.1), color: "#ed6c02" }}
+                    >
                       <SecurityIcon />
                     </Avatar>
                     <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>Security</Typography>
-                      <Chip label="Protected" size="small" sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02', fontWeight: 600 }} />
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        Security
+                      </Typography>
+                      <Chip
+                        label="Protected"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#ed6c02", 0.1),
+                          color: "#ed6c02",
+                          fontWeight: 600,
+                        }}
+                      />
                     </Box>
                   </Box>
                   <Divider sx={{ my: 2 }} />
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>JWT Auth</Typography>
-                      <Chip label="Enabled" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        JWT Auth
+                      </Typography>
+                      <Chip
+                        label="Enabled"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>HTTPS</Typography>
-                      <Chip label="Enforced" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        HTTPS
+                      </Typography>
+                      <Chip
+                        label="Enforced"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Rate Limiting</Typography>
-                      <Chip label="Active" size="small" sx={{ bgcolor: alpha('#2e7d32', 0.1), color: '#2e7d32', height: 20, fontSize: '0.7rem' }} />
+                    <Box
+                      sx={{ display: "flex", justifyContent: "space-between" }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary" }}
+                      >
+                        Rate Limiting
+                      </Typography>
+                      <Chip
+                        label="Active"
+                        size="small"
+                        sx={{
+                          bgcolor: alpha("#2e7d32", 0.1),
+                          color: "#2e7d32",
+                          height: 20,
+                          fontSize: "0.7rem",
+                        }}
+                      />
                     </Box>
                   </Box>
                 </CardContent>
@@ -887,17 +1387,19 @@ export default function AdminPage() {
       )}
 
       {/* Confirmation Dialog */}
-      <Dialog 
-        open={confirmDialogOpen} 
+      <Dialog
+        open={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}
         PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar sx={{ bgcolor: alpha('#ed6c02', 0.1), color: '#ed6c02' }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Avatar sx={{ bgcolor: alpha("#ed6c02", 0.1), color: "#ed6c02" }}>
               <WarningIcon />
             </Avatar>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>Populate Database?</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Populate Database?
+            </Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
@@ -905,7 +1407,7 @@ export default function AdminPage() {
             This action will:
             <Box component="ul" sx={{ mt: 1.5, pl: 2 }}>
               <li>Delete all existing patients, appointments, and providers</li>
-              <li>Preserve the admin account (admin@aub.com / Admin@123)</li>
+              <li>Preserve the admin account (admin@admin.com / Admin@123)</li>
               <li>Create 30 demo patient accounts</li>
               <li>Create 3+ doctors per department</li>
               <li>Create 22 lab tests</li>
@@ -920,9 +1422,9 @@ export default function AdminPage() {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2.5 }}>
-          <Button 
-            onClick={() => setConfirmDialogOpen(false)} 
-            sx={{ color: 'text.secondary', borderRadius: 2 }}
+          <Button
+            onClick={() => setConfirmDialogOpen(false)}
+            sx={{ color: "text.secondary", borderRadius: 2 }}
           >
             Cancel
           </Button>
@@ -930,15 +1432,21 @@ export default function AdminPage() {
             onClick={() => populateMutation.mutate()}
             variant="contained"
             disabled={populateMutation.isPending}
-            startIcon={populateMutation.isPending ? <CircularProgress size={20} color="inherit" /> : <DatabaseIcon />}
+            startIcon={
+              populateMutation.isPending ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                <DatabaseIcon />
+              )
+            }
             sx={{
-              bgcolor: '#840132',
-              '&:hover': { bgcolor: '#5e0124' },
+              bgcolor: "#840132",
+              "&:hover": { bgcolor: "#5e0124" },
               borderRadius: 2,
               px: 3,
             }}
           >
-            {populateMutation.isPending ? 'Populating...' : 'Populate Database'}
+            {populateMutation.isPending ? "Populating..." : "Populate Database"}
           </Button>
         </DialogActions>
       </Dialog>

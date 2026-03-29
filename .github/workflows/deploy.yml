@@ -29,22 +29,22 @@ jobs:
           set -e
           echo "=== Starting Deployment ==="
           df -h
-          
+
           # Setup Nginx if not already configured
           if [ ! -f /etc/nginx/sites-available/carecon.online ]; then
             echo "Setting up Nginx..."
             chmod +x setup-nginx.sh
             ./setup-nginx.sh || echo "Nginx setup failed, continuing..."
           fi
-          
+
           docker system prune -af --volumes 2>/dev/null || true
           docker compose -f docker-compose.prod.yml down 2>/dev/null || true
           docker compose -f docker-compose.prod.yml up -d --build
-          
+
           # Wait for services to be ready
           echo "=== Waiting for services to start ==="
           sleep 30
-          
+
           # Check backend health
           for i in {1..10}; do
             if curl -f http://localhost:8000/health 2>/dev/null; then
@@ -54,21 +54,21 @@ jobs:
             echo "Waiting for backend... attempt $i/10"
             sleep 3
           done
-          
+
           docker image prune -f
           docker compose -f docker-compose.prod.yml ps
           docker compose -f docker-compose.prod.yml logs backend --tail=50
-          
+
           # Create admin account
           echo ""
           echo "=== Creating Admin Account ==="
           if docker exec careconnect-backend python /app/scripts/create_admin.py; then
-            echo "✓ Admin account ready: admin@aub.com / Admin@123"
+            echo "✓ Admin account ready: admin@admin.com / Admin@123"
           else
             echo "✗ Admin creation failed - check logs above"
             docker compose -f docker-compose.prod.yml logs backend --tail=100
           fi
-          
+
           df -h
           echo "=== Deployment Complete ==="
           DEPLOYEOF

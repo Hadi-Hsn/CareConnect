@@ -11,7 +11,8 @@ This directory contains scripts for populating the CareConnect database with dem
 Comprehensive database population script that creates a full demo environment.
 
 **What it does:**
-- Ensures admin user exists with credentials: `admin@aub.com` / `Admin@123`
+
+- Ensures admin user exists with credentials: `admin@admin.com` / `Admin@123`
 - Clears existing demo data (preserves admin account)
 - Creates 30 patient accounts with realistic names, emails, and phone numbers
 - Creates 3+ providers (doctors) per department across all specialties
@@ -26,13 +27,15 @@ Comprehensive database population script that creates a full demo environment.
 **Usage:**
 
 Run directly from command line:
+
 ```bash
 cd backend
 python scripts/populate_demo_database.py
 ```
 
 Or trigger via Admin Portal:
-1. Log in as admin (admin@aub.com / Admin@123)
+
+1. Log in as admin (admin@admin.com / Admin@123)
 2. Navigate to Admin Dashboard
 3. Click "Populate Database" button
 4. Confirm the action
@@ -40,6 +43,7 @@ Or trigger via Admin Portal:
 **Sample Data Created:**
 
 **Patients (30):**
+
 - Emma Johnson (emma.johnson@patient.com)
 - Liam Smith (liam.smith@patient.com)
 - Olivia Brown (olivia.brown@patient.com)
@@ -47,6 +51,7 @@ Or trigger via Admin Portal:
 - All patients have password: `patient123`
 
 **Providers (90+):**
+
 - 3+ doctors per department including:
   - Cardiology
   - Dermatology
@@ -62,6 +67,7 @@ Or trigger via Admin Portal:
   - And many more...
 
 **Lab Tests (22):**
+
 - Complete Blood Count (CBC)
 - Lipid Panel
 - Thyroid Function Test
@@ -74,6 +80,7 @@ Or trigger via Admin Portal:
 - And more...
 
 **Appointments:**
+
 - 2-5 appointments per patient
 - Distributed across 60 days in the past to 30 days in the future
 - Realistic appointment reasons based on department
@@ -82,7 +89,8 @@ Or trigger via Admin Portal:
 ## Admin Credentials
 
 After running any population script, you can always log in as admin:
-- **Email:** admin@aub.com
+
+- **Email:** admin@admin.com
 - **Password:** Admin@123
 
 ## Notes
@@ -90,6 +98,7 @@ After running any population script, you can always log in as admin:
 ⚠️ **WARNING**: The `populate_demo_database.py` script will delete all existing patients, providers, appointments, and lab tests. The admin account is preserved.
 
 💡 **TIP**: Use this script when:
+
 - Setting up a new demo environment
 - Testing the system with realistic data
 - Resetting the database to a known state
@@ -98,6 +107,7 @@ After running any population script, you can always log in as admin:
 ## Development
 
 To modify the demo data:
+
 1. Edit `populate_demo_database.py`
 2. Update the data constants (PATIENT_NAMES, APPOINTMENT_REASONS, etc.)
 3. Modify the seed functions to adjust data generation logic
@@ -106,6 +116,7 @@ To modify the demo data:
 ## Dependencies
 
 The script uses the existing app models and services:
+
 - `app.models.*` - Database models
 - `app.core.security` - Password hashing
 - `app.services.rag_service` - Document indexing
