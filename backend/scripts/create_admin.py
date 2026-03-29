@@ -23,7 +23,7 @@ async def create_or_update_admin():
 
         if admin:
             # Update existing admin
-            admin.hashed_password = get_password_hash("Admin@123")
+            admin.hashed_password = get_password_hash("password123")
             admin.name = "Admin User"
             admin.role = UserRole.ADMIN
             print("✓ Admin user updated")
@@ -33,7 +33,7 @@ async def create_or_update_admin():
                 email="admin@admin.com",
                 name="Admin User",
                 role=UserRole.ADMIN,
-                hashed_password=get_password_hash("Admin@123"),
+                hashed_password=get_password_hash("password123"),
             )
             session.add(admin)
             print("✓ Admin user created")
@@ -42,7 +42,7 @@ async def create_or_update_admin():
         print()
         print("Admin credentials:")
         print("  Email: admin@admin.com")
-        print("  Password: Admin@123")
+        print("  Password: password123")
         print()
 
 

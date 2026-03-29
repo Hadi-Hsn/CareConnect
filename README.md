@@ -6,7 +6,8 @@ CareConnect is a production-grade, full-stack healthcare logistics assistant tha
 
 The platform is scoped to healthcare logistics and informational support. It does **not** provide medical advice.
 
-## Demonstration System Walkthrough Video:  
+## Demonstration System Walkthrough Video:
+
 https://drive.google.com/file/d/1bJLHlo8Nqm0OtvOP7vh37QuxUUHi4FGF/view
 
 ---
@@ -14,40 +15,42 @@ https://drive.google.com/file/d/1bJLHlo8Nqm0OtvOP7vh37QuxUUHi4FGF/view
 ## Key Capabilities
 
 <<<<<<< Updated upstream
-* Conversational AI with structured and auditable tool orchestration
-* Appointment booking, modification, and cancellation
-* Provider discovery by specialty and availability
-* Retrieval-augmented generation for facility and laboratory preparation information
-* Multi-modal interaction (text and voice)
-* Human handover with incident tracking
-* Privacy-conscious logging and operational metrics
-* Production-oriented, modular architecture
-=======
-Check out our deployed version: **[https://carecon.online/login](https://carecon.online/login)**
+
+- Conversational AI with structured and auditable tool orchestration
+- Appointment booking, modification, and cancellation
+- Provider discovery by specialty and availability
+- Retrieval-augmented generation for facility and laboratory preparation information
+- Multi-modal interaction (text and voice)
+- Human handover with incident tracking
+- Privacy-conscious logging and operational metrics
+- # Production-oriented, modular architecture
+  Check out our deployed version: **[https://carecon.online/login](https://carecon.online/login)**
 
 Demo credentials:
 
 - **Patient:** `patient@gmail.com` / `password123`
-- **Admin:** `admin@admin.com` / `Admin@123`
->>>>>>> Stashed changes
+- **Admin:** `admin@admin.com` / `password123`
+  > > > > > > > Stashed changes
 
 ---
 
 ## System Architecture (Summary)
 
-* **Frontend:** React 18, TypeScript, Material UI
-* **Backend:** FastAPI, Python 3.11
-* **LLM Integration:** OpenAI Responses API with function calling
-* **Retrieval:** ChromaDB with OpenAI embeddings
-* **Database:** SQLite (containerized, persistent volumes)
-* **Voice:** OpenAI Whisper (speech-to-text) and OpenAI TTS
-* **Observability:** Prometheus metrics and structured logging
+- **Frontend:** React 18, TypeScript, Material UI
+- **Backend:** FastAPI, Python 3.11
+- **LLM Integration:** OpenAI Responses API with function calling
+- **Retrieval:** ChromaDB with OpenAI embeddings
+- **Database:** SQLite (containerized, persistent volumes)
+- **Voice:** OpenAI Whisper (speech-to-text) and OpenAI TTS
+- **Observability:** Prometheus metrics and structured logging
 
-<<<<<<< Updated upstream
----
+## <<<<<<< Updated upstream
+
 =======
-  ***
->>>>>>> Stashed changes
+
+---
+
+> > > > > > > Stashed changes
 
 ## Running CareConnect Locally
 
@@ -61,7 +64,7 @@ Before you begin, ensure you have:
 - ✅ **Docker Desktop** installed and running ([Download here](https://www.docker.com/products/docker-desktop))
 - ✅ **OpenAI API Key** ([Get one here](https://platform.openai.com/api-keys))
 - ✅ **Git** (optional, for cloning)
->>>>>>> Stashed changes
+  > > > > > > > Stashed changes
 
 * Docker Desktop
 * Docker Compose
@@ -129,7 +132,7 @@ This starts the backend API, frontend UI, vector database, and the persistent ap
 4. 🎨 **Frontend** starts (React UI)
 5. ⚙️ **Database migrations** run automatically
 6. 🌱 **Demo data is seeded** (optional, see Step 5)
->>>>>>> Stashed changes
+   > > > > > > > Stashed changes
 
 Check container status:
 
@@ -147,18 +150,18 @@ Populate the system with sample providers, appointments, and RAG documents:
 docker-compose exec backend python scripts/seed_demo_data.py
 ```
 
-<<<<<<< Updated upstream
----
+## <<<<<<< Updated upstream
 
 ### 5. Access Local Services
 
-* **Frontend UI:** [http://localhost:5173](http://localhost:5173)
-* **API Documentation (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
-* **Health Check:** [http://localhost:8000/healthz](http://localhost:8000/healthz)
+- **Frontend UI:** [http://localhost:5173](http://localhost:5173)
+- **API Documentation (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health Check:** [http://localhost:8000/healthz](http://localhost:8000/healthz)
 
 ---
 
 ### 6. Stop the Application
+
 =======
 **This will create:**
 
@@ -198,7 +201,7 @@ Use the demo credentials:
 | Role        | Email             | Password    |
 | ----------- | ----------------- | ----------- |
 | **Patient** | patient@gmail.com | password123 |
-| **Admin**   | admin@admin.com   | Admin@123   |
+| **Admin**   | admin@admin.com   | password123 |
 
 ---
 
@@ -219,7 +222,7 @@ Use the demo credentials:
 
 ### Test the Admin Panel
 
-1. Logout and login as admin (`admin@admin.com` / `Admin@123`)
+1. Logout and login as admin (`admin@admin.com` / `password123`)
 2. Go to **Admin** → **Doctors** to manage providers
 3. Go to **Admin** → **Appointments** to manage bookings
 4. Go to **Admin** → **Statistics** to view metrics
@@ -227,7 +230,8 @@ Use the demo credentials:
 ---
 
 ## 🛑 Stop the Application
->>>>>>> Stashed changes
+
+> > > > > > > Stashed changes
 
 ```bash
 docker-compose down
@@ -242,9 +246,10 @@ docker-compose down -v
 ---
 
 <<<<<<< Updated upstream
+
 ## Project Structure (High-Level)
 
-```
+````
 careconnect/
 ├── backend/        # FastAPI backend and agent logic
 ├── frontend/       # React frontend
@@ -264,7 +269,7 @@ docker-compose restart backend
 
 # Restart only the frontend
 docker-compose restart frontend
-```
+````
 
 ### View Logs
 
@@ -500,6 +505,7 @@ docker-compose exec backend python scripts/seed_demo_data.py
 <<<<<<< Updated upstream
 CareConnect is designed as a research-grade and production-oriented reference implementation for agentic AI systems applied to healthcare logistics, emphasizing safety, determinism, and extensibility.
 =======
+
 ### Manual Testing with the API
 
 Visit http://localhost:8000/docs to access the interactive API documentation (Swagger UI).
@@ -660,4 +666,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 **Built with ❤️ for healthcare accessibility**
 
 **Stack:** React 18 • FastAPI • OpenAI GPT-4 • ChromaDB • PostgreSQL • Docker
->>>>>>> Stashed changes
+
+> > > > > > > Stashed changes

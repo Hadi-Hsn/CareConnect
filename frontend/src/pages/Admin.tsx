@@ -1407,7 +1407,9 @@ export default function AdminPage() {
             This action will:
             <Box component="ul" sx={{ mt: 1.5, pl: 2 }}>
               <li>Delete all existing patients, appointments, and providers</li>
-              <li>Preserve the admin account (admin@admin.com / Admin@123)</li>
+              <li>
+                Preserve the admin account (admin@admin.com / password123)
+              </li>
               <li>Create 30 demo patient accounts</li>
               <li>Create 3+ doctors per department</li>
               <li>Create 22 lab tests</li>

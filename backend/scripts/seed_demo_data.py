@@ -168,7 +168,9 @@ async def seed_users():
                         country_code=user_data["country_code"],
                         role=user_data["role"],
                         hashed_password=get_password_hash(
-                            "password123" if user_data["role"] == UserRole.PATIENT else "Admin@123"
+                            "password123"
+                            if user_data["role"] == UserRole.PATIENT
+                            else "password123"
                         ),
                     )
                 )
@@ -1700,7 +1702,7 @@ async def main():
     print()
     print("Demo credentials:")
     print("  Patient: patient@gmail.com / password123")
-    print("  Admin:   admin@admin.com / Admin@123")
+    print("  Admin:   admin@admin.com / password123")
 
 
 if __name__ == "__main__":

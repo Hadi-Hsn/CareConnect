@@ -240,7 +240,7 @@ async def main():
         print("\nYour CareConnect instance is fully seeded and ready to use! 🎉")
         print("\n📋 Demo Credentials:")
         print("   Patient: hadihacan@gmail.com / password123")
-        print("   Admin:   admin@admin.com / Admin@123")
+        print("   Admin:   admin@admin.com / password123")
         return True
     else:
         print(f"⚠️  {passed}/{total} checks passed")

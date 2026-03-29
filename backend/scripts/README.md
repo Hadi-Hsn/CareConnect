@@ -12,7 +12,7 @@ Comprehensive database population script that creates a full demo environment.
 
 **What it does:**
 
-- Ensures admin user exists with credentials: `admin@admin.com` / `Admin@123`
+- Ensures admin user exists with credentials: `admin@admin.com` / `password123`
 - Clears existing demo data (preserves admin account)
 - Creates 30 patient accounts with realistic names, emails, and phone numbers
 - Creates 3+ providers (doctors) per department across all specialties
@@ -35,7 +35,7 @@ python scripts/populate_demo_database.py
 
 Or trigger via Admin Portal:
 
-1. Log in as admin (admin@admin.com / Admin@123)
+1. Log in as admin (admin@admin.com / password123)
 2. Navigate to Admin Dashboard
 3. Click "Populate Database" button
 4. Confirm the action
@@ -91,7 +91,7 @@ Or trigger via Admin Portal:
 After running any population script, you can always log in as admin:
 
 - **Email:** admin@admin.com
-- **Password:** Admin@123
+- **Password:** password123
 
 ## Notes
 

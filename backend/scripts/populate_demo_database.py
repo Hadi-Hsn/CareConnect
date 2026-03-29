@@ -263,7 +263,7 @@ async def ensure_admin_user():
 
         if admin:
             # Update password to ensure it matches
-            admin.hashed_password = get_password_hash("Admin@123")
+            admin.hashed_password = get_password_hash("password123")
             admin.name = "Admin User"
             admin.role = UserRole.ADMIN
         else:
@@ -272,12 +272,12 @@ async def ensure_admin_user():
                 email="admin@admin.com",
                 name="Admin User",
                 role=UserRole.ADMIN,
-                hashed_password=get_password_hash("Admin@123"),
+                hashed_password=get_password_hash("password123"),
             )
             session.add(admin)
 
         await session.commit()
-        print("✓ Admin user ensured (admin@admin.com / Admin@123)")
+        print("✓ Admin user ensured (admin@admin.com / password123)")
 
 
 async def seed_patients():
@@ -1159,7 +1159,7 @@ async def populate_database():
     print("✅ Database population completed successfully!")
     print()
     print(f"Summary:")
-    print(f"  - 1 Admin user (admin@admin.com / Admin@123)")
+    print(f"  - 1 Admin user (admin@admin.com / password123)")
     print(f"  - {len(patients)} Patient accounts (password: patient123)")
     print(f"    • Hadi Hasan (hadihacan@gmail.com)")
     print(f"    • 30 demo patients")
@@ -1170,7 +1170,7 @@ async def populate_database():
     print(f"  - PDF profiles generated for all providers and indexed in RAG")
     print()
     print("🔑 Login credentials:")
-    print(f"  Admin: admin@admin.com / Admin@123")
+    print(f"  Admin: admin@admin.com / password123")
     print(f"  Patient (Hadi): hadihacan@gmail.com / patient123")
     print()
 

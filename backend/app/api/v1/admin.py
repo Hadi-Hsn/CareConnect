@@ -974,7 +974,7 @@ async def populate_database(
     Populate database with comprehensive demo data.
 
     **Admin only.** This will:
-    - Ensure admin@admin.com exists with password Admin@123
+    - Ensure admin@admin.com exists with password password123
     - Clear existing demo data (except admin)
     - Create 30 patient accounts
     - Create 3+ providers per department
@@ -1022,7 +1022,7 @@ async def populate_database(
             "message": "Database populated successfully with demo data",
             "details": {
                 "admin_email": "admin@admin.com",
-                "admin_password": "Admin@123",
+                "admin_password": "password123",
                 "patients_created": 30,
                 "providers_created": "3+ per department",
                 "lab_tests_created": 22,
