@@ -1,6 +1,7 @@
 """Mock scheduling client for development."""
+
 import secrets
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 from typing import Any
 
@@ -15,7 +16,7 @@ from app.services.scheduling_client import SchedulingClient
 
 logger = get_logger(__name__)
 
-# Lebanon timezone
+# Lebanon timezone (facility working hours)
 LEBANON_TZ = ZoneInfo("Asia/Beirut")
 
 
@@ -40,7 +41,7 @@ class MockSchedulingClient(SchedulingClient):
         filter_past: bool = True,
     ) -> list[TimeSlot]:
         """Generate timeslots for a given date.
-        
+
         Args:
             provider_id: Provider the slots belong to (embedded in slot_id for validation)
             target_date: The date to generate slots for
@@ -49,7 +50,7 @@ class MockSchedulingClient(SchedulingClient):
         slots: list[TimeSlot] = []
         current_time = datetime.combine(target_date, time(hour=self.start_hour), tzinfo=LEBANON_TZ)
         end_time = datetime.combine(target_date, time(hour=self.end_hour), tzinfo=LEBANON_TZ)
-        
+
         # Get current time in Lebanon timezone for filtering
         now_lebanon = datetime.now(LEBANON_TZ)
         is_today = target_date == now_lebanon.date()
@@ -57,13 +58,13 @@ class MockSchedulingClient(SchedulingClient):
         slot_id = 1
         while current_time < end_time:
             slot_end = current_time + timedelta(minutes=self.slot_duration_minutes)
-            
+
             # Skip past slots if this is today and filter_past is True
             if filter_past and is_today and slot_end <= now_lebanon:
                 current_time = slot_end
                 slot_id += 1
                 continue
-            
+
             slots.append(
                 TimeSlot(
                     slot_id=f"slot_{provider_id}_{target_date.isoformat()}_{slot_id}",
@@ -163,9 +164,7 @@ class MockSchedulingClient(SchedulingClient):
             slot_provider_id = int(slot_provider_id_str)
 
             if slot_provider_id != provider_id:
-                raise ValueError(
-                    f"Slot {slot_id} does not belong to provider {provider_id}"
-                )
+                raise ValueError(f"Slot {slot_id} does not belong to provider {provider_id}")
 
             slot_number = int(slot_number_str)
 
@@ -184,7 +183,7 @@ class MockSchedulingClient(SchedulingClient):
                 # Check if this slot is already booked
                 start_of_day = datetime.combine(target_date, time.min, tzinfo=LEBANON_TZ)
                 end_of_day = datetime.combine(target_date, time.max, tzinfo=LEBANON_TZ)
-                
+
                 result = await session.execute(
                     select(Appointment).where(
                         Appointment.provider_id == provider_id,
@@ -194,7 +193,7 @@ class MockSchedulingClient(SchedulingClient):
                     )
                 )
                 existing_appointment = result.scalar_one_or_none()
-                
+
                 if existing_appointment:
                     logger.warning(
                         "slot_already_booked",
@@ -238,7 +237,11 @@ class MockSchedulingClient(SchedulingClient):
                     "confirmation_code": confirmation_code,
                     "time_start": appointment.time_start.isoformat(),
                     "time_end": appointment.time_end.isoformat(),
-                    "status": str(appointment.status) if hasattr(appointment.status, 'value') else appointment.status,
+                    "status": (
+                        str(appointment.status)
+                        if hasattr(appointment.status, "value")
+                        else appointment.status
+                    ),
                 }
 
         except Exception as e:
@@ -284,7 +287,7 @@ class MockSchedulingClient(SchedulingClient):
 
                 appointment.time_start = selected_slot.start
                 appointment.time_end = selected_slot.end
-                appointment.updated_at = datetime.now(LEBANON_TZ)
+                appointment.updated_at = datetime.now(timezone.utc)
 
                 await session.commit()
                 await session.refresh(appointment)
@@ -295,7 +298,11 @@ class MockSchedulingClient(SchedulingClient):
                     "appointment_id": appointment.id,
                     "time_start": appointment.time_start.isoformat(),
                     "time_end": appointment.time_end.isoformat(),
-                    "status": str(appointment.status) if hasattr(appointment.status, 'value') else appointment.status,
+                    "status": (
+                        str(appointment.status)
+                        if hasattr(appointment.status, "value")
+                        else appointment.status
+                    ),
                 }
 
         except Exception as e:
@@ -325,7 +332,7 @@ class MockSchedulingClient(SchedulingClient):
                 cancelled_confirmation = appointment.confirmation_code
 
                 appointment.status = AppointmentStatus.CANCELLED
-                appointment.updated_at = datetime.now(LEBANON_TZ)
+                appointment.updated_at = datetime.now(timezone.utc)
 
                 await session.commit()
 
@@ -333,15 +340,19 @@ class MockSchedulingClient(SchedulingClient):
 
                 return {
                     "appointment_id": appointment.id,
-                    "status": str(appointment.status) if hasattr(appointment.status, 'value') else appointment.status,
+                    "status": (
+                        str(appointment.status)
+                        if hasattr(appointment.status, "value")
+                        else appointment.status
+                    ),
                     "cancelled_appointment": {
                         "reason": cancelled_reason,
                         "provider_name": provider.name,
                         "department": provider.department,
-                        "date_time": cancelled_time.strftime("%B %d, %Y at %I:%M %p"),
+                        "date_time": cancelled_time.isoformat(),
                         "confirmation_code": cancelled_confirmation,
                     },
-                    "message": f"Successfully cancelled: {cancelled_reason} on {cancelled_time.strftime('%B %d, %Y at %I:%M %p')}",
+                    "message": f"Successfully cancelled: {cancelled_reason} on {cancelled_time.isoformat()}",
                 }
 
         except Exception as e:

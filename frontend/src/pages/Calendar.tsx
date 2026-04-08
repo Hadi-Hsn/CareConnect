@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Box,
   Typography,
@@ -15,7 +15,7 @@ import {
   Fade,
   Tooltip,
   CircularProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
@@ -25,7 +25,7 @@ import {
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   Event as EventIcon,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 import {
   format,
   startOfMonth,
@@ -38,24 +38,50 @@ import {
   isSameMonth,
   isToday,
   parseISO,
-} from 'date-fns';
-import { api } from '@/lib/api';
+} from "date-fns";
+import { api } from "@/lib/api";
 
 // Status configuration
-const statusConfig: { [key: string]: { color: string; bgColor: string; icon: React.ReactElement; label: string } } = {
-  confirmed: { color: '#2e7d32', bgColor: '#e8f5e9', icon: <CheckIcon fontSize="small" />, label: 'Confirmed' },
-  cancelled: { color: '#d32f2f', bgColor: '#ffebee', icon: <CancelIcon fontSize="small" />, label: 'Cancelled' },
-  completed: { color: '#1976d2', bgColor: '#e3f2fd', icon: <CheckIcon fontSize="small" />, label: 'Completed' },
-  no_show: { color: '#757575', bgColor: '#f5f5f5', icon: <CancelIcon fontSize="small" />, label: 'No Show' },
+const statusConfig: {
+  [key: string]: {
+    color: string;
+    bgColor: string;
+    icon: React.ReactElement;
+    label: string;
+  };
+} = {
+  confirmed: {
+    color: "#2e7d32",
+    bgColor: "#e8f5e9",
+    icon: <CheckIcon fontSize="small" />,
+    label: "Confirmed",
+  },
+  cancelled: {
+    color: "#d32f2f",
+    bgColor: "#ffebee",
+    icon: <CancelIcon fontSize="small" />,
+    label: "Cancelled",
+  },
+  completed: {
+    color: "#1976d2",
+    bgColor: "#e3f2fd",
+    icon: <CheckIcon fontSize="small" />,
+    label: "Completed",
+  },
+  no_show: {
+    color: "#757575",
+    bgColor: "#f5f5f5",
+    icon: <CancelIcon fontSize="small" />,
+    label: "No Show",
+  },
 };
 
-// Helper function to format time in Lebanon timezone
-const formatLebanonTime = (dateString: string) => {
+// Helper function to format time in user's local timezone
+const formatLocalTime = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('en-US', {
-    timeZone: 'Asia/Beirut',
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: true,
   });
 };
@@ -85,32 +111,34 @@ function AppointmentDetailDialog({
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
       <DialogTitle sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ bgcolor: alpha('#840132', 0.1), color: '#840132' }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Avatar sx={{ bgcolor: alpha("#840132", 0.1), color: "#840132" }}>
             <EventIcon />
           </Avatar>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+              {format(selectedDate, "EEEE, MMMM d, yyyy")}
             </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
+              {appointments.length} appointment
+              {appointments.length !== 1 ? "s" : ""}
             </Typography>
           </Box>
         </Box>
       </DialogTitle>
       <DialogContent>
         {appointments.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <EventIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <EventIcon sx={{ fontSize: 48, color: "text.disabled", mb: 2 }} />
+            <Typography variant="body1" sx={{ color: "text.secondary" }}>
               No appointments on this day
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             {appointments.map((appt: any, index: number) => {
-              const status = statusConfig[appt.status] || statusConfig.confirmed;
+              const status =
+                statusConfig[appt.status] || statusConfig.confirmed;
               return (
                 <Fade in key={appt.id} timeout={300 + index * 100}>
                   <Paper
@@ -118,25 +146,54 @@ function AppointmentDetailDialog({
                     sx={{
                       p: 2.5,
                       borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'divider',
+                      border: "1px solid",
+                      borderColor: "divider",
                       borderLeft: `4px solid ${status.color}`,
                     }}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Avatar sx={{ width: 40, height: 40, bgcolor: alpha('#840132', 0.1), color: '#840132' }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        mb: 1.5,
+                      }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1.5 }}
+                      >
+                        <Avatar
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: alpha("#840132", 0.1),
+                            color: "#840132",
+                          }}
+                        >
                           <MedicalIcon fontSize="small" />
                         </Avatar>
                         <Box>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{ fontWeight: 700 }}
+                          >
                             {appt.provider_name}
                           </Typography>
-                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ color: "text.secondary" }}
+                          >
                             {appt.provider_department}
                           </Typography>
                           {isAdmin && appt.user_name && (
-                            <Typography variant="body2" sx={{ color: '#840132', fontWeight: 600, mt: 0.5 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: "#840132",
+                                fontWeight: 600,
+                                mt: 0.5,
+                              }}
+                            >
                               Patient: {appt.user_name}
                             </Typography>
                           )}
@@ -150,19 +207,33 @@ function AppointmentDetailDialog({
                           bgcolor: status.bgColor,
                           color: status.color,
                           fontWeight: 600,
-                          '& .MuiChip-icon': { color: status.color },
+                          "& .MuiChip-icon": { color: status.color },
                         }}
                       />
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mt: 2 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TimeIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 3,
+                        mt: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <TimeIcon
+                          sx={{ fontSize: 18, color: "text.secondary" }}
+                        />
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {formatLebanonTime(appt.time_start)}
+                          {formatLocalTime(appt.time_start)}
                         </Typography>
                       </Box>
                       {appt.reason && (
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: "text.secondary" }}
+                        >
                           {appt.reason}
                         </Typography>
                       )}
@@ -172,7 +243,7 @@ function AppointmentDetailDialog({
                         label={`Code: ${appt.confirmation_code}`}
                         size="small"
                         variant="outlined"
-                        sx={{ mt: 1.5, fontFamily: 'monospace' }}
+                        sx={{ mt: 1.5, fontFamily: "monospace" }}
                       />
                     )}
                   </Paper>
@@ -188,23 +259,27 @@ function AppointmentDetailDialog({
 
 export default function CalendarPage() {
   const currentUser = api.getCurrentUser();
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'staff';
-  
+  const isAdmin =
+    currentUser?.role === "admin" || currentUser?.role === "staff";
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Fetch appointments
   const { data: appointments, isLoading } = useQuery({
-    queryKey: ['appointments', isAdmin],
-    queryFn: () => isAdmin ? api.getAppointments() : api.getAppointments({ user_id: currentUser?.id }),
+    queryKey: ["appointments", isAdmin],
+    queryFn: () =>
+      isAdmin
+        ? api.getAppointments()
+        : api.getAppointments({ user_id: currentUser?.id }),
   });
 
   // Group appointments by date
   const appointmentsByDate = useMemo(() => {
     const grouped: { [key: string]: any[] } = {};
     appointments?.forEach((appt: any) => {
-      const dateKey = format(parseISO(appt.time_start), 'yyyy-MM-dd');
+      const dateKey = format(parseISO(appt.time_start), "yyyy-MM-dd");
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
       }
@@ -241,35 +316,42 @@ export default function CalendarPage() {
   };
 
   const getAppointmentsForDate = (date: Date) => {
-    const dateKey = format(date, 'yyyy-MM-dd');
+    const dateKey = format(date, "yyyy-MM-dd");
     return appointmentsByDate[dateKey] || [];
   };
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <CircularProgress sx={{ color: '#840132' }} />
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: 400,
+        }}
+      >
+        <CircularProgress sx={{ color: "#840132" }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 1200, mx: "auto" }}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography
           variant="h4"
           sx={{
             fontWeight: 800,
-            background: 'linear-gradient(135deg, #840132 0%, #5e0124 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            background: "linear-gradient(135deg, #840132 0%, #5e0124 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
             mb: 1,
           }}
         >
           Appointment Calendar
         </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+        <Typography variant="body1" sx={{ color: "text.secondary" }}>
           View your scheduled appointments at a glance
         </Typography>
       </Box>
@@ -279,81 +361,93 @@ export default function CalendarPage() {
         elevation={0}
         sx={{
           borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          overflow: 'hidden',
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
         }}
       >
         {/* Calendar Header */}
         <Box
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             px: 3,
             py: 2.5,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            bgcolor: '#fafbfc',
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            bgcolor: "#fafbfc",
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton 
-              onClick={handlePrevMonth} 
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <IconButton
+              onClick={handlePrevMonth}
               size="small"
-              sx={{ 
-                color: 'text.secondary',
-                border: '1px solid',
-                borderColor: 'divider',
-                '&:hover': { bgcolor: alpha('#840132', 0.05), borderColor: '#840132', color: '#840132' },
+              sx={{
+                color: "text.secondary",
+                border: "1px solid",
+                borderColor: "divider",
+                "&:hover": {
+                  bgcolor: alpha("#840132", 0.05),
+                  borderColor: "#840132",
+                  color: "#840132",
+                },
               }}
             >
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
-            <IconButton 
-              onClick={handleNextMonth} 
+            <IconButton
+              onClick={handleNextMonth}
               size="small"
-              sx={{ 
-                color: 'text.secondary',
-                border: '1px solid',
-                borderColor: 'divider',
-                '&:hover': { bgcolor: alpha('#840132', 0.05), borderColor: '#840132', color: '#840132' },
+              sx={{
+                color: "text.secondary",
+                border: "1px solid",
+                borderColor: "divider",
+                "&:hover": {
+                  bgcolor: alpha("#840132", 0.05),
+                  borderColor: "#840132",
+                  color: "#840132",
+                },
               }}
             >
               <ChevronRightIcon fontSize="small" />
             </IconButton>
           </Box>
-          
-          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5 }}>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                fontWeight: 700, 
-                color: '#840132',
+
+          <Box sx={{ display: "flex", alignItems: "baseline", gap: 1.5 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "#840132",
               }}
             >
-              {format(currentMonth, 'MMMM')}
+              {format(currentMonth, "MMMM")}
             </Typography>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 400, 
-                color: 'text.secondary',
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 400,
+                color: "text.secondary",
               }}
             >
-              {format(currentMonth, 'yyyy')}
+              {format(currentMonth, "yyyy")}
             </Typography>
           </Box>
 
           <Tooltip title="Go to today">
-            <IconButton 
-              onClick={handleToday} 
+            <IconButton
+              onClick={handleToday}
               size="small"
-              sx={{ 
-                color: 'text.secondary',
-                border: '1px solid',
-                borderColor: 'divider',
-                '&:hover': { bgcolor: alpha('#840132', 0.05), borderColor: '#840132', color: '#840132' },
+              sx={{
+                color: "text.secondary",
+                border: "1px solid",
+                borderColor: "divider",
+                "&:hover": {
+                  bgcolor: alpha("#840132", 0.05),
+                  borderColor: "#840132",
+                  color: "#840132",
+                },
               }}
             >
               <TodayIcon fontSize="small" />
@@ -362,11 +456,26 @@ export default function CalendarPage() {
         </Box>
 
         {/* Day Headers */}
-        <Grid container sx={{ bgcolor: '#f8f9fa', borderBottom: '1px solid', borderColor: 'divider' }}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+        <Grid
+          container
+          sx={{
+            bgcolor: "#f8f9fa",
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <Grid item xs={12 / 7} key={day}>
-              <Box sx={{ py: 1.5, textAlign: 'center' }}>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+              <Box sx={{ py: 1.5, textAlign: "center" }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 700,
+                    color: "text.secondary",
+                    textTransform: "uppercase",
+                    fontSize: "0.75rem",
+                  }}
+                >
                   {day}
                 </Typography>
               </Box>
@@ -388,9 +497,9 @@ export default function CalendarPage() {
                 xs={12 / 7}
                 key={index}
                 sx={{
-                  borderBottom: '1px solid',
-                  borderRight: (index + 1) % 7 !== 0 ? '1px solid' : 'none',
-                  borderColor: 'divider',
+                  borderBottom: "1px solid",
+                  borderRight: (index + 1) % 7 !== 0 ? "1px solid" : "none",
+                  borderColor: "divider",
                 }}
               >
                 <Box
@@ -398,36 +507,51 @@ export default function CalendarPage() {
                   sx={{
                     minHeight: 100,
                     p: 1,
-                    cursor: 'pointer',
-                    bgcolor: isCurrentDay ? alpha('#840132', 0.05) : 'transparent',
+                    cursor: "pointer",
+                    bgcolor: isCurrentDay
+                      ? alpha("#840132", 0.05)
+                      : "transparent",
                     opacity: isCurrentMonth ? 1 : 0.4,
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      bgcolor: alpha('#840132', 0.08),
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      bgcolor: alpha("#840132", 0.08),
                     },
                   }}
                 >
                   {/* Day Number */}
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      mb: 0.5,
+                    }}
+                  >
                     <Avatar
                       sx={{
                         width: 28,
                         height: 28,
-                        fontSize: '0.875rem',
+                        fontSize: "0.875rem",
                         fontWeight: isCurrentDay ? 700 : 500,
-                        bgcolor: isCurrentDay ? '#840132' : 'transparent',
-                        color: isCurrentDay ? 'white' : 'text.primary',
+                        bgcolor: isCurrentDay ? "#840132" : "transparent",
+                        color: isCurrentDay ? "white" : "text.primary",
                       }}
                     >
-                      {format(day, 'd')}
+                      {format(day, "d")}
                     </Avatar>
                   </Box>
 
                   {/* Appointment Indicators */}
                   {hasAppointments && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.5,
+                      }}
+                    >
                       {dayAppointments.slice(0, 2).map((appt: any) => {
-                        const status = statusConfig[appt.status] || statusConfig.confirmed;
+                        const status =
+                          statusConfig[appt.status] || statusConfig.confirmed;
                         return (
                           <Box
                             key={appt.id}
@@ -444,27 +568,30 @@ export default function CalendarPage() {
                               sx={{
                                 fontWeight: 600,
                                 color: status.color,
-                                display: 'block',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                fontSize: '0.7rem',
+                                display: "block",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                fontSize: "0.7rem",
                               }}
                             >
-                              {formatLebanonTime(appt.time_start)}
+                              {formatLocalTime(appt.time_start)}
                             </Typography>
                             <Typography
                               variant="caption"
                               sx={{
-                                color: 'text.secondary',
-                                display: 'block',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                fontSize: '0.65rem',
+                                color: "text.secondary",
+                                display: "block",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                fontSize: "0.65rem",
                               }}
                             >
-                              {appt.provider_name?.split(' ').slice(0, 2).join(' ')}
+                              {appt.provider_name
+                                ?.split(" ")
+                                .slice(0, 2)
+                                .join(" ")}
                             </Typography>
                           </Box>
                         );
@@ -473,10 +600,10 @@ export default function CalendarPage() {
                         <Typography
                           variant="caption"
                           sx={{
-                            color: '#840132',
+                            color: "#840132",
                             fontWeight: 600,
                             pl: 1,
-                            fontSize: '0.7rem',
+                            fontSize: "0.7rem",
                           }}
                         >
                           +{dayAppointments.length - 2} more
@@ -493,41 +620,72 @@ export default function CalendarPage() {
         {/* Legend */}
         <Box
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             gap: 3,
             p: 2,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            bgcolor: '#f8f9fa',
+            borderTop: "1px solid",
+            borderColor: "divider",
+            bgcolor: "#f8f9fa",
           }}
         >
-          {Object.entries(statusConfig).slice(0, 4).map(([key, value]) => (
-            <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {Object.entries(statusConfig)
+            .slice(0, 4)
+            .map(([key, value]) => (
               <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  bgcolor: value.color,
-                }}
-              />
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                {value.label}
-              </Typography>
-            </Box>
-          ))}
+                key={key}
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: "50%",
+                    bgcolor: value.color,
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{ color: "text.secondary", fontWeight: 500 }}
+                >
+                  {value.label}
+                </Typography>
+              </Box>
+            ))}
         </Box>
       </Paper>
 
       {/* Summary Stats */}
       <Grid container spacing={2} sx={{ mt: 3 }}>
         {[
-          { label: 'Total Appointments', value: appointments?.length || 0, color: '#840132' },
-          { label: 'Confirmed', value: appointments?.filter((a: any) => a.status === 'confirmed').length || 0, color: '#2e7d32' },
-          { label: 'Completed', value: appointments?.filter((a: any) => a.status === 'completed').length || 0, color: '#ed6c02' },
-          { label: 'This Month', value: appointments?.filter((a: any) => isSameMonth(parseISO(a.time_start), currentMonth)).length || 0, color: '#1976d2' },
+          {
+            label: "Total Appointments",
+            value: appointments?.length || 0,
+            color: "#840132",
+          },
+          {
+            label: "Confirmed",
+            value:
+              appointments?.filter((a: any) => a.status === "confirmed")
+                .length || 0,
+            color: "#2e7d32",
+          },
+          {
+            label: "Completed",
+            value:
+              appointments?.filter((a: any) => a.status === "completed")
+                .length || 0,
+            color: "#ed6c02",
+          },
+          {
+            label: "This Month",
+            value:
+              appointments?.filter((a: any) =>
+                isSameMonth(parseISO(a.time_start), currentMonth),
+              ).length || 0,
+            color: "#1976d2",
+          },
         ].map((stat) => (
           <Grid item xs={6} md={3} key={stat.label}>
             <Paper
@@ -535,12 +693,12 @@ export default function CalendarPage() {
               sx={{
                 p: 2,
                 borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                display: 'flex',
-                alignItems: 'center',
+                border: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                alignItems: "center",
                 gap: 2,
-                bgcolor: '#fff',
+                bgcolor: "#fff",
               }}
             >
               <Box
@@ -549,16 +707,22 @@ export default function CalendarPage() {
                   height: 44,
                   borderRadius: 1.5,
                   bgcolor: alpha(stat.color, 0.08),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 700, color: stat.color }}>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 700, color: stat.color }}
+                >
                   {stat.value}
                 </Typography>
               </Box>
-              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", fontWeight: 500 }}
+              >
                 {stat.label}
               </Typography>
             </Paper>

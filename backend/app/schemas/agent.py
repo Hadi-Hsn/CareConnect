@@ -1,4 +1,5 @@
 """Agent and chat schemas."""
+
 from datetime import datetime
 from typing import Any
 
@@ -37,6 +38,7 @@ class ChatRequest(BaseModel):
     user_id: int | None = None
     stream: bool = False
     voice_mode: bool = False  # Enable phone-call style short responses
+    timezone: str | None = None  # IANA timezone e.g. 'America/New_York', 'Asia/Beirut'
 
 
 class ChatResponse(BaseModel):

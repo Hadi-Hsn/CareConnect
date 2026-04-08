@@ -1,4 +1,5 @@
 """Agent chat endpoint."""
+
 import time
 import uuid
 
@@ -16,16 +17,13 @@ logger = get_logger(__name__)
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(
-    chat_request: ChatRequest,
-    db: AsyncSession = Depends(get_db)
-) -> ChatResponse:
+async def chat(chat_request: ChatRequest, db: AsyncSession = Depends(get_db)) -> ChatResponse:
     """
     Process a chat turn with the agent.
 
     This endpoint uses OpenAI's function calling to orchestrate booking flows
     and information retrieval.
-    
+
     Supports voice_mode parameter for phone-call-style short responses.
     """
     if not chat_request.messages:
@@ -34,12 +32,16 @@ async def chat(
     start_time = time.perf_counter()
 
     try:
-        logger.info("chat_request_received", 
-                   user_id=chat_request.user_id, 
-                   message_count=len(chat_request.messages),
-                   voice_mode=chat_request.voice_mode)
-        
-        agent = AgentRouter(db, voice_mode=chat_request.voice_mode)
+        logger.info(
+            "chat_request_received",
+            user_id=chat_request.user_id,
+            message_count=len(chat_request.messages),
+            voice_mode=chat_request.voice_mode,
+        )
+
+        agent = AgentRouter(
+            db, voice_mode=chat_request.voice_mode, user_timezone=chat_request.timezone
+        )
         message, tool_calls, tool_results, usage = await agent.chat_turn(
             chat_request.messages, chat_request.user_id
         )
@@ -51,15 +53,17 @@ async def chat(
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
-        logger.info("chat_response_successful",
-                   message_content_length=len(message.content),
-                   tool_calls_count=len(tool_calls),
-                   latency_ms=elapsed_ms)
+        logger.info(
+            "chat_response_successful",
+            message_content_length=len(message.content),
+            tool_calls_count=len(tool_calls),
+            latency_ms=elapsed_ms,
+        )
 
         # Track cost
         task_id = str(uuid.uuid4())
         task_type = "chat"
-        
+
         # Determine task type based on tools used
         if tool_calls:
             tool_names = [tc.name for tc in tool_calls]
@@ -71,7 +75,7 @@ async def chat(
                 task_type = "modification"
             elif "rag_lookup" in tool_names:
                 task_type = "information"
-        
+
         cost_tracker.log_completion(
             task_id=task_id,
             task_type=task_type,
@@ -80,7 +84,7 @@ async def chat(
             success=True,
             latency_ms=elapsed_ms,
             model="gpt-4o",
-            user_id=chat_request.user_id
+            user_id=chat_request.user_id,
         )
 
         return ChatResponse(
@@ -94,11 +98,11 @@ async def chat(
 
     except Exception as e:
         import traceback
+
         error_details = traceback.format_exc()
-        logger.error("chat_error", 
-                    error=str(e), 
-                    error_type=type(e).__name__,
-                    traceback=error_details)
+        logger.error(
+            "chat_error", error=str(e), error_type=type(e).__name__, traceback=error_details
+        )
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
 
 

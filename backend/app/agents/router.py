@@ -28,14 +28,16 @@ from app.services.scheduling_client import SchedulingClient
 logger = get_logger(__name__)
 settings = get_settings()
 
-# Lebanon timezone
-LEBANON_TZ = ZoneInfo("Asia/Beirut")
+# Default facility timezone (Lebanon)
+FACILITY_TZ = ZoneInfo("Asia/Beirut")
 
 
 class AgentRouter:
     """Agent router using OpenAI function calling."""
 
-    def __init__(self, db: AsyncSession, voice_mode: bool = False) -> None:
+    def __init__(
+        self, db: AsyncSession, voice_mode: bool = False, user_timezone: str | None = None
+    ) -> None:
         """Initialize agent router."""
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.db = db
@@ -43,6 +45,12 @@ class AgentRouter:
         self.rag_service = RAGService()
         self.email_service = EmailService()
         self.intent_classifier = IntentClassifier()
+
+        # Resolve user timezone, fallback to facility timezone
+        try:
+            self.user_tz = ZoneInfo(user_timezone) if user_timezone else FACILITY_TZ
+        except (KeyError, Exception):
+            self.user_tz = FACILITY_TZ
 
         # Use mock scheduling client for development
         if settings.mock_scheduling:
@@ -70,15 +78,17 @@ class AgentRouter:
         """
         start_time = time.perf_counter()
 
-        # Get current date and time for Lebanon timezone
-        lebanon_now = datetime.now(LEBANON_TZ)
-        current_date = lebanon_now.strftime("%Y-%m-%d")
-        current_time = lebanon_now.strftime("%I:%M %p")  # e.g., "08:10 PM"
+        # Get current date and time in user's timezone
+        user_now = datetime.now(self.user_tz)
+        current_date = user_now.strftime("%Y-%m-%d")
+        current_time = user_now.strftime("%I:%M %p")  # e.g., "08:10 PM"
+        user_tz_name = str(self.user_tz)
 
         # Build system prompt with voice mode instruction if enabled
         system_prompt = SYSTEM_PROMPT.format(
             current_date=current_date,
             current_time=current_time,
+            user_timezone=user_tz_name,
             user_id=user_id if user_id else "Not authenticated",
         )
 
@@ -497,16 +507,16 @@ class AgentRouter:
                                                 for slot in slots:
                                                     slot_start = slot.get("start", "")
                                                     if slot_start:
-                                                        # Parse ISO format time and convert to Lebanon timezone
+                                                        # Parse ISO format time and convert to user's timezone
                                                         slot_dt = datetime.fromisoformat(
                                                             slot_start.replace("Z", "+00:00")
                                                         )
-                                                        # Convert to Lebanon time for comparison
-                                                        slot_dt_lebanon = slot_dt.astimezone(
-                                                            LEBANON_TZ
+                                                        # Convert to user's timezone for comparison
+                                                        slot_dt_local = slot_dt.astimezone(
+                                                            self.user_tz
                                                         )
-                                                        slot_hour = slot_dt_lebanon.hour
-                                                        slot_minute = slot_dt_lebanon.minute
+                                                        slot_hour = slot_dt_local.hour
+                                                        slot_minute = slot_dt_local.minute
 
                                                         # Match if hour matches (allow some flexibility for minutes)
                                                         if (
@@ -547,14 +557,14 @@ class AgentRouter:
                                             for slot in slots:
                                                 slot_start = slot.get("start", "")
                                                 if slot_start:
-                                                    # Parse ISO format time and convert to Lebanon timezone
+                                                    # Parse ISO format time and convert to user's timezone
                                                     slot_dt = datetime.fromisoformat(
                                                         slot_start.replace("Z", "+00:00")
                                                     )
-                                                    # Convert to Lebanon time for comparison
-                                                    slot_dt_lebanon = slot_dt.astimezone(LEBANON_TZ)
-                                                    slot_hour = slot_dt_lebanon.hour
-                                                    slot_minute = slot_dt_lebanon.minute
+                                                    # Convert to user's timezone for comparison
+                                                    slot_dt_local = slot_dt.astimezone(self.user_tz)
+                                                    slot_hour = slot_dt_local.hour
+                                                    slot_minute = slot_dt_local.minute
 
                                                     # Match if hour matches (allow some flexibility for minutes)
                                                     if (
@@ -807,6 +817,14 @@ class AgentRouter:
         from datetime import datetime
 
         target_date = datetime.strptime(date, "%Y-%m-%d").date()
+
+        # Reject past dates (based on facility timezone where slots operate)
+        facility_today = datetime.now(FACILITY_TZ).date()
+        if target_date < facility_today:
+            return {
+                "error": f"Cannot book appointments in the past. Today is {facility_today.isoformat()}. Please choose today or a future date."
+            }
+
         found_slots: set[tuple[int, str]] = set()
 
         # If provider_id is given, search for that provider
@@ -921,6 +939,15 @@ class AgentRouter:
             }
 
         slot_start, slot_end = slot_times
+
+        # Reject booking past time slots
+        now_facility = datetime.now(FACILITY_TZ)
+        slot_start_aware = (
+            slot_start if slot_start.tzinfo else slot_start.replace(tzinfo=FACILITY_TZ)
+        )
+        if slot_start_aware <= now_facility:
+            return {"error": "This time slot is in the past. Please choose a future time slot."}
+
         conflicts = await self._find_user_conflicts(user_id, slot_start, slot_end)
         if conflicts:
             return {
@@ -1004,14 +1031,18 @@ class AgentRouter:
 
             appointment, user, provider = row
 
-            # Convert to Lebanon timezone for display
-            lebanon_time = appointment.time_start.astimezone(LEBANON_TZ)
+            # Convert to user's timezone for display
+            appt_start = appointment.time_start
+            if appt_start.tzinfo is None:
+                # Naive datetime from SQLite — assume facility timezone
+                appt_start = appt_start.replace(tzinfo=FACILITY_TZ)
+            user_time = appt_start.astimezone(self.user_tz)
 
             details = {
                 "confirmation_code": appointment.confirmation_code,
                 "provider_name": provider.name,
                 "department": provider.department,
-                "datetime": lebanon_time.strftime("%B %d, %Y at %I:%M %p"),
+                "datetime": user_time.strftime("%B %d, %Y at %I:%M %p"),
                 "reason": appointment.reason,
             }
 
@@ -1053,8 +1084,8 @@ class AgentRouter:
         from datetime import datetime
         from sqlalchemy import desc, or_
 
-        # Get current time in Lebanon timezone
-        lebanon_now = datetime.now(LEBANON_TZ)
+        # Get current time in user's timezone
+        user_now = datetime.now(self.user_tz)
 
         # Build base query - matches Appointments page API
         query = (
@@ -1066,12 +1097,12 @@ class AgentRouter:
         # Apply status filter only if explicitly requested
         if status == "upcoming":
             query = query.where(
-                Appointment.time_start >= lebanon_now, Appointment.status == "confirmed"
+                Appointment.time_start >= user_now, Appointment.status == "confirmed"
             ).order_by(Appointment.time_start)
         elif status == "past":
             query = query.where(
                 or_(
-                    Appointment.time_start < lebanon_now,
+                    Appointment.time_start < user_now,
                     Appointment.status.in_(["completed", "cancelled"]),
                 )
             ).order_by(desc(Appointment.time_start))
@@ -1098,13 +1129,16 @@ class AgentRouter:
             }
 
         # Format appointments - same format as Appointments page
-        # Note: time_start is stored as naive datetime in Lebanon local time (no timezone info)
-        # We just format it directly - do NOT use astimezone() as that would incorrectly assume UTC
+        # Convert to user's timezone for display
         appointments = []
         for appointment, provider in rows:
-            # The time is stored as Lebanon local time without tzinfo
-            # Just format it directly without timezone conversion
+            # Convert to user's timezone
             appt_time = appointment.time_start
+            if appt_time.tzinfo:
+                appt_time = appt_time.astimezone(self.user_tz)
+            else:
+                # If naive, assume facility timezone then convert
+                appt_time = appt_time.replace(tzinfo=FACILITY_TZ).astimezone(self.user_tz)
 
             # Include a clear label to help the agent identify the correct appointment
             reason_label = appointment.reason or f"{provider.department} appointment"
@@ -1191,8 +1225,8 @@ class AgentRouter:
         slot_end: datetime,
     ) -> list[dict[str, str]]:
         """Check if the user already has an appointment overlapping this slot."""
-        slot_start_local = slot_start.astimezone(LEBANON_TZ).replace(tzinfo=None)
-        slot_end_local = slot_end.astimezone(LEBANON_TZ).replace(tzinfo=None)
+        slot_start_local = slot_start.astimezone(FACILITY_TZ).replace(tzinfo=None)
+        slot_end_local = slot_end.astimezone(FACILITY_TZ).replace(tzinfo=None)
 
         day_start = slot_start_local.replace(hour=0, minute=0, second=0, microsecond=0)
         day_end = day_start + timedelta(days=1)
@@ -1214,22 +1248,26 @@ class AgentRouter:
             appt_start = appt.time_start
             appt_end = appt.time_end
             if appt_start.tzinfo:
-                appt_start_local = appt_start.astimezone(LEBANON_TZ).replace(tzinfo=None)
+                appt_start_local = appt_start.astimezone(FACILITY_TZ).replace(tzinfo=None)
             else:
                 appt_start_local = appt_start
             if appt_end.tzinfo:
-                appt_end_local = appt_end.astimezone(LEBANON_TZ).replace(tzinfo=None)
+                appt_end_local = appt_end.astimezone(FACILITY_TZ).replace(tzinfo=None)
             else:
                 appt_end_local = appt_end
 
             overlaps = appt_start_local < slot_end_local and appt_end_local > slot_start_local
             if overlaps:
+                # Format in user's timezone for display
+                display_time = (
+                    appt_start.astimezone(self.user_tz) if appt_start.tzinfo else appt_start
+                )
                 conflicts.append(
                     {
                         "appointment_id": str(appt.id),
                         "provider": provider.name,
                         "department": provider.department,
-                        "time": appt_start_local.strftime("%B %d, %Y at %I:%M %p"),
+                        "time": display_time.strftime("%B %d, %Y at %I:%M %p"),
                     }
                 )
 
